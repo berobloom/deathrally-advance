@@ -1,9 +1,9 @@
 #include "drally.h"
 #include "drally_display.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 extern __DWORD__ ___19bd60h;
-void ___623d4h(void);
 #endif
 
 extern void_cb ___2432c8h;

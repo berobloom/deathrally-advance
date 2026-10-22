@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_structs_free.h"
-#include "drally_ipx.h"
+#include "drally_net.h"
+#include "drally_net.h"
 
 //#if !defined(_WIN32)
 //#pragma GCC optimize ("O0")
@@ -403,24 +404,24 @@ __BYTE__ ___24cc64h[0x9c];
 IPX_Header * ___24cd00h[0x10];
 IPX_EventControlBlock * ___24cd60h[0x10];
 __POINTER__ ___24cdc0h[0x10];
-__POINTER__ ___24cee0h[4];
-__BYTE__ ___24cef0h[0x28];
+NetPage * ___24cee0h[4];
+IPX_Address ___24cef0h[4];
 __BYTE__ ___24cf28h[0x1000];
 __BYTE__ ___24df28h[0x400];
-__BYTE__ ___24e328h[0xc8];
+char ___24e328h[0xc8];
 __DWORD__ ___24e3f0h[10];
 __DWORD__ ___24e418h[10];
 __DWORD__ ___24e450h;
-__POINTER__ ___24e45ch;
+IPX_EventControlBlock * ___24e45ch;
 __POINTER__ ___24e464h;
 __POINTER__ ___24e46ch;
-__POINTER__ ___24e4ach;
-__POINTER__ ___24e4b4h;
-__POINTER__ ___24e4c0h;
+NetPage * ___24e4ach;
+IPX_Address * ___24e4b4h;
+NetPage * ___24e4c0h;
 __POINTER__ ___24e4c4h;
 __DWORD__ CONNECTION_TYPE;
-__POINTER__ ___24e548h;
-__POINTER__ ___24e54eh;
+IPX_Header * ___24e548h;
+IPX_EventControlBlock * ___24e54eh;
 __POINTER__ ___24e58ah;
 __BYTE__ ___24e596h[0xa];
 

@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 __WORD__ swap16(__WORD__ val){
 

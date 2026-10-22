@@ -1,20 +1,13 @@
 #include "drally.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 #define pg(v)	((v)&0xfff)
 
-typedef struct NetPage {
-	__WORD__ 	write_p;
-	__WORD__ 	read_p;
-	__BYTE__ 	data[0x1000];
-} NetPage;
-
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
-	extern NetPage * ___24e4ach;
 
-void ___6168ch(void);
 
 int ___23594h_cdecl(__POINTER__ A0, int A1){
 

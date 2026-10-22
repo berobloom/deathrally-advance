@@ -1,6 +1,6 @@
 #include "drally.h"
+#include "drally_net.h"
 
-	extern __DWORD__ MP_ERROR;
 
 void ___24ec0h(void);
 void ___2fc50h(void);

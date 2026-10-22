@@ -5,6 +5,7 @@
 #include "drmath.h"
 #include "sfx.h"
 #include "drally_structs_free.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -133,7 +134,6 @@ void dRally_Sound_freeEffectChannel(__BYTE__ ch_num);
 void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance);
 __DWORD__ dRally_Sound_getPosition(void);
 void ___60719h(void);
-void ___61418h(__DWORD__);
 void srand_watcom106(__DWORD__);
 void race___4539ch(void);
 void race___42824h(void);

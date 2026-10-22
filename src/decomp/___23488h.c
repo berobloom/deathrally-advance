@@ -1,12 +1,11 @@
 #include "drally.h"
 #include "netpage.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
-	extern NetPage * ___24e4c0h;
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
 
-void ___6168ch(void);
 
 void ___23488h_cdecl(__POINTER__ A0, __BYTE__ A1, __BYTE__ A2){
 

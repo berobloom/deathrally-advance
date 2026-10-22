@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___185b58h[];
@@ -21,13 +22,9 @@
 	extern __BYTE__ ___18d492h[];
 
 void ___2ec68h_cdecl(void);
-void ___60a84h(void);
 void ___2ab50h(void);
 void ___23230h(void);
 void ___12d6ch__VESA101_PRESENTBOTTOMSCREEN(void);
-__DWORD__ ___60b60h(__DWORD__, __DWORD__, __POINTER__, __DWORD__);
-__DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2);
-void dRChatbox_push(const char * line, int col);
 
 
 void helper00(__DWORD__ A1, __DWORD__ A2, __POINTER__ A3, __DWORD__ A4){

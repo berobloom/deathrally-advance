@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "sfx.h"
 #include "drally_structs_free.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___196de4h[];
 	extern __BYTE__ ___243334h[];
@@ -16,7 +17,6 @@
 	extern __BYTE__ ___243330h[];
 	extern __BYTE__ MY_CAR_IDX[];
 	extern __BYTE__ ___1e6ed0h[];
-	extern __DWORD__ CONNECTION_TYPE;
 
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2);
 

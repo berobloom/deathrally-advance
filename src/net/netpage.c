@@ -1,5 +1,6 @@
 #include <string.h>
 #include "netpage.h"
+#include "drally_net.h"
 
 #define pg(v)	((v)&0xfff)
 

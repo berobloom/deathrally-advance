@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drmemory.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -15,7 +16,6 @@
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
 void ___12d6ch__VESA101_PRESENTBOTTOMSCREEN(void);
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__);
-void ___6168ch(void);
 #if defined(DR_MULTIPLAYER)
 void ___23230h(void);
 void ___233c0h(void);
@@ -26,7 +26,6 @@ void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 #endif // DR_MULTIPLAYER
 void ___2aa08h(void);
 
-void dRChatbox_push(const char * line, int col);
 
 #if defined(DR_MULTIPLAYER)
 static void mp_helper(__POINTER__ vp, int i){

@@ -2,20 +2,9 @@
 #include "netpage.h"
 #include "drally_ipx.h"
 #include "dos.h"
+#include "drally_net.h"
 
-    extern __DWORD__ CONNECTION_TYPE;
-    extern IPX_EventControlBlock * ___24cd60h[];
-    extern __BYTE__ * ___24cdc0h[];
-    extern NetPage * ___24e4ach;
-    extern IPX_Header * ___24cd00h[];
-    extern NetPage * ___24e4c0h;
-    extern __POINTER__ ___24e58ah;
-    extern __BYTE__ ___199fc0h[];
-    extern IPX_EventControlBlock * ___24e54eh;
-    extern __DWORD__ MP_ERROR;
 
-__DWORD__ ___612c8h(__DWORD__);
-__WORD__ swap16(__WORD__);
 void ___636d0h(void);
 
 
@@ -48,7 +37,7 @@ void ___618c4h(void){
 
 			___24e58ah[n++] = npg_peekb(___24e4c0h, 0);
             
-            if(n >= (int)D(___199fc0h)) ___618c4h_helper(n);
+            if(n >= (int)___199fc0h) ___618c4h_helper(n);
         }
 
 		npg_skipb(___24e4c0h, 1);

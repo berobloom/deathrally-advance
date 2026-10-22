@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct font_props_s {
@@ -14,8 +15,6 @@ typedef struct font_props_s {
 	extern __POINTER__ ___1a10fch;
 	extern __POINTER__ ___1a110ch;
 
-int dRChatbox_getFont(int line);
-char * dRChatbox_getLine(int line);
 void ___12e78h_cdecl(__POINTER__, __POINTER__, __POINTER__, __DWORD__);
 
 void ___23230h(void){

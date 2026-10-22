@@ -79,4 +79,13 @@ __DWORD__ NovellNetWare_IPX_ListenForPacket(IPX_EventControlBlock *);
 IPX_Fragment * getIPXFragment(IPX_EventControlBlock *, int);
 int setIPXFragment(IPX_EventControlBlock *, int, __POINTER__, int);
 
+// db_ipx.c: emulated IPX driver, used by network.c
+extern __DWORD__ reg_ax;
+extern __DWORD__ reg_bx;
+extern __DWORD__ reg_dx;
+extern __DWORD__ reg_si;
+extern __POINTER__ sreg_es_vp;
+void handleIpxRequest(void);
+int ipx_connect(const char * addr, int port);
+
 #endif // __DRALLY_IPX_H

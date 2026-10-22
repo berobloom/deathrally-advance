@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drmemory.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -7,9 +8,6 @@
 
 void dRally_System_clean(void);
 void __VGA3_SETMODE(void);
-#if defined(DR_MULTIPLAYER)
-void ___623d4h(void);
-#endif // DR_MULTIPLAYER
 
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__ size){
 

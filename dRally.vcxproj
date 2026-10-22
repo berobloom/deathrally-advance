@@ -405,6 +405,7 @@
     <ClInclude Include="include\drally.h" />
     <ClInclude Include="include\drally_display.h" />
     <ClInclude Include="include\drally_ipx.h" />
+    <ClInclude Include="include\drally_net.h" />
     <ClInclude Include="include\drally_keyboard.h" />
     <ClInclude Include="include\drally_race.h" />
     <ClInclude Include="include\drally_structs_fixed.h" />

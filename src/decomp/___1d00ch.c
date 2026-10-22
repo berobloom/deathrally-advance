@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -10,9 +11,7 @@
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___185b58h[];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___1866b8h[];
-	extern __BYTE__ ___199f9ch[];
 
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
 void ___2b5f0h(void);
@@ -20,12 +19,9 @@ __DWORD__ ___1caf4h(void);
 void ___2415ch(void);
 void ___13710h(__DWORD__, __DWORD__);
 __DWORD__ ___3ab5ch_cdecl(__DWORD__);
-void ___61278h(void);
-void ___623d4h(void);
 void ___135fch(__DWORD__, __DWORD__, __DWORD__, __DWORD__);
 void ___23230h(void);
 void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
-void dRChatbox_push(const char * line, int col);
 
 void ___1d00ch(void){
 
@@ -74,7 +70,7 @@ void ___1d00ch(void){
 		if(___3ab5ch_cdecl(0) != 0){
 
 			CONNECTION_TYPE = 2;
-			D(___199f9ch) = 0;
+			___199f9ch = 0;
 			ecx = s_6c[D(___1a1ef8h)].color;
 			___2415ch();
 			s_6c[D(___1a1ef8h)].color = ecx;

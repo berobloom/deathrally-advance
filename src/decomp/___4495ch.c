@@ -1,11 +1,7 @@
 #include "drally.h"
 #include "netpage.h"
+#include "drally_net.h"
 
-	extern NetPage * ___24e4ach;
-	extern NetPage * ___24e4c0h;
-	extern NetPage * ___24cee0h[4];
-
-void ___61278h(void);
 
 void ___4495ch(void){
 

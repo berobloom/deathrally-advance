@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 __DWORD__ __GET_TIMER_TICKS(void);
 

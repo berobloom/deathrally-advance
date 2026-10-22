@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -12,7 +13,6 @@ void ___12a54h(void);
 void dRally_Sound_release(void);
 void __VGA3_SETMODE(void);
 void dRally_System_clean(void);
-void ___623d4h(void);
 
 
 void ___3aaf8h(void){

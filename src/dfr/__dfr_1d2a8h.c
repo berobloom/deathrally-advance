@@ -1,38 +1,29 @@
 #include "drally.h"
 #include "drally_fonts.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___19bd60h[];
-	extern __BYTE__ ___199fa4h_com_port_addr[];
 	extern __BYTE__ ___1a1ef8h[];
-	extern __BYTE__ CONNECTION_TYPE[];
-	extern __BYTE__ ___199fach[];
 	extern __BYTE__ ___1a01e0h[];
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __BYTE__ ___185c0bh[];
 	extern __POINTER__ ___1a1108h;
-	extern __BYTE__ ___199fa0h[];
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___185b58h[];
 
 
 void ___12e78h_cdecl(__BYTE__ * A1, font_props_t * A2, const char * A3, __DWORD__ dst_off);
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
-void ___60a84h(void);
 __BYTE__ ___5994ch(void);
-__DWORD__ ___60b48h(__DWORD__ A1, __DWORD__ A2);
 void ___2ab50h(void);
 void ___13bd4h_cdecl(__DWORD__, __DWORD__);
-__DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2);
-void ___61278h(void);
 __DWORD__ ___1caf4h(void);
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
 void ___2415ch(void);
 void ___2b5f0h(void);
-__DWORD__ ___61cd0h(void);
 void ___1123ch(void);
 void ___1d4e8h(void);
-__DWORD__ ___61b88h(__DWORD__ A1);
 void ___1ca00h(__DWORD__ A1);
 void ___13710h(__DWORD__, __DWORD__);
 __DWORD__ ___3ab5ch_cdecl(__DWORD__);
@@ -52,7 +43,7 @@ void ___1d2a8h(void){
 
 	if(ecx == 0){
 
-		eax = ___61b88h(D(___199fa4h_com_port_addr));
+		eax = ___61b88h(___199fa4h_com_port_addr);
 		
 		if(eax != 0){
 
@@ -62,8 +53,8 @@ void ___1d2a8h(void){
 
 			if(eax != 0){
 
-				D(CONNECTION_TYPE) = 1;
-				D(___199fach) = 0x4b00;
+				CONNECTION_TYPE = 1;
+				___199fach = 0x4b00;
 				ebx = D(___1a01e0h+0x6c*D(___1a1ef8h)+0x2c);
 				___2415ch();
 				D(___1a01e0h+0x6c*D(___1a1ef8h)+0x2c) = ebx;
@@ -93,7 +84,7 @@ void ___1d2a8h(void){
 					edx = ebx % D(esp+8);
 					if(edx == 1){
 					
-						ebp = ___60b48h(D(___199fa0h)+5, 2);
+						ebp = ___60b48h(___199fa0h+5, 2);
 					}
 
 					___2ab50h();

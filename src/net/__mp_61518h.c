@@ -2,17 +2,8 @@
 #include "netpage.h"
 #include "drally_ipx.h"
 #include "dos.h"
+#include "drally_net.h"
 
-    extern __DWORD__ CONNECTION_TYPE;
-    extern IPX_EventControlBlock * ___24cd60h[];
-    extern IPX_Header * ___24cd00h[];
-    extern __BYTE__ * ___24cdc0h[];
-    extern IPX_Address * ___24e4b4h;
-    extern IPX_Address ___24cef0h[];
-    extern NetPage * ___24cee0h[];
-	extern __DWORD__ MP_ERROR;
-
-__WORD__ swap16(__WORD__);
 
 static int ipxaddrcmp(IPX_Address * addr1, IPX_Address * addr2){
 

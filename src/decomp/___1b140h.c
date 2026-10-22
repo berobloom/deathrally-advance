@@ -3,6 +3,7 @@
 #include "drally_keyboard.h"
 #include "drmemory.h"
 #include "sfx.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct s20_s {
@@ -15,7 +16,6 @@ typedef struct s20_s {
 
 
 	extern __BYTE__ ___19ded0h[];
-	extern __POINTER__ ___24e4ach;
 	extern __DWORD__ ___24cc54h_sfx_volume;
 	extern __DWORD__ MP_MONEY;
 	extern __BYTE__ ___185a14h_UseWeapons[];
@@ -23,10 +23,8 @@ typedef struct s20_s {
 	extern __BYTE__ ___1a2010h[];
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
-	extern __BYTE__ ___199f9ch[];
 	extern __DWORD__ ___19bd60h;
 	extern __BYTE__ ___1a1098h[];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___196adch[];
 	extern __BYTE__ ___185a24h[];
 
@@ -46,9 +44,6 @@ void ___10754h(void);
 void ___60705h(void_cb);
 void ___1c6bch_cdecl(__DWORD__);
 void shop_main(void);
-void ___61278h(void);
-void ___623d4h(void);
-__DWORD__ ___61cd0h(void);
 void ___1123ch(void);
 __DWORD__ ___1aa28h(__DWORD__ A1, __DWORD__ A2, __DWORD__ A3);
 void ___1ad30h(__DWORD__ A1, __DWORD__ A2, __DWORD__ A3);
@@ -116,7 +111,7 @@ void ___1b140h(void){
     ___13248h_cdecl(0xe9, 0xe9, 0x88, 0x64, 1);
     ___12e78h_v3(___1a10cch___185ba9h, "Wait...", 250, 264);
     ___12cb8h__VESA101_PRESENTSCREEN();
-    W(___24e4ach) = W(___24e4ach+2);
+    ___24e4ach->write_p = ___24e4ach->read_p;
 
     i = -1;
     while(++i < 0x46){
@@ -162,7 +157,7 @@ void ___1b140h(void){
 
     ___5994ch();
     ___59b3ch();
-    W(___24e4ach) = W(___24e4ach+2);
+    ___24e4ach->write_p = ___24e4ach->read_p;
     B(esp+0x20) = 0;
     B(esp+0x24) = 1;
     D(esp+0x18) = 0x280*(D(esp+0xc)+0xd)+D(esp+0x10)+0x14;
@@ -334,8 +329,8 @@ void ___1b140h(void){
         if(D(esp+0x1c) == DR_SCAN_ESCAPE) break;
     }
 
-    W(___24e4ach) = W(___24e4ach+2);
-    memset(___24e4ach+4, 0, 0x1000);
+    ___24e4ach->write_p = ___24e4ach->read_p;
+    memset(___24e4ach->data, 0, 0x1000);
     ___5994ch();
     ___59b3ch();
     dRMemory_free(ebp);
@@ -348,7 +343,7 @@ void ___1b140h(void){
         ___61278h();
         ___623d4h();
 
-        D(___199f9ch) = B(esp+0x20)+1;
+        ___199f9ch = B(esp+0x20)+1;
 
         if(___61cd0h() == 0) ___1123ch();
         ___19bd60h = 1;

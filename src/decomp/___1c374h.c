@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_fonts.h"
+#include "drally_net.h"
 
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
@@ -7,7 +8,6 @@
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___185a24h[];
 	extern __DWORD__ MP_MONEY;
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___185a5ch[];
 	extern __BYTE__ ___185b58h[];
 

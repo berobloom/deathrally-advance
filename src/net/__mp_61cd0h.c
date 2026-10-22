@@ -3,30 +3,11 @@
 #include "netpage.h"
 #include "drally_ipx.h"
 #include "dos.h"
+#include "drally_net.h"
 
     extern struct tm TimeInit;
 
-    extern __DWORD__ ___199fb8h;
-    extern __DWORD__ CONNECTION_TYPE;
-	extern __DWORD__ MP_ERROR;
-    extern NetPage * ___24e4ach;
-    extern NetPage * ___24cee0h[4];
-    extern NetPage * ___24e4c0h;
-    extern IPX_Address * ___24e4b4h;
-    extern __DWORD__ ___24e3f0h[];
-    extern __DWORD__ ___199fa0h;
-    extern __DWORD__ ___199f9ch;
-    extern IPX_EventControlBlock * ___24e45ch;
-    extern IPX_EventControlBlock * ___24e54eh;
-    extern IPX_Header * ___24e548h;
-    extern IPX_Header * ___24cd00h[];
-    extern __POINTER__ ___24cdc0h[];
-    extern IPX_EventControlBlock * ___24cd60h[];
-    extern __POINTER__ ___24e58ah;
-    extern __POINTER__ ___24e464h;
 
-__WORD__ swap16(__WORD__);
-__DWORD__ ___638ech(void);
 void _dos_gettime(struct dostime_t * __time);
 
 __DWORD__ ___61cd0h(void){

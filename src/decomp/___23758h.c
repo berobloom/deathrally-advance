@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_keyboard.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct font_props_s {
@@ -36,9 +37,6 @@ void ___2ab50h(void);
 void ___12e78h_cdecl(__BYTE__ * A1, font_props_t * A2, const char * A3, __DWORD__ dst_off);
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
 void ___1398ch__VESA101_PRESENTRECTANGLE(__DWORD__ offset, __POINTER__ src, __DWORD__ w, __DWORD__ h);
-void dRChatbox_push(const char * line, int col);
-int dRChatbox_getFont(int line);
-char * dRChatbox_getLine(int line);
 
 
 void ___23758h(void){

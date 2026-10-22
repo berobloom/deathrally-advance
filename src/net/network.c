@@ -1,16 +1,10 @@
 #include "drally.h"
 #include "drally_ipx.h"
+#include "drally_net.h"
 
-void handleIpxRequest(void);
-int ipx_connect(const char *, __DWORD__);
 
-    extern __DWORD__ reg_ax;
-    extern __DWORD__ reg_bx;
     extern __DWORD__ reg_cx;
-    extern __DWORD__ reg_dx;
     extern __DWORD__ sreg_es;
-    extern __POINTER__ sreg_es_vp;
-    extern __DWORD__ reg_si;
 #define reg_al  B(&reg_ax)
 
 __DWORD__ NovellNetWare_IPX_InstallationCheck(void){

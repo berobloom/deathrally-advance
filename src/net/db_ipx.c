@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "drally_net.h"
 
 #include "drally_ipx.h"
 

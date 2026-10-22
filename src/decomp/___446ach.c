@@ -1,8 +1,8 @@
 #include "drally.h"
 #include "netpage.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___24331ch[];
-	extern NetPage * ___24cee0h[4];
 	extern __BYTE__ ___243d9eh[];
 	extern __BYTE__ ___196e60h[];
 

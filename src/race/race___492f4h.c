@@ -1,8 +1,8 @@
 #include "drally.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
-	void ___623d4h(void);
 #endif
 
 void __VGA3_SETMODE(void);

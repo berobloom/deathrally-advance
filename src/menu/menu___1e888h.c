@@ -2,6 +2,7 @@
 #include "drally_keyboard.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct x655_s {
@@ -28,7 +29,6 @@ typedef struct x655_s {
 	extern __BYTE__ ___196a80h[];
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a1ef4h[];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___185a24h[];
 	extern __BYTE__ ___196a74h[];
 	extern __BYTE__ ___196ad4h[];
@@ -72,7 +72,6 @@ void ___1c178h(void);
 void ___1b140h(void);
 void ___1e4f8h(void);
 #endif // DR_MULTIPLAYER
-void dRChatbox_push(const char * line, int col);
 
 static __DWORD__ helper_color(__DWORD__ A0, __DWORD__ A1){
 

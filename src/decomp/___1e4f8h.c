@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct menubox_s {
@@ -12,11 +13,9 @@ typedef struct menubox_s {
 } menubox_t;
 
 	extern char ___1866b8h[9][9][50];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern menubox_t ___185a5ch[9];
 	extern __BYTE__ ___196a84h[];
 	extern __BYTE__ ___196a78h[];
-	extern __BYTE__ ___199f9ch[];
 	extern __DWORD__ ___19bd60h;
 	extern __BYTE__ ___185b58h[9][9];
 
@@ -24,10 +23,7 @@ void ___13710h(__DWORD__, __DWORD__);
 void ___2415ch(void);
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
 void ___60719h(void);
-void ___63b20h(__DWORD__, __DWORD__);
-__DWORD__ ___61cd0h(void);
 void ___1123ch(void);
-void ___623d4h(void);
 
 void ___1e4f8h(void){
 
@@ -59,8 +55,8 @@ void ___1e4f8h(void){
 
 #if defined(DR_MULTIPLAYER)
 		___623d4h();
-		edx = D(___199f9ch);
-		D(___199f9ch) = 0;
+		edx = ___199f9ch;
+		___199f9ch = 0;
 
 		if(___61cd0h() == 0) ___1123ch();
 

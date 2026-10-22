@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drmemory.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 #define COOXY(x,y) (0x280*(y)+(x))
 
@@ -66,7 +67,6 @@
 	extern int LAP_RECORD_SEC;
 	extern int LAP_RECORD_100;
 	extern __BYTE__ ___1a103ch[];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___185a18h[];
 	extern __BYTE__ ___196ae8h[];
@@ -88,7 +88,6 @@
 	extern __DWORD__ ___24cc58h_msx_volume;
 	extern __BYTE__ ___185a20h[];
 
-void dRChatbox_push(const char * line, int col);
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__ size);
 void old_bpa_read(const char *, __POINTER__, const char *);
 void bpk_decode2(__POINTER__, __POINTER__);
@@ -102,10 +101,7 @@ __BYTE__ dRally_Sound_setPosition(__DWORD__ pos_n);
 void dRally_Sound_setMasterVolume(__DWORD__ vol);
 void ___12cb8h__VESA101_PRESENTSCREEN(void);
 void __WAIT_5(void);
-void ___60a84h(void);
-__DWORD__ ___60b60h(__DWORD__, __DWORD__, __POINTER__, __DWORD__);
 void ___2ab50h(void);
-__DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2);
 void ___3881ch(void);
 void ___24ec0h(void);
 void ___2fc50h(void);

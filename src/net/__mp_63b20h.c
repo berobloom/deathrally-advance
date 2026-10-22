@@ -1,15 +1,7 @@
 #include "drally.h"
 #include "drally_ipx.h"
+#include "drally_net.h"
 
-    extern __DWORD__ ___199fd4h;
-    extern __DWORD__ ___199fa0h;
-    extern __DWORD__ ___199f9ch;
-
-    extern __POINTER__ ___24e464h;
-    extern IPX_Header * ___24e548h;
-    extern IPX_EventControlBlock * ___24e45ch;
-
-__WORD__ swap16(__WORD__);
 
 void ___63b20h(__DWORD__ A1, __DWORD__ A2){
 #if defined(DR_MULTIPLAYER)

@@ -2,12 +2,12 @@
 #include "drmemory.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___185c0bh[];
 	extern __POINTER__ ___1a1108h;
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
-	extern __POINTER__ ___24e4ach;
 	extern __BYTE__ ___1a1098h[];
 
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
@@ -101,8 +101,8 @@ ___1aaddh:
 		ebx = edi+0xb;
 		___23488h_cdecl(vp, edx, ebx);
 		ebx = 0x1000;
-		memset(___24e4ach+4, 0, ebx);
-		W(___24e4ach+2) = W(___24e4ach);
+		memset(___24e4ach->data, 0, ebx);
+		___24e4ach->read_p = ___24e4ach->write_p;
 		eax = D(esp+4);
 		ebp = D(esp);
 		eax += 0x13;
@@ -143,7 +143,7 @@ ___1abfbh:
 		edx++;
 		___2ab50h();
 		if((int)edx < 0x28) goto ___1abfbh;
-		memset(___24e4ach+4, 0, 0x1000);
+		memset(___24e4ach->data, 0, 0x1000);
 		dRMemory_free(vp1);
 		dRMemory_free(vp);
 		return 2;   
@@ -179,15 +179,15 @@ ___1aca5h:
 		edx++;
 		___2ab50h();
 		if((int)edx < 0x28) goto ___1aca5h;
-		memset(___24e4ach+4, 0, 0x1000);
+		memset(___24e4ach->data, 0, 0x1000);
 		dRMemory_free(vp1);
 		dRMemory_free(vp);
 		return 1;
 ___1ace1h:
 		B(vp) = 0;
 		___23488h_cdecl(vp, 0x1e, edi+0xb);
-		memset(___24e4ach+4, 0, 0x1000);
-		W(___24e4ach+2) = W(___24e4ach);
+		memset(___24e4ach->data, 0, 0x1000);
+		___24e4ach->read_p = ___24e4ach->write_p;
 		dRMemory_free(vp1);
 		dRMemory_free(vp);
 		return 0;

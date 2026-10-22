@@ -1,10 +1,10 @@
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "netpage.h"
+#include "drally_net.h"
 
 	extern __BYTE__ ___243880h[];
 	extern int NUM_OF_CARS;
-	extern int CONNECTION_TYPE;
 	extern __BYTE__ ___24331ch[];
 	extern int MY_CAR_IDX;
 	extern __BYTE__ ___1e6ed0h[];
@@ -14,14 +14,12 @@
 	extern __BYTE__ ___196e64h[];
 	extern __BYTE__ ___243cd8h[];
 	extern __BYTE__ ___243318h[];
-	extern __POINTER__ ___24cee0h[4];
 	extern __BYTE__ ___1a51c0h[];
 
 __DWORD__ __GET_FRAME_COUNTER(void);
 void ___446ach(void);
 void ___44a4ch(int A1);
 void ___44730h_helper(int);
-void ___61518h(void);
 
 static int helper22(NetPage * npg, int offset){
 

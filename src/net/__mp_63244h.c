@@ -1,10 +1,8 @@
 #include "drally.h"
 #include "netpage.h"
+#include "drally_net.h"
 
-	extern NetPage * ___24e4ach;
-	extern char ___24e328h[];
 
-	void ___6168ch(void);
 	char * strupr_watcom106(char * s);
 
 void ___63228h(void){

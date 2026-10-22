@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_keyboard.h"
 #include "drally_structs_free.h"
+#include "drally_net.h"
 
 #define CTRL_NULL			0x00
 #define CTRL_ACCELERATE		0x01
@@ -15,8 +16,6 @@
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
-	extern __DWORD__ CONNECTION_TYPE;
-	extern __BYTE__ ___199f9ch[];
 	extern __BYTE__ SUPERGLOBAL___243cd0h[];
 	extern __BYTE__ kmap[];
 	extern kb_control_t ___1a1140h;
@@ -48,9 +47,6 @@
 	extern __BYTE__ SUPERGLOBAL___243cach[];
 
 
-void ___63b20h(__DWORD__, __DWORD__);
-void ___61518h(void);
-void ___61418h(__DWORD__);
 void ___40564h(void);
 
 static __BYTE__ todo_in(__WORD__ w){
@@ -65,7 +61,7 @@ void race___40164h(void){
 	struct_35e_t *	s_35e;
 
 #if defined(DR_MULTIPLAYER)
-	if((___19bd60h != 0)&&(CONNECTION_TYPE == 2)) ___63b20h(1, D(___199f9ch));
+	if((___19bd60h != 0)&&(CONNECTION_TYPE == 2)) ___63b20h(1, ___199f9ch);
 #endif // DR_MULTIPLAYER
 
 	aFlags = CTRL_NULL;

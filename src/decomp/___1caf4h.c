@@ -2,12 +2,12 @@
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
 #include "drmemory.h"
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 #endif //DR_MULTIPLAYER
 
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a0f9ch;
@@ -22,19 +22,15 @@ void ___12cb8h__VESA101_PRESENTSCREEN(void);
 __BYTE__ ___5994ch(void);
 __BYTE__ ___59b3ch(void);
 
-__DWORD__ NovellNetWare_IPX_InstallationCheck(void);
-__DWORD__ ___61cd0h(void);
 void ___1123ch(void);
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__);
 void ___12d6ch__VESA101_PRESENTBOTTOMSCREEN(void);
 int ___23594h_cdecl(__POINTER__, int);
 void ___58c60h(void);
-void ___6168ch(void);
 void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___23230h(void);
 void ___135fch(__DWORD__, __DWORD__, __DWORD__, __DWORD__);
 
-void dRChatbox_push(const char * line, int col);
 
 __DWORD__ ___1caf4h(void){
 

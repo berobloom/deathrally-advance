@@ -1,14 +1,10 @@
 #include "drally.h"
+#include "drally_net.h"
 
 	extern __BYTE__ NUM_OF_CARS[];
 	extern __BYTE__ ___243878h[];
 	extern __BYTE__ ___243330h[];
 
-void ___60a84h(void);
-void ___60a28h(__DWORD__ A1);
-__DWORD__ ___60b48h(__DWORD__ A1, __DWORD__ A2);
-__DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2);
-void ___61278h(void);
 
 void ___44130h_cdecl(__DWORD__ A0){
 

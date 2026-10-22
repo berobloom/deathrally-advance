@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_fonts.h"
+#include "drally_net.h"
 
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
@@ -9,8 +10,6 @@
 	extern __POINTER__ ___1a110ch;
 
 void ___12e78h_cdecl(__BYTE__ * A1, font_props_t * A2, const char * A3, __DWORD__ dst_off);
-int dRChatbox_getFont(int line);
-char * dRChatbox_getLine(int line);
 
 
 void ___232f8h(void){

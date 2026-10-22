@@ -1,16 +1,9 @@
 #include "drally.h"
+#include "drally_net.h"
 
-	extern __BYTE__ ___24cef0h[];
-	extern __POINTER__ ___24e4ach;
 	extern __BYTE__ ___1a1168h[];
-	extern __POINTER__ ___24e4b4h;
 	extern __BYTE__ NUM_OF_CARS[];
-	extern __POINTER__ ___24cee0h[4];
 
-__DWORD__ ___60b60h(__DWORD__, __DWORD__, __POINTER__, __DWORD__);
-__DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2);
-void ___60a84h(void);
-void ___60a28h(__DWORD__ A1);
 
 void ___44194h(void){
 
@@ -19,35 +12,35 @@ void ___44194h(void){
 	__POINTER__ 	vp[4];
 
 
-	memset(___24cef0h, 0, 0xa);
-	memset(___24cef0h+0xa, 0, 0xa);
-	memset(___24cef0h+0x14, 0, 0xa);
-	memset(___24cef0h+0x1e, 0, 0xa);
-	W(___24e4ach) = 0;
-	W(___24e4ach+2) = 0;
-	vp[0] = ___24cef0h+0xa*B(___1a1168h);
-	vp[1] = ___24cef0h+0xa*B(___1a1168h+1);
-	vp[2] = ___24cef0h+0xa*B(___1a1168h+2);
-	vp[3] = ___24cef0h+0xa*B(___1a1168h+3);
+	memset(&___24cef0h[0], 0, sizeof(IPX_Address));
+	memset(&___24cef0h[1], 0, sizeof(IPX_Address));
+	memset(&___24cef0h[2], 0, sizeof(IPX_Address));
+	memset(&___24cef0h[3], 0, sizeof(IPX_Address));
+	___24e4ach->write_p = 0;
+	___24e4ach->read_p = 0;
+	vp[0] = (__POINTER__)&___24cef0h[B(___1a1168h)];
+	vp[1] = (__POINTER__)&___24cef0h[B(___1a1168h+1)];
+	vp[2] = (__POINTER__)&___24cef0h[B(___1a1168h+2)];
+	vp[3] = (__POINTER__)&___24cef0h[B(___1a1168h+3)];
 	___60a84h();
 
 	while(1){
 
 		___60a28h(2);
-		eax = ___60b60h(1, D(NUM_OF_CARS), ___24e4b4h, 0xa);
+		eax = ___60b60h(1, D(NUM_OF_CARS), (__POINTER__)___24e4b4h, 0xa);
 		if(eax == 0xff) break;
 	}
 
 	___611c0h(0xa, vp);
-	W(___24e4ach) = 0;
-	W(___24e4ach+2) = 0;
-	W(___24cee0h[0]) = 0;
-	W(___24cee0h[0]+2) = 0;
-	W(___24cee0h[1]) = 0;
-	W(___24cee0h[1]+2) = 0;
-	W(___24cee0h[2]) = 0;
-	W(___24cee0h[2]+2) = 0;
-	W(___24cee0h[3]) = 0;
-	W(___24cee0h[3]+2) = 0;
+	___24e4ach->write_p = 0;
+	___24e4ach->read_p = 0;
+	___24cee0h[0]->write_p = 0;
+	___24cee0h[0]->read_p = 0;
+	___24cee0h[1]->write_p = 0;
+	___24cee0h[1]->read_p = 0;
+	___24cee0h[2]->write_p = 0;
+	___24cee0h[2]->read_p = 0;
+	___24cee0h[3]->write_p = 0;
+	___24cee0h[3]->read_p = 0;
 	return;
 }

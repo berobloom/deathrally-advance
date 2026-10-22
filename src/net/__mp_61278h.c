@@ -1,7 +1,6 @@
 #include "drally.h"
+#include "drally_net.h"
 
-    extern __DWORD__ CONNECTION_TYPE;
-    extern __POINTER__ ___24e4c4h;
 
 __DWORD__ __GET_FRAME_COUNTER(void);
 

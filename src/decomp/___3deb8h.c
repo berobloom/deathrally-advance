@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 typedef char char70[70];
 
@@ -123,7 +124,6 @@ static const char70 ___195494h[19][4] = {
 };
 
 int rand_watcom106(void);
-void dRChatbox_push(const char *, int);
 
 void ___3deb8h(void){
 

@@ -2,6 +2,7 @@
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
 #include "watcom106.h"
+#include "drally_net.h"
 
 #pragma pack(1)
 typedef struct rgb24_s {
@@ -78,8 +79,6 @@ void menu___3d4f0h(void);
 void menu___3da48h(void);
 int ___148cch_cdecl(__DWORD__, __DWORD__, __DWORD__, __BOOL__ *);
 
-void dRChatbox_clear(void);
-void dRChatbox_push(const char *, int);
 void setIntensity___19eb50h(__DWORD__);
 
 void menu_main(void){

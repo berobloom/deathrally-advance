@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 typedef char chatbox_t[0x16][0x96];
 

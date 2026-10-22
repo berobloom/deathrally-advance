@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_net.h"
 
 __DWORD__ ___199f9ch = 0;
 __DWORD__ ___199fa0h = 0;

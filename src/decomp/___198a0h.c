@@ -4,9 +4,9 @@
 #include "drally_structs_fixed.h"
 #include "drally_keyboard.h"
 #include "netpage.h"
+#include "drally_net.h"
 
 	extern __DWORD__ MP_MONEY;
-	extern NetPage * ___24e4ach;
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
 	extern __BYTE__ ___1a0ffch[];
@@ -16,8 +16,6 @@
 	extern __BYTE__ ___185a14h_UseWeapons[];
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___19de70h[20];
-	extern __BYTE__ ___199f9ch[];
-	extern __DWORD__ CONNECTION_TYPE;
 	extern __BYTE__ ___196adch[];
 	extern __DWORD__ ___19bd60h;
 	extern __BYTE__ ___185a24h[];
@@ -42,11 +40,7 @@ void ___1c6bch_cdecl(__DWORD__);
 void shop_main(void);
 void ___10754h(void);
 void ___60705h(void_cb);
-void ___61278h(void);
-void ___623d4h(void);
-__DWORD__ ___61cd0h(void);
 void ___1123ch(void);
-void dRChatbox_push(const char * line, int col);
 
 // Network Initialize Game
 __DWORD__ ___198a0h(void){
@@ -372,7 +366,7 @@ __DWORD__ ___198a0h(void){
 		dRMemory_free(vp1);
 		___61278h();
 		___623d4h();
-		D(___199f9ch) = D(esp+0xd8)+1;
+		___199f9ch = D(esp+0xd8)+1;
 		if(___61cd0h() == 0) ___1123ch();
 		D(___196adch) = D(esp+0x108);
 		___19bd60h = 1;

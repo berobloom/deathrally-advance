@@ -1,10 +1,7 @@
 #include "drally.h"
 #include "drally_ipx.h"
+#include "drally_net.h"
 
-    extern __DWORD__ CONNECTION_TYPE;
-    extern IPX_EventControlBlock * ___24e54eh;
-    extern __POINTER__ ___24e58ah;
-    extern __DWORD__ MP_ERROR;
 
 void ___61418h(__DWORD__ A1){
 #if defined(DR_MULTIPLAYER)

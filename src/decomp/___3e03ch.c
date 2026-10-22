@@ -1,6 +1,6 @@
 #include "drally.h"
+#include "drally_net.h"
 
-void dRChatbox_push(const char *, int);
 
 void ___3e03ch(void){
 

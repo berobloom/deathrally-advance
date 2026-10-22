@@ -1,14 +1,6 @@
 #include "drally.h"
+#include "drally_net.h"
 
-    extern __DWORD__ ___24e450h;
-    extern __DWORD__ ___24e418h[10];
-    extern __BYTE__ ___199fb6h[];
-    extern __DWORD__ ___24e3f0h[10];
-    extern __BYTE__ ___199fb8h[];
-    extern __BYTE__ ___24cf28h[];
-    extern __POINTER__ ___24e4ach;
-    extern __POINTER__ ___24e46ch;
-    extern __BYTE__ ___24df28h[];
 
 void ___608ech(__DWORD__ A1, __DWORD__ A2){
 
@@ -84,12 +76,12 @@ __DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2){
 	n = -1;
 	while(++n < 0xa) ___24e418h[n] = n;
 
-	___608ech(0, B(___199fb6h)-1);
+	___608ech(0, ___199fb6h-1);
 
 	n = -1;
-	while(++n < B(___199fb6h)){
+	while(++n < ___199fb6h){
 
-		if(___24e3f0h[n] != D(___199fb8h)){
+		if(___24e3f0h[n] != ___199fb8h){
 
 			m = -1;
 			while(++m < A1) B(A2[n]+m) = B(___24cf28h+m+(n<<0xa));
@@ -100,8 +92,8 @@ __DWORD__ ___611c0h(__DWORD__ A1, __POINTER__ * A2){
 		}
 	}
 
-	W(___24e4ach) = 0;
-	W(___24e4ach+2) = 0;
+	___24e4ach->write_p = 0;
+	___24e4ach->read_p = 0;
 	//W(___24e46ch) = 0;
 	//W(___24e46ch+2) = 0;
 

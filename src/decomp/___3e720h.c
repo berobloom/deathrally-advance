@@ -1,7 +1,7 @@
 #include "drally.h"
+#include "drally_net.h"
 
     extern __BYTE__ ___1a202fh[0x13];
-	extern __DWORD__ ___199fa0h;
 	extern __BYTE__ ___1a2148h;
 	extern __DWORD__ ___1a1f3ch_counter;
 	extern void_cb ___2432c8h;
@@ -16,10 +16,7 @@ extern __BYTE__ ___1a01e0h[];
 extern __BYTE__ ___1a1ef8h[];
 extern __BYTE__ ___1866b8h[];
 extern __DWORD__ ___19bd60h;
-extern __DWORD__ CONNECTION_TYPE;
 void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
-void ___61278h(void);
-void ___623d4h(void);
 #endif // DR_MULTIPLAYER
 
 void ___3aaf8h(void);

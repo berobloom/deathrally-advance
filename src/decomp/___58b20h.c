@@ -1,11 +1,11 @@
 #include "drally.h"
 #include <stdarg.h>
+#include "drally_net.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
 
-void ___623d4h(void);
 void __VGA3_SETMODE(void);
 void dRally_System_clean(void);
 

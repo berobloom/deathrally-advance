@@ -3,6 +3,7 @@
 #include "drally_structs_free.h"
 #include "drally_structs_fixed.h"
 #include "drmemory.h"
+#include "drally_net.h"
 
 #define STANDARD_COM1       0
 #define STANDARD_COM2       1
@@ -36,8 +37,6 @@ extern __DWORD__ ___1a1118h_gp_machine_gun;
 extern __DWORD__ ___1a111ch_gp_drop_mine;
 extern __DWORD__ ___1a1f3ch_counter;
 extern __BYTE__ ___185a5ch[];
-extern __DWORD__ ___199fa4h_com_port_addr;
-extern __DWORD__ ___199fa8h_com_port_irq;
 extern __DWORD__ ___1a1e50h_com_port_standard;
 extern __DWORD__ ___1a1120h_gp_turbo_boost;
 extern __DWORD__ ___1a1110h_gp_steer_left;
