@@ -54,9 +54,9 @@ void ___1d00ch(void);
 #if defined(DR_MULTIPLAYER)
 void shop_main(void);
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
-__BYTE__ ___148cch_cdecl(__DWORD__, __DWORD__, __DWORD__, int *);
+int ___148cch_cdecl(__DWORD__, __DWORD__, __DWORD__, int *);
 void ___2415ch(void);
-void ___23488h_cdecl(__POINTER__, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___58c60h(void);
 void ___2b318h(void);
 void ___2ab50h(void);

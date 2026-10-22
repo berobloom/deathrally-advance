@@ -27,7 +27,7 @@ typedef struct font_props_s {
 void ___135fch(__DWORD__, __DWORD__, __DWORD__, __DWORD__);
 void ___23230h(void);
 __BYTE__ ___5994ch(void);
-void ___23488h_cdecl(const char *, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___232f8h(void);
 char * itoa_watcom106(int value, char * buffer, int radix);
 __BYTE__ ___59b3ch(void);

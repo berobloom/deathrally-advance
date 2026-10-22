@@ -16,7 +16,7 @@ void ___12cb8h__VESA101_PRESENTSCREEN(void);
 __BYTE__ ___5994ch(void);
 __DWORD__ __GET_TIMER_TICKS(void);
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__);
-void ___23488h_cdecl(__POINTER__, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___2ab50h(void);
 void ___13bd4h_cdecl(__DWORD__, __DWORD__);
 __DWORD__ ___23594h_cdecl(__POINTER__, __DWORD__);

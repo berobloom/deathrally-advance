@@ -76,7 +76,7 @@ void menu___218b4h(void);
 void menu___22a80h(void);
 void menu___3d4f0h(void);
 void menu___3da48h(void);
-__BYTE__ ___148cch_cdecl(__DWORD__, __DWORD__, __DWORD__, __BOOL__ *);
+int ___148cch_cdecl(__DWORD__, __DWORD__, __DWORD__, __BOOL__ *);
 
 void dRChatbox_clear(void);
 void dRChatbox_push(const char *, int);

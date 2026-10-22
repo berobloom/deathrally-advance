@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_structs_free.h"
+#include "drally_ipx.h"
 
 //#if !defined(_WIN32)
 //#pragma GCC optimize ("O0")
@@ -399,8 +400,8 @@ __BYTE__ ___243e74h[0x8de0];
 __DWORD__ ___24cc54h_sfx_volume;
 __DWORD__ ___24cc58h_msx_volume;
 __BYTE__ ___24cc64h[0x9c];
-__POINTER__ ___24cd00h[0x10];
-__POINTER__ ___24cd60h[0x10];
+IPX_Header * ___24cd00h[0x10];
+IPX_EventControlBlock * ___24cd60h[0x10];
 __POINTER__ ___24cdc0h[0x10];
 __POINTER__ ___24cee0h[4];
 __BYTE__ ___24cef0h[0x28];

@@ -17,7 +17,7 @@ extern __BYTE__ ___1a1ef8h[];
 extern __BYTE__ ___1866b8h[];
 extern __DWORD__ ___19bd60h;
 extern __DWORD__ CONNECTION_TYPE;
-void ___23488h_cdecl(char *, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___61278h(void);
 void ___623d4h(void);
 #endif // DR_MULTIPLAYER

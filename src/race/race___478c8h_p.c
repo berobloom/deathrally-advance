@@ -46,7 +46,7 @@ void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWOR
 void ___58c60h(void);
 void __VGA13_PRESENTSCREEN__(void);
 __DWORD__ ___47d8ch(__DWORD__);
-void ___47e90h(__DWORD__);
+void ___47e90h(__BYTE__);
 void ___4495ch(void);
 
 static int r204(unsigned int val){

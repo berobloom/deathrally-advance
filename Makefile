@@ -25,10 +25,15 @@ $(BUILD)/%.o: src/%.c Makefile
 
 -include $(DEPS)
 
-.PHONY: all clean run dRally.exe
+.PHONY: all clean run check dRally.exe
 
 run: $(TARGET)
 	./scripts/drun
+
+# LTO build: fails when files declare a function or global with different types
+check:
+	@$(MAKE) --no-print-directory BUILD=$(BUILD)/check TARGET=$(BUILD)/check/drally_lto \
+		FLAGS="-O1 -flto=auto -Werror -Wno-unused-result"
 
 dRally.exe:
 	@$(MSBUILD)

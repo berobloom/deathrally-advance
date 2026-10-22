@@ -16,6 +16,7 @@ On Debian/Ubuntu: `sudo apt install build-essential libsdl2-dev libsdl2-net-dev`
 ```sh
 make -j$(nproc)
 FLAGS="YOUR CFLAGS" make   # custom flags, default is -O3
+make check                 # LTO build, fails on mismatched declarations across files
 ```
 
 #### Installation - needs original game assets

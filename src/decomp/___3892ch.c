@@ -75,7 +75,7 @@ static __BYTE__ helper_color(__DWORD__ eax, __DWORD__ edx){
 	return eax&0xff;
 }
 
-void ___3892ch_cdecl(__DWORD__ A1, __DWORD__ A2){
+void ___3892ch_cdecl(__DWORD__ A1){
 
 	__DWORD__	eax, ebx, ecx, edx, edi, esi, ebp, rr, gg, bb, nn, p5, p6, p7;
 	__BYTE__ 	esp[0x70];
@@ -87,7 +87,6 @@ void ___3892ch_cdecl(__DWORD__ A1, __DWORD__ A2){
 
 	s_6c = (racer_t *)___1a01e0h;
 	eax = A1;
-	edx = A2;
 	D(esp+0x64) = eax;
 	ebx = D(esp+0x64);
 	edx ^= edx;

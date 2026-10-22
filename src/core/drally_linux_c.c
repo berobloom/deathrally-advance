@@ -41,7 +41,7 @@ static struct GX {
 } GX = {0};
 
 
-extern __DWORD__ ___60441h;
+extern __BYTE__ ___60441h;
 extern __DWORD__ ___6045ch;
 extern __BYTE__ ___60446h;
 extern void (*___6044ch)(void);

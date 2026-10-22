@@ -21,7 +21,7 @@
     extern __POINTER__ ___24cdc0h[16];
 
 void ipx_disconnect(void);
-__DWORD__ swap16(__DWORD__);
+__WORD__ swap16(__WORD__);
 
 void ___623d4h(void){
 

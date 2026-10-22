@@ -22,7 +22,7 @@ void ___233c0h(void);
 void ___1e4f8h(void);
 void ___1e62ch_cdecl(__DWORD__);
 int ___23594h_cdecl(__POINTER__, int);
-void ___23488h_cdecl(__POINTER__, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 #endif // DR_MULTIPLAYER
 void ___2aa08h(void);
 

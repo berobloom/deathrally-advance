@@ -1,6 +1,6 @@
 #include "drally.h"
 
-void ___1d4e8h(__DWORD__ A1){
+void ___1d4e8h(void){
 
 	printf("TODO ___1d4e8h\n");
 	exit(1);

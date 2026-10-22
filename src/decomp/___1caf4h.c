@@ -30,7 +30,7 @@ void ___12d6ch__VESA101_PRESENTBOTTOMSCREEN(void);
 int ___23594h_cdecl(__POINTER__, int);
 void ___58c60h(void);
 void ___6168ch(void);
-void ___23488h_cdecl(__POINTER__, __DWORD__, __DWORD__);
+void ___23488h_cdecl(__POINTER__, __BYTE__, __BYTE__);
 void ___23230h(void);
 void ___135fch(__DWORD__, __DWORD__, __DWORD__, __DWORD__);
 

@@ -37,7 +37,7 @@ typedef struct rgbf_s {
 	extern __BYTE__ ___243330h[];
 	extern __BYTE__ * VGA13_ACTIVESCREEN;
 
-void __DISPLAY_SET_PALETTE_COLOR(__BYTE__ b, __BYTE__ g, __BYTE__ r, int n);
+void __DISPLAY_SET_PALETTE_COLOR(int b, int g, int r, int n);
 void dRally_Sound_setMasterVolume(__DWORD__ vol);
 void __VGA13_PRESENTSCREEN__(void);
 void race___46738h__VGA13_PRESENTCLEARSCREEN(void);
