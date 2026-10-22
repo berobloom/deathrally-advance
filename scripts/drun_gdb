@@ -1,0 +1,8 @@
+#!/bin/sh
+# Same as drun, but under gdb.
+cd "$(dirname "$0")/.." || exit 1
+
+cp drally_linux ./game/dRally
+
+cd game
+gdb dRally --eval-command=run

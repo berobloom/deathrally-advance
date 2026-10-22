@@ -1,0 +1,8 @@
+#!/bin/sh
+# Copy the built binary next to the game data and run it from there.
+cd "$(dirname "$0")/.." || exit 1
+
+cp drally_linux ./game/dRally
+
+cd game
+./dRally
