@@ -16,9 +16,25 @@
 
 int rand_watcom106(void);
 
-// a float's fraction is exact in float, and where it is 0.5 or more
-// (int)(1.0+dval) is (int)dval+1: the same as in double
-static int helper00(float fval){ return ((fval-(float)(int)fval) < 0.5f)?(int)fval:(int)fval+1; }
+// rounds as ((d-(int)d) < 0.5) ? (int)d : (int)(1.0+d) in double did:
+// halves up when positive, towards 0 when negative. From the float's bits,
+// which soft-float would take ten times as long for; checked against the
+// original for every 97th float below 2^31 in magnitude
+static int helper00(float fval){
+
+	union { float f; unsigned int u; } b;
+	int 	e, m, r;
+
+	b.f = fval;
+	e = (int)((b.u >> 23)&0xff)-127;
+	if(e < 0) return ((int)b.u >= 0)&&(e == -1);
+
+	m = (b.u&0x7fffff)|0x800000;
+	r = (e < 23) ? (m >> (23-e)) : (m << (e-23));
+	if((int)b.u < 0) return -r;
+
+	return (e < 23) ? r+((m >> (22-e))&1) : r;
+}
 
 static void helper11(float fval1, float fval2, __BYTE__ * bp){
 
@@ -36,6 +52,16 @@ static void helper11(float fval1, float fval2, __BYTE__ * bp){
 		dest[0] = bp[dest[0]];
 		dest[1] = bp[dest[1]];
 	}
+}
+
+// a mark of len points from (x, y) in steps of (dx, dy). The marks of a
+// car's wheels darken the track through the same table, so drawing them
+// one after the other gives what drawing them point by point together did
+DR_HOT static void helper55(float x, float y, float dx, float dy, int len, __BYTE__ * bp){
+
+	int 	k;
+
+	for(k = 0; k < len; k++) helper11(x+(float)k*dx, y+(float)k*dy, bp);
 }
 
 static float helper22(float fval){ return (0.0 <= (double)fval)?fval:(float)(-1.0*(double)fval); }
@@ -145,18 +171,14 @@ void race___54668h(void){
 					// the same for the whole mark
 					br0 = !helper33(n, 0.85);
 
-					k = -1;
-					while(++k < (int)s_35e[n].__b0){
+					k = (int)s_35e[n].__b0;
+					if(br0){
 
-						if(br0){
-
-							helper11(s_35e[n].X1__116+(float)k*x1f, s_35e[n].Y1__11a+(float)k*y1f, TRX_SKI_TAB);
-							helper11(s_35e[n].X2__126+(float)k*x2f, s_35e[n].Y2__12a+(float)k*y2f, TRX_SKI_TAB);
-						}
-
-						helper11(s_35e[n].X3__136+(float)k*x3f, s_35e[n].Y3__13a+(float)k*y3f, TRX_SKI_TAB);
-						helper11(s_35e[n].X4__146+(float)k*x4f, s_35e[n].Y4__14a+(float)k*y4f, TRX_SKI_TAB);
+						helper55(s_35e[n].X1__116, s_35e[n].Y1__11a, x1f, y1f, k, TRX_SKI_TAB);
+						helper55(s_35e[n].X2__126, s_35e[n].Y2__12a, x2f, y2f, k, TRX_SKI_TAB);
 					}
+					helper55(s_35e[n].X3__136, s_35e[n].Y3__13a, x3f, y3f, k, TRX_SKI_TAB);
+					helper55(s_35e[n].X4__146, s_35e[n].Y4__14a, x4f, y4f, k, TRX_SKI_TAB);
 				}
 			}
 		}
@@ -173,14 +195,11 @@ void race___54668h(void){
 			x4f = (s_35e[n].X4__13e-s_35e[n].X4__146)/(float)(int)s_35e[n].__b0;
 			y4f = (s_35e[n].Y4__142-s_35e[n].Y4__14a)/(float)(int)s_35e[n].__b0;
 
-			k = -1;
-			while(++k < (int)s_35e[n].__b0){
-
-				helper11(s_35e[n].X1__116+(float)k*x1f, s_35e[n].Y1__11a+(float)k*y1f, TRX_BLO_TAB);
-				helper11(s_35e[n].X2__126+(float)k*x2f, s_35e[n].Y2__12a+(float)k*y2f, TRX_BLO_TAB);
-				helper11(s_35e[n].X3__136+(float)k*x3f, s_35e[n].Y3__13a+(float)k*y3f, TRX_BLO_TAB);
-				helper11(s_35e[n].X4__146+(float)k*x4f, s_35e[n].Y4__14a+(float)k*y4f, TRX_BLO_TAB);
-			}
+			k = (int)s_35e[n].__b0;
+			helper55(s_35e[n].X1__116, s_35e[n].Y1__11a, x1f, y1f, k, TRX_BLO_TAB);
+			helper55(s_35e[n].X2__126, s_35e[n].Y2__12a, x2f, y2f, k, TRX_BLO_TAB);
+			helper55(s_35e[n].X3__136, s_35e[n].Y3__13a, x3f, y3f, k, TRX_BLO_TAB);
+			helper55(s_35e[n].X4__146, s_35e[n].Y4__14a, x4f, y4f, k, TRX_BLO_TAB);
 		}
 
 		s_35e[n].X1__116 = s_35e[n].X1__10e;

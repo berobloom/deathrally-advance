@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
+#include "drally_race.h"
 
 	extern __BYTE__ NUM_OF_CARS[];
 	extern __BYTE__ ___1e6ed0h[];
@@ -33,17 +34,14 @@ static double helper01(__DWORD__ val){
 	return (double)F32(esp);
 }
 
-// the last of the w x h pixels, rows from 1 and columns from 0, solid in
-// both cars' images: its row, and its column in *col, or 0
-DR_HOT static int helper02(__BYTE__ * pn, __BYTE__ * pk, int w, int h, int * col){
+// the last of the pixels in rows j0 to j1 and columns i0 to i1 that is
+// solid in both cars' images: its row, and its column in *col, or 0
+DR_HOT static int helper02(__BYTE__ * pn, __BYTE__ * pk, int j0, int j1, int i0, int i1, int * col){
 
 	int 	i, j;
 
-	j = h;
-	while(--j > 0){
-
-		i = w;
-		while(--i >= 0){
+	for(j = j1; j >= j0; j--){
+		for(i = i1; i >= i0; i--){
 
 			if((pn[0x28*j+i] > 3)&&(pk[0x28*j+i] > 3)){
 
@@ -56,6 +54,9 @@ DR_HOT static int helper02(__BYTE__ * pn, __BYTE__ * pk, int w, int h, int * col
 
 	return 0;
 }
+
+static int max3(int a, int b, int c){ return (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c); }
+static int min3(int a, int b, int c){ return (a < b) ? ((a < c) ? a : c) : ((b < c) ? b : c); }
 
 // RACE COLLISIONS
 void race___4dcach(void){
@@ -99,7 +100,15 @@ void race___4dcach(void){
 					__BYTE__ * 	pn = ___243d74h+s_35e[n].ImgOffset+0x28*dRMath_abspos_i(dy)+dRMath_abspos_i(dx);
 					__BYTE__ * 	pk = ___243d74h+s_35e[k].ImgOffset+0x28*dRMath_absneg_i(dy)+dRMath_absneg_i(dx);
 
-					if((j = helper02(pn, pk, w, h, &i)) > 0){
+					// rows from 1 and columns from 0 of the overlap, inside
+					// both images' boxes of solid pixels
+					const __BYTE__ * 	bn = race_car_box(s_35e[n].ImgOffset);
+					const __BYTE__ * 	bk = race_car_box(s_35e[k].ImgOffset);
+					int 	pdx = dRMath_abspos_i(dx), pdy = dRMath_abspos_i(dy), ndx = dRMath_absneg_i(dx), ndy = dRMath_absneg_i(dy);
+					int 	j0 = max3(1, bn[2]-pdy, bk[2]-ndy), j1 = min3(h-1, bn[3]-pdy, bk[3]-ndy);
+					int 	i0 = max3(0, bn[0]-pdx, bk[0]-ndx), i1 = min3(w-1, bn[1]-pdx, bk[1]-ndx);
+
+					if((j = helper02(pn, pk, j0, j1, i0, i1, &i)) > 0){
 
 						D(esp+0x94) = 1;
 						s_35e[n].__172 = i+dRMath_abspos_i(dx)-0x14;
