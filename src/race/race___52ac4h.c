@@ -28,16 +28,21 @@ void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWOR
 void race___52ac4h(void){
 
 	__DWORD__ 		n, a, b, c, d;
+	int 			x, y;
 	struct_35e_t *	s_35e;
 
 	s_35e = (struct_35e_t *)___1e6ed0h;
+	// the car's position as integers, which only changes when it hits one
+	x = (int)s_35e[D(___243c60h)].XLocation;
+	y = (int)s_35e[D(___243c60h)].YLocation;
+
 	n = -1;
 	while(++n < 0x14){
 
 		if(SPECTATORS[n].dead == 0){
 
-			c = (int)s_35e[D(___243c60h)].XLocation-(SPECTATORS[n].x+8);
-			d = (int)s_35e[D(___243c60h)].YLocation-(SPECTATORS[n].y+8);
+			c = x-(SPECTATORS[n].x+8);
+			d = y-(SPECTATORS[n].y+8);
 
 			if((abs(c) < 0x14)&&(abs(d) < 0x14)&&(B(c+0x14+0x28*(d+0x14)+___243d74h+s_35e[D(___243c60h)].ImgOffset) > 3)){
 
@@ -56,6 +61,8 @@ void race___52ac4h(void){
 				s_35e[D(___243c60h)].__b0 *= -0.1f;
 				s_35e[D(___243c60h)].__104 = (float)(rand_watcom106()%0xa-5);
 				s_35e[D(___243c60h)].__352 = 0x2d;
+				x = (int)s_35e[D(___243c60h)].XLocation;
+				y = (int)s_35e[D(___243c60h)].YLocation;
 
 				if(D(___243c60h) != D(MY_CAR_IDX)){
 

@@ -31,11 +31,15 @@ void race___526ach(void){
 	s_35e = (struct_35e_t *)___1e6ed0h;
 	s_54 = (struct_54_t *)___1de7d0h;
 
+	// the car's position as integers, which this doesn't change
+	rat_a = (int)s_35e[D(___243c60h)].XLocation;
+	rat_b = (int)s_35e[D(___243c60h)].YLocation;
+
 	n = -1;
 	while(++n < 0x10){
 
-		edx = (int)(double)s_35e[D(___243c60h)].XLocation-(int)D(___1f2488h+0x120*n);
-		eax = (int)(double)s_35e[D(___243c60h)].YLocation-(int)D(___1f2488h+0x120*n+4);
+		edx = rat_a-(int)D(___1f2488h+0x120*n);
+		eax = rat_b-(int)D(___1f2488h+0x120*n+4);
 
 		if((dRMath_abs_i(edx) < 0x11)&&(dRMath_abs_i(eax) < 0x11)){
 					
@@ -47,9 +51,7 @@ void race___526ach(void){
 						
 					if(D(___243c60h) != D(MY_CAR_IDX)){
 
-						rat_a = (int)((double)s_35e[D(___243c60h)].XLocation-(double)s_35e[D(MY_CAR_IDX)].XLocation);
-						rat_b = (int)((double)s_35e[D(___243c60h)].YLocation-(double)s_35e[D(MY_CAR_IDX)].YLocation);
-						eax = 0x9000-0x4b*dRMath_magnitude2_i(rat_a, rat_b);
+						eax = 0x9000-0x4b*dRMath_magnitude2_i((int)((double)s_35e[D(___243c60h)].XLocation-(double)s_35e[D(MY_CAR_IDX)].XLocation), (int)((double)s_35e[D(___243c60h)].YLocation-(double)s_35e[D(MY_CAR_IDX)].YLocation));
 
 						if((int)eax > 0x1000) dRally_Sound_pushEffect(0xa, SFX_MINE, 0, eax, 0x21000, 0x8000);
 					}
