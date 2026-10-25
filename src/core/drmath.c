@@ -1,9 +1,39 @@
 #include "drally.h"
 #include "drmath.h"
 
+#include "drmath_sin.h"
+
+// sin() and cos() from a table, which the GBA can afford 170 times a race
+// tick where libm's took half the time, and which gives the same results
+// on every CPU, so that the GBA's races stay the desktop's. They are off by
+// at most 7e-7.
+//
+// Angles are in 1/2^24 turns; the table's 4096 steps are interpolated with
+// the lower 12 bits.
+int dRMath_sin_i(int a){
+
+	int 	i = (a >> 12)&0xfff, f = a&0xfff;
+
+	return dRMath_sin_tab[i]+(((dRMath_sin_tab[i+1]-dRMath_sin_tab[i])*f) >> 12);
+}
+
+int dRMath_cos_i(int a){
+
+	return dRMath_sin_i(a+(1 << 22));
+}
+
+// radians to 1/2^24 turns. fmod() is exact, so far-off angles still agree everywhere
+static int turns(double dval){
+
+	if((dval > 512.0)||(dval < -512.0)) dval = fmod(dval, 6.283185307179586);
+
+	return (int)(dval*2670176.857720436);
+}
+
+double dRMath_sin(double dval){ return dRMath_sin_i(turns(dval))*(1.0/268435456.0); }
+double dRMath_cos(double dval){ return dRMath_cos_i(turns(dval))*(1.0/268435456.0); }
+
 #if !defined(DR_INLINE_MATH)
-double dRMath_sin(double dval){ return sin(dval); }
-double dRMath_cos(double dval){ return cos(dval); }
 double dRMath_sqrt(double dval){ return sqrt(dval); }
 double dRMath_ceil(double dval){ return ceil(dval); }
 double dRMath_floor(double dval){ return floor(dval); }

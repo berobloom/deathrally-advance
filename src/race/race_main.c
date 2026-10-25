@@ -266,6 +266,7 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 	race___405bch();
 	race___49a34h();
 	dRally_Sound_pushEffect(1, (s_94[MY_CAR_IDX].__0&0xff)+25, 0, 0x10000, 0x28000, 0x8000);
+	race_walls_build();
 	resetCounter(1);
 	D(___243ca0h) = 0;
 	D(___243cdch) = 0;

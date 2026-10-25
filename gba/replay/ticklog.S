@@ -1,8 +1,8 @@
 @ The race recorded by the desktop game's make ticklog, see race_replay.h.
-@ The Makefile puts its directory on the include path.
+@ The Makefile gives its path as TICKLOG_PATH.
 
 	.section .rodata
 	.align	4
 	.global	ticklog
 ticklog:
-	.incbin	"TICKLOG.BIN"
+	.incbin	TICKLOG_PATH

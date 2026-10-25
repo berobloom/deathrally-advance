@@ -27,7 +27,7 @@ GAME_LIB := $(BUILD)/libgame.a
 
 ARCH := -mthumb -mthumb-interwork -mcpu=arm7tdmi -mtune=arm7tdmi
 CFLAGS := $(ARCH) -O2 -ffunction-sections -fdata-sections -Wno-unused-result \
-	-DDR_REPLAY -I../include -I../../include -I../../src/race -I$(DEVKITPRO)/libgba/include
+	-DDR_REPLAY -I../../include/nosdl -I../../include -I../../src/race -I$(DEVKITPRO)/libgba/include
 LDFLAGS := -specs=gba.specs $(ARCH) -Wl,--gc-sections -L$(DEVKITPRO)/libgba/lib
 
 ifneq ($(FRAMES),)
@@ -43,6 +43,14 @@ LDFLAGS += $(foreach f,race___4b62ch race___4c434h race___4dcach race___514d8h r
 	dcmplt dcmpgt dcmpeq fcmpgt fcmpge fcmple fcmplt,-Wl,--wrap=__aeabi_$(f))
 endif
 
+# libgcc's soft-float and division routines are ARM code; read from ROM
+# over its 16-bit bus they take several times as long as from IWRAM
+LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
+LIBGCC_IWRAM := _arm_addsubdf3 _arm_muldivdf3 _arm_cmpdf2 _arm_unorddf2 _arm_fixdfsi _arm_fixunsdfsi \
+	_arm_truncdfsf2 _arm_addsubsf3 _arm_muldivsf3 _arm_cmpsf2 _arm_unordsf2 _arm_fixsfsi \
+	_udivsi3 _divsi3 _dvmd_tls
+LIBGCC_OBJS := $(LIBGCC_IWRAM:%=$(BUILD)/libgcc/%.o)
+
 ROM := drreplay.gba
 ELF := $(BUILD)/drreplay.elf
 
@@ -52,8 +60,13 @@ $(ROM): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 	$(GBAFIX) $@ -tDRREPLAY -cDRRP -m01
 
-$(ELF): $(BUILD)/main.o $(BUILD)/ticklog.o $(GAME_LIB)
+$(ELF): $(BUILD)/main.o $(BUILD)/ticklog.o $(LIBGCC_OBJS) $(GAME_LIB)
 	$(CC) $(LDFLAGS) -Wl,-Map,$(BUILD)/drreplay.map -o $@ $^ -lgba -lm
+
+$(BUILD)/libgcc/%.o: $(LIBGCC)
+	@mkdir -p $(@D)
+	@cd $(@D) && $(AR) x $(LIBGCC) $*.o
+	@$(OBJCOPY) --rename-section .text=.iwram $@
 
 $(GAME_LIB): $(GAME_OBJS)
 	@rm -f $@
@@ -69,7 +82,7 @@ $(BUILD)/game/%.o: ../../src/%.c
 
 $(BUILD)/ticklog.o: ticklog.S $(TICKLOG)
 	@mkdir -p $(@D)
-	$(CC) $(ARCH) -Wa,-I$(dir $(TICKLOG)) -c -o $@ $<
+	$(CC) $(ARCH) -DTICKLOG_PATH=\"$(abspath $(TICKLOG))\" -c -o $@ $<
 
 # main.o follows FRAMES and PROFILE, so it's always rebuilt
 FORCE:

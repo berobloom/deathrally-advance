@@ -3,10 +3,15 @@
 
 #include <math.h>
 
+// from a table, the same on every CPU; the _i versions take 1/2^24 turns
+// and return 4.28 fixed point
+double dRMath_sin(double dval);
+double dRMath_cos(double dval);
+int dRMath_sin_i(int a);
+int dRMath_cos_i(int a);
+
 #if defined(DR_INLINE_MATH)
 static inline double dRMath_abs(double dval){ return (dval < 0.0)?(-1.0*dval):dval; }
-static inline double dRMath_sin(double dval){ return sin(dval); }
-static inline double dRMath_cos(double dval){ return cos(dval); }
 static inline double dRMath_sqrt(double dval){ return sqrt(dval); }
 static inline double dRMath_ceil(double dval){ return ceil(dval); }
 static inline double dRMath_floor(double dval){ return floor(dval); }
@@ -26,8 +31,6 @@ static inline double dRMath_magnitude2(double a, double b){ return dRMath_sqrt(d
 static inline double dRMath_magnitude3(double a, double b, double c){ return dRMath_sqrt(dRMath_sum3squares(a, b, c)); }
 #else // DR_INLINE_MATH
 double dRMath_abs(double dval);
-double dRMath_sin(double dval);
-double dRMath_cos(double dval);
 double dRMath_sqrt(double dval);
 double dRMath_ceil(double dval);
 double dRMath_floor(double dval);

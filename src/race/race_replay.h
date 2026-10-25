@@ -32,6 +32,10 @@ __DWORD__ race_replay_hash(const __BYTE__ * flat);
 __POINTER__ * race_replay_buf(unsigned i);
 unsigned race_replay_buf_size(unsigned i);
 
+const char * race_replay_start(__DWORD__ * log, __BYTE__ * flat);
+int race_replay_next(void);
+__DWORD__ * race_replay_done(void);
+
 void race_ticklog_before(void);
 void race_ticklog_after(void);
 void race_ticklog_end(void);

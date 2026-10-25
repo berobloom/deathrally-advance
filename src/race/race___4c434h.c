@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
+#include "drally_race.h"
 
 	extern __BYTE__ ___243c60h[];
 	extern __BYTE__ ___1e6ed0h[];
@@ -269,7 +270,8 @@ void race___4c434h(void){
 	edip = TRX_MAS+(int)(double)s_35e[D(___243c60h)].XLocation-0x14+TRX_WIDTH*(int)ecx+(int)(double)s_35e[D(___243c60h)].__15a;
 	esi = 0xf;
 
-	j = -1;
+	// the car's pixels against walls under them, unless there are none
+	j = race_walls_near((int)s_35e[D(___243c60h)].XLocation-0x14+(int)s_35e[D(___243c60h)].__15a, ecx, 0x28, 0x28) ? -1 : 0x28;
 	while(++j < 0x28){
 
 		breaker = 0;
@@ -354,7 +356,7 @@ void race___4c434h(void){
 				eax = 0;
 
 				ecx = 0;
-				while(1){
+				if(race_walls_near((int)s_35e[D(___243c60h)].XLocation-0x14+(int)s_35e[D(___243c60h)].__15a, D(esp+0x5c), 0x28, 0x28)) while(1){
 
 					if((signed char)B(ebxp) <= 3){
 

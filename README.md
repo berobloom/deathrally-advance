@@ -174,7 +174,7 @@ Multiplayer is not available yet.
     tools/gbabake     turns game data into GBA layouts
     gba/proto         Game Boy Advance rendering prototype
     gba/replay        runs recorded races through the race logic on the GBA
-    gba/include       SDL stand-in for building the game's code for the GBA
+    include/nosdl     SDL stand-in for building the game's code without SDL
     scripts           run helpers, discmp.sh to compare generated code
 
 Function files are named after their address in the original executable (e.g. `___3e720h.c`). Keep that name when moving them between modules.

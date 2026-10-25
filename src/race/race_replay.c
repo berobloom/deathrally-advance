@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "race_replay.h"
+#include "drally_race.h"
 
 // only in builds that record (DR_TICKLOG) or replay (DR_REPLAY) races: the
 // externs below give globals other types than their definitions
@@ -124,6 +125,85 @@ unsigned race_replay_buf_size(unsigned i){
 	default: return 0;
 	}
 }
+
+#if defined(DR_REPLAY)
+
+static __DWORD__ * 	play_p;
+static __BYTE__ * 	play_flat;
+
+// checks a recording and points the buffers into it. The caller gives
+// TRX_IMA and the obstacles (buffers 3 and 5) writable memory if the
+// recording isn't. Returns 0, or what is wrong.
+const char * race_replay_start(__DWORD__ * log, __BYTE__ * flat){
+
+	static char 	err[80];
+	unsigned 	i, n;
+
+	if((log[0] != RACE_REPLAY_MAGIC)||(log[1] != RACE_REPLAY_VERSION)) return "not a recording of this version";
+
+	n = log[2];
+	if((n != race_replay_size())||(log[3] != race_replay_count())){
+
+		snprintf(err, sizeof(err), "%u bytes in %u globals, this build has %u in %u", n, log[3], race_replay_size(), race_replay_count());
+		return err;
+	}
+	for(i = 0; i < log[3]; i++){
+
+		if(log[4+i] != race_replay_var_size(i)){
+
+			snprintf(err, sizeof(err), "global %u has %u bytes, %u in this build", i, log[4+i], race_replay_var_size(i));
+			return err;
+		}
+	}
+	log += 4+log[3];
+
+	for(i = 0; i < RACE_REPLAY_NBUFS; i++){
+
+		__DWORD__ 	size = *log++;
+
+		*race_replay_buf(i) = (__POINTER__)log;
+		log += (size+3)/4;
+	}
+
+	memcpy(flat, log, n);
+	race_replay_scatter(flat);	// so that race_replay_buf_size() works
+	race_walls_build();
+	play_p = log+(n+3)/4;
+	play_flat = flat;
+
+	return 0;
+}
+
+// applies what changed before the next frame's logic; 0 at the end
+int race_replay_next(void){
+
+	unsigned 	k, nruns;
+
+	if((nruns = *play_p) == RACE_REPLAY_END) return 0;
+
+	play_p++;
+	for(k = 0; k < nruns; k++){
+
+		__DWORD__ 	off = *play_p++, len = *play_p++;
+
+		memcpy(play_flat+off, play_p, len);
+		play_p += (len+3)/4;
+	}
+	race_replay_scatter(play_flat);
+
+	return 1;
+}
+
+// after race_logic(): gathers the globals and returns the recorded hash's
+// word, to compare with race_replay_hash(flat) (or to replace it)
+__DWORD__ * race_replay_done(void){
+
+	race_replay_gather(play_flat);
+
+	return play_p++;
+}
+
+#endif // DR_REPLAY
 
 #if defined(DR_TICKLOG)
 

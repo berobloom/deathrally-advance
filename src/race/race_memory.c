@@ -73,6 +73,7 @@ void race_alloc(void){
 
 void race_free(void){
 
+	race_walls_free();
 	dRMemory_free(TRX_IMA);
 	dRMemory_free(TRX_MAS);
 	dRMemory_free(TRX_VAI);

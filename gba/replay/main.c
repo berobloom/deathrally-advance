@@ -160,8 +160,9 @@ static u32 cycles(void){
 
 int main(void){
 
-	const __DWORD__ * 	p = ticklog;
-	unsigned 		i, n, nruns, frames, mismatches, first_bad;
+	const char * 		err;
+	const __DWORD__ * 	expected;
+	unsigned 		i, n, frames, mismatches, first_bad;
 	u32 			t, tmax[MAX_TICKS+1], fcount[MAX_TICKS+1], ticks, worst;
 	unsigned long long 	tsum[MAX_TICKS+1], total;
 
@@ -171,33 +172,14 @@ int main(void){
 	REG_DEBUG_ENABLE = 0xc0de;
 	consoleDemoInit();
 
-	if((p[0] != RACE_REPLAY_MAGIC)||(p[1] != RACE_REPLAY_VERSION)){ say("no TICKLOG.BIN in this ROM"); while(1) VBlankIntrWait(); }
+	n = race_replay_size();
+	if(n > sizeof(flat)) err = "flat[] too small";
+	else err = race_replay_start((__DWORD__ *)ticklog, flat);
+	if(err){ say("TICKLOG.BIN: %s", err); while(1) VBlankIntrWait(); }
 
-	n = p[2];
-	if((n != race_replay_size())||(p[3] != race_replay_count())||(n > sizeof(flat))){
-
-		say("log has %u bytes in %u globals, this build %u in %u", n, p[3], race_replay_size(), race_replay_count());
-		while(1) VBlankIntrWait();
-	}
-	for(i = 0; i < p[3]; i++){
-
-		if(p[4+i] != race_replay_var_size(i)){ say("global %u: %u bytes in the log, %u here", i, p[4+i], race_replay_var_size(i)); while(1) VBlankIntrWait(); }
-	}
-	p += 4+p[3];
-
-	for(i = 0; i < RACE_REPLAY_NBUFS; i++){
-
-		__DWORD__ 	size = *p++;
-
-		*race_replay_buf(i) = (__POINTER__)p;
-		p += (size+3)/4;
-	}
 	*race_replay_buf(3) = NOWHERE;
 	memcpy(obstacles, *race_replay_buf(5), sizeof(obstacles));
 	*race_replay_buf(5) = obstacles;
-
-	memcpy(flat, p, n);
-	p += (n+3)/4;
 
 	memset(tsum, 0, sizeof(tsum)); memset(tmax, 0, sizeof(tmax)); memset(fcount, 0, sizeof(fcount));
 	frames = mismatches = 0; first_bad = ~0u; total = ticks = worst = 0;
@@ -209,18 +191,9 @@ int main(void){
 
 	say("replaying %u bytes of race state", n);
 
-	while(((nruns = *p++) != RACE_REPLAY_END)&&(frames < REPLAY_FRAMES)){
+	while((frames < REPLAY_FRAMES)&&race_replay_next()){
 
 		unsigned 	k;
-
-		for(k = 0; k < nruns; k++){
-
-			__DWORD__ 	off = *p++, len = *p++;
-
-			memcpy(flat+off, p, len);
-			p += (len+3)/4;
-		}
-		race_replay_scatter(flat);
 
 		k = getCounter(2);	// the timer ticks this frame's logic will run
 		if(k > MAX_TICKS) k = MAX_TICKS;
@@ -229,8 +202,8 @@ int main(void){
 		race_logic();
 		t = cycles()-t;
 
-		race_replay_gather(flat);
-		if(race_replay_hash(flat) != *p++){
+		expected = race_replay_done();
+		if(race_replay_hash(flat) != *expected){
 
 			if(first_bad == ~0u){
 
