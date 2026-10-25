@@ -16,11 +16,25 @@ typedef void (*void_cb)(void);
 
 #define S(s, type, offset)     (*(type *)((__POINTER__)(s)+(offset)))
 
+// Q/D/W/P read and write at any byte address, as the original x86 code
+// did. Through a packed, may_alias struct they stay lvalues, and CPUs that
+// can't load unaligned words (the GBA's ARM7) get byte loads instead.
+#if defined(__GNUC__)
+typedef struct { __QWORD__ v; } __attribute__((packed, may_alias)) __uqword__;
+typedef struct { __DWORD__ v; } __attribute__((packed, may_alias)) __udword__;
+typedef struct { __WORD__ v; } __attribute__((packed, may_alias)) __uword__;
+typedef struct { __POINTER__ v; } __attribute__((packed, may_alias)) __upointer__;
+#define Q(q)    (((__uqword__ *)(q))->v)
+#define D(d)	(((__udword__ *)(d))->v)
+#define W(w)	(((__uword__ *)(w))->v)
+#define P(p)    (((__upointer__ *)(p))->v)
+#else
 #define Q(q)    (*(__QWORD__ *)(q))
 #define D(d)	(*(__DWORD__ *)(d))
 #define W(w)	(*(__WORD__ *)(w))
-#define B(b)	(*(__BYTE__ *)(b))
 #define P(p)    (*(__POINTER__ *)(p))
+#endif
+#define B(b)	(*(__BYTE__ *)(b))
 
 #if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
 #define X(r)	((__WORD__ *)&r)[1]
