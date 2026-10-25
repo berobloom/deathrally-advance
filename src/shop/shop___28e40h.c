@@ -4,6 +4,7 @@
 #include "drally_structs_fixed.h"
 #include "drally_structs_free.h"
 #include "sfx.h"
+#include "drally_display.h"
 
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
@@ -24,7 +25,6 @@
 #endif // DR_MULTIPLAYER
 	extern __POINTER__ ___1a1e88h;
 	extern __BYTE__ ___196a84h[];
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a1eb4h;
 	extern __BYTE__ ___185a38h_delay[];
 	extern __BYTE__ ___1a1028h[];

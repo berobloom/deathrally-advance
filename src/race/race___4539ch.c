@@ -1,8 +1,7 @@
 #include "drally.h"
 #include "drmath.h"
+#include "drally_race.h"
 
-	extern int * ___243310h;
-	extern int * ___243314h;
 
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__);
 

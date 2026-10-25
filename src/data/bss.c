@@ -2,6 +2,7 @@
 #include "drally_structs_free.h"
 #include "drally_net.h"
 #include "drally_net.h"
+#include "drally_race.h"
 
 //#if !defined(_WIN32)
 //#pragma GCC optimize ("O0")
@@ -288,8 +289,8 @@ __BYTE__ ___2432fch[4];
 //__BYTE__ ___243300h[4];
 __BYTE__ ___243304h[4];
 __BYTE__ ___24330ch[4];
-__POINTER__ ___243310h;
-__POINTER__ ___243314h;
+int * ___243310h;
+int * ___243314h;
 __BYTE__ ___243318h[4];
 __BYTE__ ___24331ch[4];
 __BYTE__ ___243320h[4];

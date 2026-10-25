@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drmemory.h"
 #include "drally_structs_free.h"
+#include "drally_race.h"
 
 	extern int TRX_WIDTH;
 	extern int TRX_HEIGHT;
@@ -31,8 +32,6 @@
 	extern __POINTER__ RACE_ROCKETX_BPK[2];
 	extern __POINTER__ RACE_BURN1A_BPK;
 	extern __POINTER__ RACE_SMOKE_BPK;
-	extern __POINTER__ ___243314h;
-	extern __POINTER__ ___243310h;
 
 __POINTER__ ___3f71ch__allocateMemory(__DWORD__);
 
@@ -106,6 +105,6 @@ void race_free(void){
 	dRMemory_free(RACE_ROCKETX_BPK[1]);
 	dRMemory_free(RACE_BURN1A_BPK);
 	dRMemory_free(RACE_SMOKE_BPK);
-	dRMemory_free(___243314h);
-	dRMemory_free(___243310h);
+	dRMemory_free((__POINTER__)___243314h);
+	dRMemory_free((__POINTER__)___243310h);
 }

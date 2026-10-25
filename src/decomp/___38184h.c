@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_display.h"
 
 	extern __BYTE__ ___1a01e0h[];
 	extern __BYTE__ ___185c7ah[];
@@ -12,7 +13,6 @@
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a0fe0h;
 	extern __BYTE__ ___196adch[];
 

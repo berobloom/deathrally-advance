@@ -1,7 +1,7 @@
 #include "drally.h"
+#include "drally_race.h"
 
 	extern __BYTE__ ___196e68h[];
-	extern int * ___243314h;	// [3601]
 	extern int CURRENT_VIEWPORT_X;
 	extern __POINTER__ BACKBUFFER;
 	extern __BYTE__ * VGA13_ACTIVESCREEN;

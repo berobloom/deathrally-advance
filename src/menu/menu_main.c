@@ -3,6 +3,7 @@
 #include "drally_structs_fixed.h"
 #include "watcom106.h"
 #include "drally_net.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct rgb24_s {
@@ -19,7 +20,6 @@ typedef struct rgb24_s {
 	extern __BYTE__ ___196ab8h[];
 	extern __DWORD__ ___196a90h_modem_dialing;
 	extern __BYTE__ ___1a1ef8h[];
-	extern rgb24_t * ___1a0fb8h;
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __BYTE__ ___1a01e0h[];
@@ -144,7 +144,7 @@ void menu_main(void){
 	___3d2bch();	// Fade Out
 	___12940h();	// Fill Palette
 
-	color = &___1a0fb8h[s_6c[D(___1a1ef8h)].color];
+	color = &((rgb24_t *)___1a0fb8h)[s_6c[D(___1a1ef8h)].color];
 	___11564h_cdecl(color->r, color->g, color->b);
 	memcpy(___1a112ch__VESA101_ACTIVESCREEN_PTR, ___1a1138h__VESA101_BACKGROUND, 0x4b000);
 	s_6c[D(___1a1ef8h)].face = 0;

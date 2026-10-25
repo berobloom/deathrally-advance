@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_structs_fixed.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct rgb24_s {
@@ -18,9 +19,7 @@ typedef struct x655_s {
 	extern x655_t ___19df50h[];
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
-	extern rgb24_t * ___1a0fb8h;
 	extern __DWORD__ ___196ad8h;
-	extern rgb24_t * ___1a10c8h;
 	extern __BYTE__ ___1a1edch[];
 
 void ___12940h(void);
@@ -39,15 +38,15 @@ void ___2b318h(void){
 	s_6c = (racer_t *)___1a01e0h;
 	___12940h();
 
-	if(!(p_pal = ___1a0fb8h)) p_pal = dummy_pal;
+	if(!(p_pal = (rgb24_t *)___1a0fb8h)) p_pal = dummy_pal;
 
 	___11564h_cdecl(p_pal[s_6c[D(___1a1ef8h)].color].r, p_pal[s_6c[D(___1a1ef8h)].color].g, p_pal[s_6c[D(___1a1ef8h)].color].b);
 
-	if(!(p_pal = ___1a0fb8h)) p_pal = dummy_pal;
+	if(!(p_pal = (rgb24_t *)___1a0fb8h)) p_pal = dummy_pal;
 
 	___24010h(p_pal[s_6c[D(___1a1ef8h)].color].r, p_pal[s_6c[D(___1a1ef8h)].color].g, p_pal[s_6c[D(___1a1ef8h)].color].b);
 	
-	if(!(p_pal = ___1a10c8h)) p_pal = dummy_pal;
+	if(!(p_pal = (rgb24_t *)___1a10c8h)) p_pal = dummy_pal;
 
 	n = -1;
 	while(++n < 0x20){

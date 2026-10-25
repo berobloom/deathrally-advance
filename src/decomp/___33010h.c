@@ -2,6 +2,7 @@
 #include "drmemory.h"
 #include "drally_structs_fixed.h"
 #include "drally_net.h"
+#include "drally_display.h"
 
 #define COOXY(x,y) (0x280*(y)+(x))
 
@@ -60,7 +61,6 @@
 	extern __BYTE__ ___1a1ef8h[];
 	extern __DWORD__ ___196a94h_difficulty;
 	extern __BYTE__ ___185a14h_UseWeapons[];
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a0fe0h;
 	extern record_t ___19f750h[6][18];
 	extern int LAP_RECORD_MIN;

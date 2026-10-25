@@ -16,4 +16,8 @@ void race_msg(int msg_no);
 void race_alloc(void);
 void race_free(void);
 
+// bss.c: 1024*cos and 1024*sin tables, 3601 entries
+extern int * ___243310h;
+extern int * ___243314h;
+
 #endif // __DRALLY_RACE_H

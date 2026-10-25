@@ -1,13 +1,12 @@
 #include "drally.h"
 #include "assets.h"
 #include "drmemory.h"
+#include "drally_display.h"
 
 	extern __DWORD__ ___1a1e68h;
 	extern __POINTER__ ___1a10d8h;
 	extern __POINTER__ ___1a10f0h;
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a0fe0h;
-	extern __POINTER__ ___1a10c8h;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a10c4h;
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;

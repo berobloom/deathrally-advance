@@ -3,6 +3,7 @@
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
 #include "sfx.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct x655_s {
@@ -35,7 +36,6 @@ typedef struct x655_s {
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a10e4h__VESA101h_DefaultScreenBufferA;
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
-	extern __POINTER__ ___1a0fb8h;
 	extern __BYTE__ ___185a20h[];
 	extern __BYTE__ ___1a1ec4h[];
 	extern __BYTE__ ___185a14h_UseWeapons[];

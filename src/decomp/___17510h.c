@@ -2,6 +2,7 @@
 #include "drally_keyboard.h"
 #include "drally_structs_fixed.h"
 #include "sfx.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct font_props_s {
@@ -22,7 +23,6 @@ typedef struct font_props_s {
 	extern __POINTER__ ___1a1104h;
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a1e88h;
 	extern __POINTER__ ___1a1eb4h;
 

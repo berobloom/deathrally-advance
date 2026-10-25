@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drmath.h"
+#include "drally_race.h"
 
 #pragma pack(1)
 typedef struct rgb24_s {
@@ -29,8 +30,6 @@ typedef struct rgbf_s {
 	extern __BYTE__ ___2432ech[];
 	extern __BYTE__ ___2432f4h[];
 	extern __BYTE__ ___2432f0h[];
-	extern __POINTER__ ___243310h;
-	extern __POINTER__ ___243314h;
 	extern __BYTE__ ___243874h[];
 	extern __BYTE__ ___243894h[];
 	extern __BYTE__ ___243878h[];
@@ -272,8 +271,8 @@ void race___46a10h(void){
 		n = -1;
 		while(++n < 600){
 
-			D(___243310h+4*n) = (int)(1024.0*dRMath_cos((double)n*(157.0/15000.0)));
-			D(___243314h+4*n) = (int)(1024.0*dRMath_sin((double)n*(157.0/15000.0)));
+			___243310h[n] = (int)(1024.0*dRMath_cos((double)n*(157.0/15000.0)));
+			___243314h[n] = (int)(1024.0*dRMath_sin((double)n*(157.0/15000.0)));
 		}
 
 		D(esp+0x58) = 0x41000000;
@@ -300,8 +299,8 @@ void race___46a10h(void){
 			dRally_Sound_setMasterVolume(0x1b4*D(esp+0x48));
 			D(esp+0x48) = (int)(double)F32(esp+0x58);
 			eax = 0x257-(D(esp+0x48)-0x8);
-			D(esp+0x44) = 2*D(___243310h+4*eax);
-			D(esp+0x1c) = 2*D(___243314h+4*eax);
+			D(esp+0x44) = 2*___243310h[eax];
+			D(esp+0x1c) = 2*___243314h[eax];
 			D(esp+0x40) = (int)D(esp+0x1c)>>0x1;
 			D(esp+0x3c) = (int)D(esp+0x44)>>0x1;
 			D(esp+0x30) = (int)D(esp+0x44)>>0x1;

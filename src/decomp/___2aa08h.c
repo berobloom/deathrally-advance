@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct rgb24_s {
@@ -10,7 +11,6 @@ typedef struct rgb24_s {
 	extern __BYTE__ kmap[];
 	extern __DWORD__ ___196a88h;
 	extern __DWORD__ ___196ad8h;
-	extern rgb24_t * ___1a10c8h;
 
 void __DISPLAY_SET_PALETTE_COLOR(__DWORD__ b, __DWORD__ g, __DWORD__ r, __DWORD__ n);
 void ___58c60h(void);
@@ -35,9 +35,9 @@ void ___2aa08h(void){
 		n = -1;
 		while(++n < 0x20){
 
-			r = n*___1a10c8h[___196ad8h].r/64;
-			g = n*___1a10c8h[___196ad8h].g/64;
-			b = n*___1a10c8h[___196ad8h].b/64;
+			r = n*((rgb24_t *)___1a10c8h)[___196ad8h].r/64;
+			g = n*((rgb24_t *)___1a10c8h)[___196ad8h].g/64;
+			b = n*((rgb24_t *)___1a10c8h)[___196ad8h].b/64;
 
 			__DISPLAY_SET_PALETTE_COLOR(b, g, r, 0xc0+n);
 		}

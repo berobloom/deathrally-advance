@@ -5,12 +5,12 @@
 #include "drally_structs_free.h"
 #include "sfx.h"
 #include "watcom106.h"
+#include "drally_display.h"
 
 	extern __POINTER__ ___1a1114h;
 	extern __BYTE__ ___1a54d0h[];
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a1ed0h[];
-	extern __POINTER__ ___1a0fb8h;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a10f8h;
 	extern __POINTER__ ___19de70h[20];

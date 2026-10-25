@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_structs_fixed.h"
+#include "drally_display.h"
 
 #pragma pack(1)
 typedef struct x655_s {
@@ -13,7 +14,6 @@ typedef struct x655_s {
 	extern __BYTE__ ___1a0d60h[];
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
-	extern __POINTER__ ___1a0fb8h;
 	extern __DWORD__ ___24cc58h_msx_volume;
 
 void ___10b80h_cdecl(const char *, __DWORD__, const char *, __DWORD__, const char *, __DWORD__, __DWORD__);
