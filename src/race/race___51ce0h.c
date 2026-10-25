@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 
 	extern __BYTE__ ___1df520h[];
 	extern int TRX_VIEWPORT_TL_X;
@@ -39,17 +40,20 @@ void race___51ce0h(void){
 
 						if(((int)edx < 0xc8)&&(D(___1df520h+0x10*D(esp)+8) != 5)){
 
-							__BYTE__* s = RACE_BLOWI_BPK + 0x10 * (0x10 * D(___1df520h + 0x10 * D(esp) + 8));
-							__BYTE__* d = BACKBUFFER + 0x200 * (eax - 8) + edi + 0x58;
-							j = 16;
-							do {
-								i = 16;
+							if(race_draw){
+
+								__BYTE__* s = RACE_BLOWI_BPK + 0x10 * (0x10 * D(___1df520h + 0x10 * D(esp) + 8));
+								__BYTE__* d = BACKBUFFER + 0x200 * (eax - 8) + edi + 0x58;
+								j = 16;
 								do {
-									if ((px = *s++) != 0) *d = px;
-									d++;
-								} while (--i);
-								d += 0x200 - 16;
-							} while (--j);
+									i = 16;
+									do {
+										if ((px = *s++) != 0) *d = px;
+										d++;
+									} while (--i);
+									d += 0x200 - 16;
+								} while (--j);
+							}
 						}
 					}
 				}

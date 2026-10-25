@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "sfx.h"
 #include "drally_structs_free.h"
 #include "drally_net.h"
@@ -51,14 +52,17 @@ void race___42218h(void){
 			D(___243320h) -= D(___243334h);
 		}
 
-		__BYTE__* s = GEN_LAM_BPK;
-		__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
-		j = 0x3c;
-		do {
-			memcpy(d, s, 0x50);
-			s += 0x50;
-			d += 0x200;
-		} while (--j);
+		if(race_draw){
+
+			__BYTE__* s = GEN_LAM_BPK;
+			__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
+			j = 0x3c;
+			do {
+				memcpy(d, s, 0x50);
+				s += 0x50;
+				d += 0x200;
+			} while (--j);
+		}
 	}
 
 	if((int)getCounter(1) > 0xbe){
@@ -93,14 +97,17 @@ void race___42218h(void){
 			D(___243320h) += 2*D(___243334h);
 		}
 
-		__BYTE__* s = GEN_LAM_BPK + 0x2580;
-		__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
-		j = 0x3c;
-		do {
-			memcpy(d, s, 0x50);
-			s += 0x50;
-			d += 0x200;
-		} while (--j);
+		if(race_draw){
+
+			__BYTE__* s = GEN_LAM_BPK + 0x2580;
+			__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
+			j = 0x3c;
+			do {
+				memcpy(d, s, 0x50);
+				s += 0x50;
+				d += 0x200;
+			} while (--j);
+		}
 
 		D(___196de0h) = 2;
 	}
@@ -128,13 +135,16 @@ void race___42218h(void){
 
 		D(___196de0h) = 1;
 
-		__BYTE__* s = GEN_LAM_BPK + 0x12c0;
-		__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
-		j = 0x3c;
-		do {
-			memcpy(d, s, 0x50);
-			s += 0x50;
-			d += 0x200;
-		} while (--j);
+		if(race_draw){
+
+			__BYTE__* s = GEN_LAM_BPK + 0x12c0;
+			__BYTE__* d = BACKBUFFER + 0x150 + D(___243320h);
+			j = 0x3c;
+			do {
+				memcpy(d, s, 0x50);
+				s += 0x50;
+				d += 0x200;
+			} while (--j);
+		}
 	}
 }

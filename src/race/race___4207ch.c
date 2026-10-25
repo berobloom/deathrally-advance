@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 
 	extern __BYTE__ ___243334h[];
 	extern __BYTE__ ___243328h[];
@@ -25,14 +26,17 @@ void race___4207ch(void){
 
 	edx = (int)(D(___243324h)+0x8000)>>0x10;
 
-	__BYTE__* s = GEN_FLA_BPK + 0x12c0 * edx;
-	__BYTE__* d = BACKBUFFER + 0x150 + D(___243328h);
-	j = 0x3c;
-	do {
-		memcpy(d, s, 0x50);
-		s += 0x50;
-		d += 0x200;
-	} while (--j);
+	if(race_draw){
+
+		__BYTE__* s = GEN_FLA_BPK + 0x12c0 * edx;
+		__BYTE__* d = BACKBUFFER + 0x150 + D(___243328h);
+		j = 0x3c;
+		do {
+			memcpy(d, s, 0x50);
+			s += 0x50;
+			d += 0x200;
+		} while (--j);
+	}
 
 	D(___243324h) += D(___24332ch);
 	eax = (int)(D(___243324h)+0x8000)>>0x10;

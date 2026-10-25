@@ -55,11 +55,16 @@ static void IRQ0_TimerISR(void){
 }
 
 int skip;
+// set, the counter stands still: no time passes, no timer ticks (see
+// race_check_nodraw() in race_replay.c)
+int dr_frame_counter_frozen;
+
 unsigned int __GET_FRAME_COUNTER(void){
 
 	unsigned int NewTicks;
 	unsigned int FrameMs = 1000/___60458h;// - 1;
 
+	if(dr_frame_counter_frozen) return INT8_FRAME_COUNTER;
 
 	NewTicks = SDL_GetTicks()-Ticks;	
 	

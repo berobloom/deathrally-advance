@@ -304,6 +304,74 @@ void race_ticklog_end(void){
 	log_done = 1;
 }
 
+#include <unistd.h>
+#include <sys/wait.h>
+
+	extern int dr_frame_counter_frozen;
+	extern int TRX_VIEWPORT_TL_X, TRX_VIEWPORT_TL_Y;
+	extern int CURRENT_VIEWPORT_W, CURRENT_VIEWPORT_X, CURRENT_VIEWPORT_CENTER_X;
+	extern int X___243c8ch, Y___243c90h;
+
+// with DR_CHECK_NODRAW set: race_render() with race_draw = 0, in a child
+// process, against race_render() as usual. Both must leave the globals
+// race_logic() uses, and the camera, the same: then a port can run the
+// render functions without their drawing, as the GBA does, and get the
+// same race. Time stands still meanwhile, so both see the same ticks
+void race_check_nodraw(void){
+
+	static unsigned 	frame, bad;
+	unsigned 		i, n = race_replay_size(), first = ~0u, diffs = 0;
+	__BYTE__ * 		a = malloc(n+0x20);
+	__BYTE__ * 		b = malloc(n+0x20);
+	int 			fd[2];
+	pid_t 			pid;
+
+	dr_frame_counter_frozen = 1;
+
+	if(pipe(fd)||((pid = fork()) < 0)){ perror("race_check_nodraw"); exit(1); }
+
+	if(pid == 0){
+
+		race_draw = 0;
+		race_render();
+		race_replay_gather(a);
+		memcpy(a+n, (int []){ TRX_VIEWPORT_TL_X, TRX_VIEWPORT_TL_Y, CURRENT_VIEWPORT_W, CURRENT_VIEWPORT_X, CURRENT_VIEWPORT_CENTER_X, X___243c8ch, Y___243c90h, 0 }, 0x20);
+		if(write(fd[1], a, n+0x20) != (ssize_t)(n+0x20)) _exit(1);
+		_exit(0);
+	}
+
+	race_render();
+	race_replay_gather(b);
+	memcpy(b+n, (int []){ TRX_VIEWPORT_TL_X, TRX_VIEWPORT_TL_Y, CURRENT_VIEWPORT_W, CURRENT_VIEWPORT_X, CURRENT_VIEWPORT_CENTER_X, X___243c8ch, Y___243c90h, 0 }, 0x20);
+
+	close(fd[1]);
+	for(i = 0; i < n+0x20; ){
+
+		ssize_t 	r = read(fd[0], a+i, n+0x20-i);
+
+		if(r <= 0){ fprintf(stderr, "race_check_nodraw: no state from the child\n"); exit(1); }
+		i += r;
+	}
+	close(fd[0]);
+	waitpid(pid, 0, 0);
+
+	for(i = 0; i < n+0x20; i++){
+
+		if(a[i] != b[i]){ if(first == ~0u) first = i; diffs++; }
+	}
+	if(diffs){
+
+		bad++;
+		fprintf(stderr, "frame %u: %u bytes differ without drawing, the first at %u of %u\n", frame, diffs, first, n);
+	}
+	if((frame%1000) == 0) fprintf(stderr, "race_check_nodraw: frame %u, %u frames differ\n", frame, bad);
+	frame++;
+
+	dr_frame_counter_frozen = 0;
+	free(a);
+	free(b);
+}
+
 #endif // DR_TICKLOG
 
 #endif // DR_TICKLOG||DR_REPLAY

@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
 
@@ -51,17 +52,20 @@ void race___51204h(void){
 
 				val = (int)s_35e[D(___243c60h)].ImgIndex/4;
 
-				__BYTE__* s = RACE_ROCKETX_BPK[D(___196efch)] + 0x100 * val;
-				__BYTE__* d = BACKBUFFER + 0x200 * y + x + 0x60;
-				j = 16;
-				do {
-					i = 16;
+				if(race_draw){
+
+					__BYTE__* s = RACE_ROCKETX_BPK[D(___196efch)] + 0x100 * val;
+					__BYTE__* d = BACKBUFFER + 0x200 * y + x + 0x60;
+					j = 16;
 					do {
-						if ((px = *s++) != 0) *d = px;
-						d++;
-					} while (--i);
-					d += (0x200 - 16);
-				} while (--j);
+						i = 16;
+						do {
+							if ((px = *s++) != 0) *d = px;
+							d++;
+						} while (--i);
+						d += (0x200 - 16);
+					} while (--j);
+				}
 
 				if((__GET_FRAME_COUNTER()-s_35e[D(___243c60h)].__1de) > 3){
 					

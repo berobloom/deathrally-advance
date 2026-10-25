@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 
 	extern __BYTE__ ___1f2488h[];
@@ -31,7 +32,7 @@ void race___51eb4h(void){
 
 			if((x >= -18 + CURRENT_VIEWPORT_X)&&(x < 320)&&(y >= 6)&&(y < 200)){
 
-				switch(D(0x120*n+___1f2488h+0x18)-1){
+				if(race_draw) switch(D(0x120*n+___1f2488h+0x18)-1){
 				case 2:
 					___424c8h_v2(itoa_watcom106(s_54[0].__50, strcpy(buffer, "$")+1, 0xa)-1, x+0x60, y-6);
 					break;

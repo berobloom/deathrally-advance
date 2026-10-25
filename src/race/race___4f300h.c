@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
 
@@ -127,7 +128,7 @@ static void helper02(int n){
 
 	s_35e = (struct_35e_t *)___1e6ed0h;
 
-	helper01(s_35e[n].__4+88, s_35e[n].__8-8, RACE_BURN1A_BPK+0x100*s_35e[n].__1da, 0x10);
+	if(race_draw) helper01(s_35e[n].__4+88, s_35e[n].__8-8, RACE_BURN1A_BPK+0x100*s_35e[n].__1da, 0x10);
 
 	if((s_35e[n].__1de+0x3) <= __GET_FRAME_COUNTER()){
 
@@ -171,7 +172,7 @@ void race___4f300h(void){
 	if(lqandlq_d(d00, d01, d02)) s_35e[D(MY_CAR_IDX)].__8 = CURRENT_VIEWPORT_CENTER_Y-Y___243c90h;
 
 
-	if(((int)D(___1de580h+0x94*D(MY_CAR_IDX)+0x18) > 0)&&(s_35e[D(MY_CAR_IDX)].Finished == 0)) helper00(D(MY_CAR_IDX));
+	if(race_draw&&((int)D(___1de580h+0x94*D(MY_CAR_IDX)+0x18) > 0)&&(s_35e[D(MY_CAR_IDX)].Finished == 0)) helper00(D(MY_CAR_IDX));
 
 	n = -1;
 	while(++n < (int)D(NUM_OF_CARS)){
@@ -185,13 +186,13 @@ void race___4f300h(void){
 
 				if(ltandlt(-40, (int)s_35e[n].__8, (int)(CURRENT_VIEWPORT_H+0x28))){
 	
-					if(((int)D(___1de580h+0x94*n+0x18) > 0)&&(s_35e[n].Finished == 0)) helper00(n);
+					if(race_draw&&((int)D(___1de580h+0x94*n+0x18) > 0)&&(s_35e[n].Finished == 0)) helper00(n);
 				}
 			}
 		}
 	}
 
-	helper01(s_35e[D(MY_CAR_IDX)].__4+76, s_35e[D(MY_CAR_IDX)].__8-20, ___243d74h+s_35e[D(MY_CAR_IDX)].ImgOffset, 0x28);
+	if(race_draw) helper01(s_35e[D(MY_CAR_IDX)].__4+76, s_35e[D(MY_CAR_IDX)].__8-20, ___243d74h+s_35e[D(MY_CAR_IDX)].ImgOffset, 0x28);
 
 	if((int)D(___1de580h+0x94*D(MY_CAR_IDX)+0x18) <= 0) helper02(D(MY_CAR_IDX));
 
@@ -204,7 +205,7 @@ void race___4f300h(void){
 
 				if(ltandlt(-20, (int)s_35e[n].__8, (int)(CURRENT_VIEWPORT_H+0x14))){
 
-					helper01(s_35e[n].__4+0x4c, s_35e[n].__8-0x14, ___243d74h+s_35e[n].ImgOffset, 0x28);
+					if(race_draw) helper01(s_35e[n].__4+0x4c, s_35e[n].__8-0x14, ___243d74h+s_35e[n].ImgOffset, 0x28);
 				}
 			}
 

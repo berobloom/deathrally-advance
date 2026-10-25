@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 
 	extern __BYTE__ ___243cd4h[];
@@ -51,5 +52,5 @@ void race___40db4h(void){
 		}
 	}
 
-	race___40864h();
+	if(race_draw) race___40864h();
 }

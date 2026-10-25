@@ -355,54 +355,11 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 
 		frames = __GET_FRAME_COUNTER();
 
-		race___4ee9ch();
-		race___4f030h();
-
-		ecx = CURRENT_VIEWPORT_W+4;
-		ecx -= ecx&3;
-		m = -1;
-		while(++m < 0xc8){	// COPY TRACK BACKGROUND
-
-
-			memcpy(BACKBUFFER+0x200*m+CURRENT_VIEWPORT_X+0x60, TRX_IMA+TRX_WIDTH*(TRX_VIEWPORT_TL_Y+m)+TRX_VIEWPORT_TL_X, ecx);
-		}
-
-#if defined(DR_MULTIPLAYER)
-		if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER
-			race___52d7ch();
-#if defined(DR_MULTIPLAYER)
-		}
-#endif // DR_MULTIPLAYER
-		D(___243c60h) = -1;
-		while(++D(___243c60h) < NUM_OF_CARS) race___50ef4h();
-		race___4f300h();	// RENDER CARS
-		race___51ce0h();
-		if(dRally_Race_getSettings(RACE_SHADOWS)) race___4f170h();
-		D(___243c60h) = -1;
-		while(++D(___243c60h) < NUM_OF_CARS) race___50a48h();
-		D(___243c60h) = -1;
-		while(++D(___243c60h) < NUM_OF_CARS) race___51204h();
-		race___53310h();	// SORT OBJECTS
-		race___53464h();	// OBJECTS
-		D(___243c60h) = -1;
-		while(++D(___243c60h) < NUM_OF_CARS) race___50ba4h();
-		race___51eb4h();
-#if defined(DR_MULTIPLAYER)
-		if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER
-			race___56594h();	// INRACE CHEATS
-#if defined(DR_MULTIPLAYER)
-		}
-#endif // DR_MULTIPLAYER
-		if((int)getCounter(1) < 0x122) race___42218h();
-		(CURRENT_VIEWPORT_W != 0x140) ? race___40f48h() : race___40db4h();
-
-		D(___243c60h) = -1;
-		while(++D(___243c60h) < NUM_OF_CARS){
-
-			if((s_35e[D(___243c60h)].Position == 1)&&(D(___196dd4h) != 0)) race___4207ch();
-		}
+#if defined(DR_TICKLOG)
+		if(getenv("DR_CHECK_NODRAW")) race_check_nodraw();
+		else
+#endif // DR_TICKLOG
+		race_render();
 
 		if((int)D(___2438c8h) > 0x12c){
 #if defined(DR_MULTIPLAYER)
@@ -435,28 +392,7 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 			s_35e[MY_CAR_IDX].Drug = 0;
 		}
 
-		D(___243c60h) = 0;
-		eax = -1;
-		while(++eax < 4){
-
-			if((int)s_35e[eax].Drug > 0) s_35e[eax].Drug -= D(___243334h);
-		}
-
-		D(___243c60h) = 4;
-
-		if(dRally_Race_getSettings(RACE_NOTWIDE)){
-
-			if(CURRENT_VIEWPORT_W > 0x100) CURRENT_VIEWPORT_W -= 4*D(___243334h);
-			if(CURRENT_VIEWPORT_W < 0x100) CURRENT_VIEWPORT_W = 0x100;
-		}
-		else {
-
-			if(CURRENT_VIEWPORT_W < 0x140) CURRENT_VIEWPORT_W += 2*D(___243334h);
-			if(CURRENT_VIEWPORT_W > 0x140) CURRENT_VIEWPORT_W = 0x140;
-		}
-
-		CURRENT_VIEWPORT_CENTER_X = CURRENT_VIEWPORT_W/2;
-		CURRENT_VIEWPORT_X = 0x140-CURRENT_VIEWPORT_W;
+		race_render_after();
 
 #if defined(DR_MULTIPLAYER)
 		if(	(!___19bd60h&&kmap[DR_SCAN_ESCAPE])

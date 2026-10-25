@@ -39,5 +39,6 @@ __DWORD__ * race_replay_done(void);
 void race_ticklog_before(void);
 void race_ticklog_after(void);
 void race_ticklog_end(void);
+void race_check_nodraw(void);
 
 #endif // __RACE_REPLAY_H

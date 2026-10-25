@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 
 	extern __BYTE__ ___243c60h[];
@@ -32,17 +33,20 @@ void race___50a48h(void){
 
 			img = RACE_FLAMEX_BPK[s_94[D(___243c60h)].__84[s_94[D(___243c60h)].__60]]+0x40*(s_35e[D(___243c60h)].ImgIndex/2);
 
-			__BYTE__* s = img;
-			__BYTE__* d = BACKBUFFER + 0x200 * (j0) + i0 + 0x60;
-			j = 8;
-			do {
-				i = 8;
+			if(race_draw){
+
+				__BYTE__* s = img;
+				__BYTE__* d = BACKBUFFER + 0x200 * (j0) + i0 + 0x60;
+				j = 8;
 				do {
-					if ((px = *s++) != 0) *d = px;
-					d++;
-				} while (--i);
-				d += (0x200 - 8);
-			} while (--j);
+					i = 8;
+					do {
+						if ((px = *s++) != 0) *d = px;
+						d++;
+					} while (--i);
+					d += (0x200 - 8);
+				} while (--j);
+			}
 		}
 
 		s_35e[D(___243c60h)].__1b6 = 0;

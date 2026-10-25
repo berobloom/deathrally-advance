@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 
 typedef struct spectator_s {
@@ -79,7 +80,7 @@ void race___52d7ch(void){
 
 		if((SPECTATORS[n].x > (int)(TRX_VIEWPORT_TL_X-0x10))&&(SPECTATORS[n].x < (int)(TRX_VIEWPORT_TL_X+0x140))){
 			if((SPECTATORS[n].y > (int)(TRX_VIEWPORT_TL_Y-0x10))&&(SPECTATORS[n].y < (int)(TRX_VIEWPORT_TL_Y+0xc8))){
-				if((SPECTATORS[n].x != 0)&&(SPECTATORS[n].y != 0)){
+				if(race_draw&&(SPECTATORS[n].x != 0)&&(SPECTATORS[n].y != 0)){
 
 					eax = SPECTATORS[n].y-TRX_VIEWPORT_TL_Y;
 					edx = 0;
