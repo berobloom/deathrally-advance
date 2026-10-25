@@ -11,7 +11,7 @@ GAME_SRCS := $(filter-out $(SDL_SRCS),$(patsubst ../../src/%,%,$(wildcard ../../
 GAME_OBJS := $(GAME_SRCS:%.c=$(BUILD)/game/%.o)
 GAME_LIB := $(BUILD)/libgame.a
 
-CFLAGS := -O2 -g -ffp-contract=off -ffunction-sections -fdata-sections -Wno-unused-result -DDR_REPLAY -I../../include/nosdl -I../../include -I../../src/race
+CFLAGS := -O2 -g -ffp-contract=off -ffunction-sections -fdata-sections -Wno-unused-result -DDR_REPLAY -DDR_INLINE_MATH -I../../include/nosdl -I../../include -I../../src/race
 
 replay: $(BUILD)/replay.o $(GAME_LIB)
 	$(CC) -Wl,--gc-sections -o $@ $^ -lm

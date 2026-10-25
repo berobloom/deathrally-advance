@@ -66,23 +66,34 @@ void race___4dcach(void){
 			
 				D(esp+0x94) = 0;
 
-				j = 0;
-				while(++j < (int)(0x28-dRMath_abs_i(D(esp+0x64)))){
+				// the last pixel, in rows from 1 and columns from 0, where
+				// both cars' images are solid: searched from the end, so
+				// the search stops at the first
+				{
+					int 	dx = D(esp+0x68), dy = D(esp+0x64);
+					int 	w = 0x28-dRMath_abs_i(dx), h = 0x28-dRMath_abs_i(dy);
+					__BYTE__ * 	pn = ___243d74h+s_35e[n].ImgOffset+0x28*dRMath_abspos_i(dy)+dRMath_abspos_i(dx);
+					__BYTE__ * 	pk = ___243d74h+s_35e[k].ImgOffset+0x28*dRMath_absneg_i(dy)+dRMath_absneg_i(dx);
 
-					i = -1;
-					while(++i < (int)(0x28-dRMath_abs_i(D(esp+0x68)))){
+					j = h;
+					while(--j > 0){
 
-						if(B(___243d74h+0x28*(j+dRMath_abspos_i(D(esp+0x64)))+s_35e[n].ImgOffset+i+dRMath_abspos_i(D(esp+0x68))) > 3){
+						i = w;
+						while(--i >= 0){
 
-							if(B(___243d74h+0x28*(j+dRMath_absneg_i(D(esp+0x64)))+s_35e[k].ImgOffset+i+dRMath_absneg_i(D(esp+0x68))) > 3){
-
-								D(esp+0x94) = 1;
-								s_35e[n].__172 = i+dRMath_abspos_i(D(esp+0x68))-0x14;
-								s_35e[n].__176 = j+dRMath_abspos_i(D(esp+0x64))-0x14;
-								s_35e[k].__172 = i+dRMath_absneg_i(D(esp+0x68))-0x14;
-								s_35e[k].__176 = j+dRMath_absneg_i(D(esp+0x64))-0x14;
-							}
+							if((pn[0x28*j+i] > 3)&&(pk[0x28*j+i] > 3)) break;
 						}
+
+						if(i >= 0) break;
+					}
+
+					if(j > 0){
+
+						D(esp+0x94) = 1;
+						s_35e[n].__172 = i+dRMath_abspos_i(dx)-0x14;
+						s_35e[n].__176 = j+dRMath_abspos_i(dy)-0x14;
+						s_35e[k].__172 = i+dRMath_absneg_i(dx)-0x14;
+						s_35e[k].__176 = j+dRMath_absneg_i(dy)-0x14;
 					}
 				}
 
