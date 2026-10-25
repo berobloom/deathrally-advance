@@ -1,17 +1,95 @@
-# dRally
+# Death Rally Advance: _Death Rally_ on the Game Boy Advance
 
-The main goal of this project is to create a port of Death Rally (1996) running natively on Linux and BSD based operating systems.
+A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
-#### Linux requirements
-* GCC/Clang C compiler
-* GNU/Make
+dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
+
+This is an early work in progress. The GBA side is a **rendering prototype**: it draws the game's real tracks and cars with the GBA's tile and sprite hardware at 60 frames per second, but the driving is a stand-in, not the game's race code. See [Status](#status).
+
+## Game Data
+
+No game data is included. You need the files from the original _Death Rally_. The port has been developed with the free registered Windows version, see [Installation](#installation).
+
+The GBA build puts the game data inside the ROM, so a ROM carries the same restrictions as the data files it was built from: **don't share ROMs**.
+
+## Game Boy Advance
+
+### Screenshots
+
+| | |
+|:-:|:-:|
+| ![The start grid](docs/screenshots/gba-start-grid.png) | ![Racing on the first track](docs/screenshots/gba-racing.png) |
+| The start grid of the first track | Racing, with the frame rate meter on top |
+| ![Track 3](docs/screenshots/gba-track-2.png) | ![Track 10](docs/screenshots/gba-track-9.png) |
+| Track 3, with the other cars on autopilot | Track 10 |
+
+Screenshots are taken in mGBA and shown at twice the GBA's resolution.
+
+### What the Prototype Does
+
+`gba/proto` tests whether the GBA can draw a race:
+
+* The track is a 256-color tile background streamed from ROM through a ring of tiles, so tracks of any size scroll without being loaded into RAM.
+* The four cars are hardware sprites, using the game's own 96 rotation frames and body colors.
+* Car shadows are drawn by the OBJ window with the darken effect, instead of by drawing pixels.
+* Cars stay on the road using the track's mask, the same one the game uses for its walls.
+
+The driving, the collisions and the other cars' autopilot are simple stand-ins. None of the game's race code runs on the GBA yet.
+
+In mGBA all ten tracks run at 60 frames per second using about 12% of each frame, of which at most 9% is graphics. That leaves most of the frame for the game's own race code, which is the next thing to measure. The prototype hasn't been tested on real hardware yet.
+
+### Building
+
+Requirements:
+
+* The devkitPro GBA toolchain. Install devkitPro's pacman (see [Getting Started](https://devkitpro.org/wiki/Getting_Started)), then run `sudo dkp-pacman -S gba-dev`.
+* A C compiler for Linux, to build `tools/gbabake`, which turns the game data into the layouts the ROM uses.
+* The game data in `game/` (or pass `GAME=/path/to/game`).
+
+```sh
+make -C gba/proto            # builds gba/proto/drproto-tr0.gba
+make -C gba/proto TRACK=5    # any track, 0-9
+```
+
+Each ROM holds one track and is about 3 MB.
+
+### Controls
+
+| Button       | Does                                     |
+|--------------|------------------------------------------|
+| D-pad        | Steer left and right                     |
+| A            | Accelerate                               |
+| B            | Brake, then reverse                      |
+| R            | Let the autopilot drive                  |
+| Start        | Back to the start grid                   |
+| Select       | Show or hide the frame rate meter        |
+
+The meter shows frames per second, the share of each frame used (CPU) and the part of that spent on graphics (GFX).
+
+### Status
+
+Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA.
+
+Not done yet:
+
+* Running the game's race code on the GBA. It uses floating point, which the GBA has to emulate, and needs more RAM than the GBA has, so it will need fixed-point math and data kept in ROM.
+* Menus, shops and the underground market, which are drawn at 640x480.
+* Music and sound (the S3M and XM songs, through Maxmod).
+* Saving in SRAM.
+* Testing on real hardware.
+
+## Desktop
+
+### Requirements
+
+* GCC or Clang
+* GNU Make
 * SDL2
 * SDL2_net
 
 On Debian/Ubuntu: `sudo apt install build-essential libsdl2-dev libsdl2-net-dev`
 
-
-#### Building
+### Building
 
 ```sh
 make -j$(nproc)
@@ -19,9 +97,9 @@ FLAGS="YOUR CFLAGS" make   # custom flags, default is -O3
 make check                 # LTO build, fails on mismatched declarations across files
 ```
 
-#### Installation - needs original game assets
+### Installation
 
-* [Death Rally registered free windows version CHIP](https://www.chip.de/downloads/Death-Rally-Vollversion_38550689.html)
+The game needs the original game assets, for example the [free registered Windows version on CHIP](https://www.chip.de/downloads/Death-Rally-Vollversion_38550689.html):
 
 ```sh
 7z e -o game DeathRallyWin_10.exe
@@ -48,13 +126,15 @@ Only versions including the DR.IDF file are able to use the `-DDR_CDCHECK` defin
 
     [1] CDROM.INI contains relative location of CINEM directory (./CINEM)
 
-#### Running
+### Running
 
 ```sh
 make run            # or ./scripts/drun, ./scripts/drun_gdb for gdb
 ```
 
-#### Source layout
+Multiplayer is not available yet.
+
+## Source Layout
 
     src/core          entry point, system/SDL layer, input, memory, math
     src/gfx           display, palettes, fonts, cinematics
@@ -73,29 +153,14 @@ make run            # or ./scripts/drun, ./scripts/drun_gdb for gdb
     gba/proto         Game Boy Advance rendering prototype
     scripts           run helpers, discmp.sh to compare generated code
 
-Function files are named after their address in the original executable
-(e.g. `___3e720h.c`), keep that name when moving them between modules.
+Function files are named after their address in the original executable (e.g. `___3e720h.c`). Keep that name when moving them between modules.
 
-#### Game Boy Advance prototype
+## License
 
-`gba/proto` tests whether the GBA can draw a race: a real track as a tile
-background streamed from ROM, four cars as sprites with the game's own 96
-rotation frames, and shadows through the OBJ window. The driving and the
-other cars' autopilot are stand-ins; none of the game's code runs yet.
+MIT, see [LICENSE](LICENSE).
 
-Needs devkitARM with libgba (`sudo dkp-pacman -S gba-dev`) and the game data
-in `game/`:
+## Credits
 
-```sh
-make -C gba/proto            # drproto-tr0.gba
-make -C gba/proto TRACK=5    # drproto-tr5.gba, any track 0-9
-```
-
-D-pad left/right steer, A accelerates, B brakes and reverses, R lets the
-autopilot drive, Start goes back to the grid, Select hides the meter. The
-meter shows frames per second, the share of each frame used (CPU) and the
-part of that spent on graphics (GFX). The ROMs contain game data: don't
-share them.
-
-#### Work in progress
-*   Multiplayer not available
+- dRally: Neomalius (urxp)
+- Game Boy Advance port: Berobloom
+- _Death Rally_ (1996): Remedy Entertainment and Apogee Software
