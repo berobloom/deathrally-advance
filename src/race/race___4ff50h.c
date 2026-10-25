@@ -47,12 +47,116 @@ static int helper00(double dval){
 	return ((dval-(double)(int)dval) < 0.5)?(int)dval:(int)(1.0+dval);
 }
 
+// the trace of a burst from car me: 26 steps of (dx, dy)*5/256 from its
+// gun at (ox, oy), up to a car, a wall or a spectator. cx and cy are the
+// cars' positions as integers
+DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, int * cy){
+
+	__DWORD__ 		eax, ecx, edx, ebx, esi;
+	int 			i, j, n, sx, sy;
+	struct_35e_t * 	s_35e = (struct_35e_t *)___1e6ed0h;
+
+	n = -1;
+	while(++n < 26){
+
+		sx = (int)(5*n*dx+0x80)>>8;
+		sy = (int)(5*n*dy+0x80)>>8;
+
+		i = -1;
+		while(++i < (int)D(NUM_OF_CARS)){
+
+			if(i != me){
+
+				ebx = cx[i]-sx-cx[me]-ox;
+				esi = cy[i]-sy-cy[me]-oy;
+
+				if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(esi) < 20)){
+
+					if(B(___243d74h+s_35e[i].ImgOffset+(int)ebx+40*(esi+20)+20) > 3){
+
+						n = 26;
+
+						if(s_35e[i].Finished == 0){
+
+							D(___1de580h+0x94*i+0x18) = (int)((double)(int)D(___1de580h+0x94*i+0x18)-(double)(int)(0x400-D(___1de580h+0x94*i+0x1c))*(double)F32(___24389ch+4*D(___1de580h+0x94*me)));
+						}
+
+						if((int)D(___1de580h+0x94*i+0x18) < 0) D(___1de580h+0x94*i+0x18) = 0;
+
+						D(___2432c0h) = D(___2432b0h)+sx;
+						D(___2432c4h) = D(___2432b4h)+sy;
+						s_35e[me].__1aa = 3*D(___1de580h+4*D(___1de580h+0x94*me+0x60)+0x94*me+0x84)+1;
+					}
+				}
+			}
+		}
+
+		edx = sx+ox+cx[me];
+		eax = sy+oy+cy[me];
+
+		if(((int)eax >= 0)&&((int)eax < TRX_HEIGHT)){
+
+			if(((int)edx >= 0)&&((int)edx < TRX_WIDTH)){
+
+				if((B(TRX_MAS+edx+eax*TRX_WIDTH)&0xf) < 4){
+
+					D(___2432c0h) = D(___2432b0h)+sx;
+					D(___2432c4h) = D(___2432b4h)+sy;
+					n = 26;
+					s_35e[me].__1aa = 3*D(___1de580h+0x94*me+4*D(___1de580h+0x94*me+0x60)+0x84)+1;
+				}
+			}
+		}
+
+#if defined(DR_MULTIPLAYER)
+		if(___19bd60h == 0){
+#endif // DR_MULTIPLAYER
+
+			j = rand_watcom106()%5;
+			i = -1;
+			while(++i < 4){
+
+				if(___1df720h[5*i+j].dead == 0){
+
+					eax = ox+sx+cx[me]-___1df720h[5*i+j].x-8;
+					edx = oy+sy+cy[me]-___1df720h[5*i+j].y-8;
+
+					if((dRMath_abs_i(eax) < 3)&&(dRMath_abs_i(edx) < 3)){
+		
+						___1df720h[5*i+j].dead = 1;
+						___1df720h[5*i+j].frame = 0;
+
+						if(me != D(MY_CAR_IDX)){
+
+							eax = (int)(s_35e[me].XLocation-s_35e[D(MY_CAR_IDX)].XLocation);
+							edx = (int)(s_35e[me].YLocation-s_35e[D(MY_CAR_IDX)].YLocation);
+							ecx = 0x10000-75*dRMath_magnitude2_i(eax, edx);
+
+							if((int)ecx > 0x1000){
+
+								dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, ecx, 0x50000, 0x8000);
+							}
+						}
+						else {
+
+							dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, 0x9000, 0x50000, 0x8000);
+						}
+					}
+				}
+			}
+#if defined(DR_MULTIPLAYER)
+		}
+#endif // DR_MULTIPLAYER
+	}
+
+}
+
 // MACHINE GUNS
 void race___4ff50h(void){
 
-	__DWORD__ 		eax, ebx, ecx, edx, esi;
+	__DWORD__ 		eax, ebx, ecx, edx;
 	__BYTE__ 		esp[0x144];
-	int 			i, j, n, me;
+	int 			i;
 	int 			cx[4], cy[4];
 	struct_35e_t * 	s_35e;
 
@@ -96,105 +200,13 @@ void race___4ff50h(void){
 	D(esp+0xd0) = helper00(256.0*dRMath_cos_deg(((double)s_35e[D(___243c60h)].Direction+180.0))*LOC_83)-3+rand_watcom106()%6;
 
 	// the cars' positions as integers: the trace doesn't move them
-	me = D(___243c60h);
 	for(i = 0; i < (int)D(NUM_OF_CARS); i++){
 
 		cx[i] = (int)s_35e[i].XLocation;
 		cy[i] = (int)s_35e[i].YLocation;
 	}
 
-	n = -1;
-	while(++n < 26){
-
-		D(esp+0xf0) = (int)(5*n*D(esp+0xd4)+0x80)>>8;
-		D(esp+0xf4) = (int)(5*n*D(esp+0xd0)+0x80)>>8;
-
-		i = -1;
-		while(++i < (int)D(NUM_OF_CARS)){
-
-			if(i != D(___243c60h)){
-
-				ebx = cx[i]-D(esp+0xf0)-cx[me]-D(esp+0xe8);
-				esi = cy[i]-D(esp+0xf4)-cy[me]-D(esp+0xe4);
-
-				if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(esi) < 20)){
-
-					if(B(___243d74h+s_35e[i].ImgOffset+(int)ebx+40*(esi+20)+20) > 3){
-
-						n = 26;
-
-						if(s_35e[i].Finished == 0){
-
-							D(___1de580h+0x94*i+0x18) = (int)((double)(int)D(___1de580h+0x94*i+0x18)-(double)(int)(0x400-D(___1de580h+0x94*i+0x1c))*(double)F32(___24389ch+4*D(___1de580h+0x94*D(___243c60h))));
-						}
-
-						if((int)D(___1de580h+0x94*i+0x18) < 0) D(___1de580h+0x94*i+0x18) = 0;
-
-						D(___2432c0h) = D(___2432b0h)+D(esp+0xf0);
-						D(___2432c4h) = D(___2432b4h)+D(esp+0xf4);
-						s_35e[D(___243c60h)].__1aa = 3*D(___1de580h+4*D(___1de580h+0x94*D(___243c60h)+0x60)+0x94*D(___243c60h)+0x84)+1;
-					}
-				}
-			}
-		}
-
-		edx = D(esp+0xf0)+D(esp+0xe8)+cx[me];
-		eax = D(esp+0xf4)+D(esp+0xe4)+cy[me];
-
-		if(((int)eax >= 0)&&((int)eax < TRX_HEIGHT)){
-
-			if(((int)edx >= 0)&&((int)edx < TRX_WIDTH)){
-
-				if((B(TRX_MAS+edx+eax*TRX_WIDTH)&0xf) < 4){
-
-					D(___2432c0h) = D(___2432b0h)+D(esp+0xf0);
-					D(___2432c4h) = D(___2432b4h)+D(esp+0xf4);
-					n = 26;
-					s_35e[D(___243c60h)].__1aa = 3*D(___1de580h+0x94*D(___243c60h)+4*D(___1de580h+0x94*D(___243c60h)+0x60)+0x84)+1;
-				}
-			}
-		}
-
-#if defined(DR_MULTIPLAYER)
-		if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER
-
-			j = rand_watcom106()%5;
-			i = -1;
-			while(++i < 4){
-
-				if(___1df720h[5*i+j].dead == 0){
-
-					eax = D(esp+0xe8)+D(esp+0xf0)+cx[me]-___1df720h[5*i+j].x-8;
-					edx = D(esp+0xe4)+D(esp+0xf4)+cy[me]-___1df720h[5*i+j].y-8;
-
-					if((dRMath_abs_i(eax) < 3)&&(dRMath_abs_i(edx) < 3)){
-		
-						___1df720h[5*i+j].dead = 1;
-						___1df720h[5*i+j].frame = 0;
-
-						if(D(___243c60h) != D(MY_CAR_IDX)){
-
-							eax = (int)(s_35e[D(___243c60h)].XLocation-s_35e[D(MY_CAR_IDX)].XLocation);
-							edx = (int)(s_35e[D(___243c60h)].YLocation-s_35e[D(MY_CAR_IDX)].YLocation);
-							ecx = 0x10000-75*dRMath_magnitude2_i(eax, edx);
-
-							if((int)ecx > 0x1000){
-
-								dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, ecx, 0x50000, 0x8000);
-							}
-						}
-						else {
-
-							dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, 0x9000, 0x50000, 0x8000);
-						}
-					}
-				}
-			}
-#if defined(DR_MULTIPLAYER)
-		}
-#endif // DR_MULTIPLAYER
-	}
+	helper01(D(___243c60h), D(esp+0xe8), D(esp+0xe4), D(esp+0xd4), D(esp+0xd0), cx, cy);
 
 	D(___1de580h+0x94*D(___243c60h)+0x30) -= 0x104;
 	

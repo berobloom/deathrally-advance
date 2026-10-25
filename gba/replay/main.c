@@ -58,10 +58,11 @@ static const char * prof_names[PROF_N] = {
 static unsigned long long 	prof_cycles[PROF_N];
 static int 			prof_in = PROF_N;	// the part running now, for PROFILE=2
 static unsigned 		prof_calls[PROF_N];
+static u32 			prof_max[PROF_N];	// the slowest call
 static u32 cycles(void);
 #define PROF_WRAP_VOID(f, decl, args) \
 	void __real_##f decl; \
-	void __wrap_##f decl { u32 t = cycles(); prof_in = PROF_##f; __real_##f args; prof_in = PROF_N; prof_cycles[PROF_##f] += cycles()-t; prof_calls[PROF_##f]++; }
+	void __wrap_##f decl { u32 t = cycles(); prof_in = PROF_##f; __real_##f args; prof_in = PROF_N; t = cycles()-t; prof_cycles[PROF_##f] += t; prof_calls[PROF_##f]++; if(t > prof_max[PROF_##f]) prof_max[PROF_##f] = t; }
 PROF_WRAP_VOID(race___4b62ch, (int n), (n))
 PROF_WRAP_VOID(race___4c434h, (void), ())
 PROF_WRAP_VOID(race___4dcach, (void), ())
@@ -163,6 +164,7 @@ int main(void){
 	u32 			t, tmax[MAX_TICKS+1], fcount[MAX_TICKS+1], ticks, worst;
 	unsigned long long 	tsum[MAX_TICKS+1], total, win_cycles = 0;
 	u32 			win_ticks = 0, win_worst = 0;
+	u32 			slow_t[5] = { 0 }, slow_f[5] = { 0 }, over = 0;
 
 	irqInit();
 	irqEnable(IRQ_VBLANK);
@@ -225,6 +227,19 @@ int main(void){
 		if(t > tmax[k]) tmax[k] = t;
 		total += t; ticks += k; frames++;
 		if(t > worst) worst = t;
+		// the slowest frames and how many take longer than a frame: a
+		// tick that long makes the game drop a frame
+		if(t > 280896) over++;
+		for(i = 0; i < 5; i++){
+
+			if(t > slow_t[i]){
+
+				memmove(slow_t+i+1, slow_t+i, (4-i)*sizeof(u32));
+				memmove(slow_f+i+1, slow_f+i, (4-i)*sizeof(u32));
+				slow_t[i] = t; slow_f[i] = frames-1;
+				break;
+			}
+		}
 		// cars that finish or are wrecked stop costing, so the busiest
 		// stretch says more than the whole race's average
 		win_cycles += t; win_ticks += k;
@@ -247,13 +262,14 @@ int main(void){
 	t = ticks ? total/ticks : 0;
 	say("per tick: %u cycles = %u.%u%% of a frame", t, PCT(t));
 	say("70 ticks/s at 60 fps: %u.%u%% of the CPU", PCT((unsigned long long)t*70/60));
-	say("worst frame %u.%u%%", PCT(worst));
+	say("worst frame %u.%u%%, %u frames take longer than a frame", PCT(worst), over);
+	for(i = 0; i < 5; i++) say("  frame %u: %u cycles", slow_f[i], slow_t[i]);
 	say("busiest 1000 frames: %u cycles a tick, %u.%u%% of the CPU at 70 ticks/s", win_worst, PCT((unsigned long long)win_worst*70/60));
 #if defined(PROFILE)
 	for(i = 0; i < PROF_N; i++){
 
-		if(prof_calls[i]) say("%-14s %7u calls %6u cycles each, %u.%u%% a tick", prof_names[i], prof_calls[i],
-			(u32)(prof_cycles[i]/prof_calls[i]), PCT(ticks ? prof_cycles[i]/ticks : 0));
+		if(prof_calls[i]) say("%-14s %7u calls %6u cycles each, %u.%u%% a tick, at most %u", prof_names[i], prof_calls[i],
+			(u32)(prof_cycles[i]/prof_calls[i]), PCT(ticks ? prof_cycles[i]/ticks : 0), prof_max[i]);
 	}
 #if PROFILE >= 2
 	for(i = 0, t = 0; i < FOP_N; i++){
