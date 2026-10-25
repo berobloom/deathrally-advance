@@ -18,8 +18,7 @@
 	extern __BYTE__ ___243cb0h[];
 	extern __BYTE__ ___243cb4h[];
 
-#define A_PI 	3.14159265359
-#define L0_83 	0.833333
+#define L0_83 	0.833333f
 
 #define CTRL_NULL			0x00
 #define CTRL_ACCELERATE		0x01
@@ -58,7 +57,7 @@ static __DWORD__ helper00(int i){
 	return rslt;
 }
 
-static void helper01(double d_sign){
+static void helper01(float d_sign){
 
 	struct_35e_t * s_35e;
 	struct_35e_t * 	car;
@@ -72,18 +71,19 @@ static void helper01(double d_sign){
 
 	if((car->__18 == 0)&&(car->__1c == 0)){
 
-		car->Direction += (float)(d_sign*(double)car->__a8);
-		F32(___243cfch) += (float)((double)F32(s94+0x10)*d_sign*(double)car->__a8/90.0);
-		F32(___243cfch) *= (float)(1.0+d_sign*(double)car->__bc/18.0);
+		car->Direction += d_sign*car->__a8;
+		F32(___243cfch) += F32(s94+0x10)*d_sign*car->__a8*(1.0f/90.0f);
+		F32(___243cfch) *= 1.0f+d_sign*car->__bc*(1.0f/18.0f);
 
-		if(car->__c0*d_sign < 36.0f) car->__c0 += (float)(2.0*d_sign);
+		if(car->__c0*d_sign < 36.0f) car->__c0 += 2.0f*d_sign;
 	}
 }
 
 // RACE ENGINE
 void race___4c434h(void){
 
-	double 	d_tmp, d_hypotenuse, d_a, d_b, d_sign;
+	float 	d_hypotenuse, d_a, d_b, sin_d, cos_d;
+	int 	a_d;
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi;
 	__BYTE__ 	esp[0x64];
 	int 	breaker, i, j;
@@ -100,7 +100,7 @@ void race___4c434h(void){
 	D(___243cfch) = 0;
 	car->__15e = 0.0f;
 	car->__15a = 0.0f;
-	car->__b0 *= 0.98;
+	car->__b0 *= 0.98f;
 	
 	if((int)D(s94+0x18) > 0){
 
@@ -112,17 +112,17 @@ void race___4c434h(void){
 				
 				if(((L(ecx)&CTRL_TURBO_BOOST) == 0)||((int)D(s94+0x34) <= 0)){
 
-					car->__b0 += (float)(0.8*(double)F32(s94+4)/30.0);
+					car->__b0 += F32(s94+4)*(0.8f/30.0f);
 				}
 				else {
 
 					if(D(s94+0x20) == 0){
 
-						car->__b0 += (float)(1.3*(double)F32(s94+4)/30.0);
+						car->__b0 += F32(s94+4)*(1.3f/30.0f);
 					}
 					else {
 
-						car->__b0 += (float)(1.5*(double)F32(s94+4)/30.0);
+						car->__b0 += F32(s94+4)*(1.5f/30.0f);
 
 						D(s94+0x18) -= 0x16;
 						if((int)D(s94+0x18) < 0) D(s94+0x18) = 0;
@@ -144,7 +144,7 @@ void race___4c434h(void){
 
 			if(((L(edx)&CTRL_BRAKE) != 0)&&((L(edx)&CTRL_DROP_MINE) == 0)){
 
-				car->__b0 -= F32(s94+4)/90.0;
+				car->__b0 -= F32(s94+4)*(1.0f/90.0f);
 				car->__b0 *= 0.986f;
 			}
 
@@ -175,28 +175,28 @@ void race___4c434h(void){
 
 		if(car->Finished != 0){
 
-			car->__bc *= (float)(9.0/10.0);
+			car->__bc *= 9.0f/10.0f;
 		}
 		else {
 
-			if(0.0 >= (double)F32(s94+4)){
+			if(0.0f >= F32(s94+4)){
 
-				car->__bc *= (float)(9.0/10.0);
+				car->__bc *= 9.0f/10.0f;
 			}
 			else {
 
-				car->__bc = (float)((((double)car->__c0*(double)car->__b0)*(double)F32(s94+0xc))/(double)F32(s94+4));
+				car->__bc = car->__c0*car->__b0*F32(s94+0xc)/F32(s94+4);
 
-				if(dRMath_abs((double)car->__bc) > 20.0){
+				if(fabsf(car->__bc) > 20.0f){
 
-					car->__b0 *= (float)(49.0/50.0);
+					car->__b0 *= 49.0f/50.0f;
 				}
 			}
 		}
 
-		if((car->Ctrls[getCounter(4)]&CTRL_STEER_RIGHT) != 0) helper01(-1.0);
+		if((car->Ctrls[getCounter(4)]&CTRL_STEER_RIGHT) != 0) helper01(-1.0f);
 		if(car->Direction < 0.0f) car->Direction += 360.0f;
-		if((car->Ctrls[getCounter(4)]&CTRL_STEER_LEFT) != 0) helper01(1.0);
+		if((car->Ctrls[getCounter(4)]&CTRL_STEER_LEFT) != 0) helper01(1.0f);
 		if(car->Direction >= 360.0f) car->Direction -= 360.0f;
 
 		if(car->__c0 > 0.0f) car->__c0 -= 1.0f;
@@ -211,73 +211,89 @@ void race___4c434h(void){
 		if(car->Direction >= 360.0f) car->Direction -= 360.0f;
 	} // i
 
-	F32(esp+0x38) = (float)((double)car->__bc*dRMath_sin_deg(((double)car->Direction+ 90.0))/11.0);
-	F32(esp+0x3c) = (float)((double)car->__bc*dRMath_cos_deg(((double)car->Direction+ 90.0))*L0_83/11.0);
-	F32(esp+0x34) = (float)((double)car->__b0*dRMath_sin_deg(((double)car->Direction+180.0)));
-	F32(esp+0x30) = (float)((double)car->__b0*dRMath_cos_deg(((double)car->Direction+180.0))*L0_83);
-	F32(___243d24h) = (float)((double)F32(___243cfch)*dRMath_sin_deg(((double)car->Direction+270.0)));
-	F32(___243d20h) = (float)((double)F32(___243cfch)*dRMath_cos_deg(((double)car->Direction+270.0))*L0_83);
+	// sin(d+90) is cos(d), sin(d+180) -sin(d) and so on: the 20 sines and
+	// cosines of the car's direction plus a fixed angle come from three
+	a_d = dRMath_turns_degf(car->Direction);
+	sin_d = dRMath_fixf(dRMath_sin_i(a_d), 28);
+	cos_d = dRMath_fixf(dRMath_cos_i(a_d), 28);
 
-	d_a = (double)F32(esp+0x34)+(double)F32(esp+0x38);
-	d_b = (double)F32(esp+0x30)+(double)F32(esp+0x3c);
+	F32(esp+0x38) = car->__bc*cos_d*(1.0f/11.0f);
+	F32(esp+0x3c) = -car->__bc*sin_d*L0_83*(1.0f/11.0f);
+	F32(esp+0x34) = -car->__b0*sin_d;
+	F32(esp+0x30) = -car->__b0*cos_d*L0_83;
+	F32(___243d24h) = -F32(___243cfch)*cos_d;
+	F32(___243d20h) = F32(___243cfch)*sin_d*L0_83;
 
-	d_hypotenuse = dRMath_magnitude2(d_a, d_b);
-	F32(esp+0x58) = (d_hypotenuse == 0.0)?1.0f:(float)(dRMath_abs((double)car->__b0)/d_hypotenuse);
+	d_a = F32(esp+0x34)+F32(esp+0x38);
+	d_b = F32(esp+0x30)+F32(esp+0x3c);
 
-	car->__15a = (float)((double)car->__fc+(double)F32(___243d24h)+(double)F32(esp+0x58)*d_a);
-	car->__15e = (float)((double)car->__100+(double)F32(___243d20h)+(double)F32(esp+0x58)*d_b);
+	d_hypotenuse = sqrtf(d_a*d_a+d_b*d_b);
+	F32(esp+0x58) = (d_hypotenuse == 0.0f)?1.0f:fabsf(car->__b0)/d_hypotenuse;
 
-	car->__c4 = (float)(18.0*dRMath_sin_deg(((double)car->Direction+206.0))+(double)car->__15a);
-	car->__c8 = (float)(18.0*dRMath_cos_deg(((double)car->Direction+206.0))*L0_83+(double)car->__15e);
-	car->__cc = (float)(18.0*dRMath_sin_deg(((double)car->Direction+154.0))+(double)car->__15a);
-	car->__d0 = (float)(18.0*dRMath_cos_deg(((double)car->Direction+154.0))*L0_83+(double)car->__15e);
-	car->__d4 = (float)(18.0*dRMath_sin_deg(((double)car->Direction+334.0))+(double)car->__15a);
-	car->__d8 = (float)(18.0*dRMath_cos_deg(((double)car->Direction+334.0))*L0_83+(double)car->__15e);
-	car->__dc = (float)(18.0*dRMath_sin_deg(((double)car->Direction+ 26.0))+(double)car->__15a);
-	car->__e0 = (float)(18.0*dRMath_cos_deg(((double)car->Direction+ 26.0))*L0_83+(double)car->__15e);
-	car->__e4 = (float)( 8.0*dRMath_sin_deg(((double)car->Direction+270.0))+(double)car->__15a);
-	car->__e8 = (float)( 8.0*dRMath_cos_deg(((double)car->Direction+270.0))*L0_83+(double)car->__15e);
-	car->__ec = (float)( 8.0*dRMath_sin_deg(((double)car->Direction+ 90.0))+(double)car->__15a);
-	car->__f0 = (float)( 8.0*dRMath_cos_deg(((double)car->Direction+ 90.0))*L0_83+(double)car->__15e);
-	car->__f4 = (float)(22.0*dRMath_sin_deg(((double)car->Direction+180.0))+(double)car->__15a);
-	car->__f8 = (float)(22.0*dRMath_cos_deg(((double)car->Direction+180.0))*L0_83+(double)car->__15e);
+	car->__15a = car->__fc+F32(___243d24h)+F32(esp+0x58)*d_a;
+	car->__15e = car->__100+F32(___243d20h)+F32(esp+0x58)*d_b;
+
+	// the corners at 26 and 154 degrees, 18 pixels out, and the points
+	// opposite them; 8 pixels to the sides and 22 to the back
+	{
+		int 	s26 = dRMath_sin_i(a_d+(int)((26u << 24)/360)), c26 = dRMath_cos_i(a_d+(int)((26u << 24)/360));
+		int 	s154 = dRMath_sin_i(a_d+(int)((154u << 24)/360)), c154 = dRMath_cos_i(a_d+(int)((154u << 24)/360));
+		float 	x26 = dRMath_fixf(18*(s26 >> 4), 24), y26 = dRMath_fixf(18*(c26 >> 4), 24)*L0_83;
+		float 	x154 = dRMath_fixf(18*(s154 >> 4), 24), y154 = dRMath_fixf(18*(c154 >> 4), 24)*L0_83;
+
+		car->__c4 = car->__15a-x26;
+		car->__c8 = car->__15e-y26;
+		car->__cc = car->__15a+x154;
+		car->__d0 = car->__15e+y154;
+		car->__d4 = car->__15a-x154;
+		car->__d8 = car->__15e-y154;
+		car->__dc = car->__15a+x26;
+		car->__e0 = car->__15e+y26;
+		car->__e4 = car->__15a-8.0f*cos_d;
+		car->__e8 = car->__15e+8.0f*sin_d*L0_83;
+		car->__ec = car->__15a+8.0f*cos_d;
+		car->__f0 = car->__15e-8.0f*sin_d*L0_83;
+		car->__f4 = car->__15a-22.0f*sin_d;
+		car->__f8 = car->__15e-22.0f*cos_d*L0_83;
+	}
 
 	D(___243d24h) = 0;
 	D(___243d20h) = 0;
 
-	edx = (int)((double)car->YLocation+(double)car->__f8);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__f4);
+	edx = (int)(car->YLocation+car->__f8);
+	D(esp+0x5c) = (int)(car->XLocation+car->__f4);
 	D(esp+0x2c) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__c8);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__c4);
+	edx = (int)(car->YLocation+car->__c8);
+	D(esp+0x5c) = (int)(car->XLocation+car->__c4);
 	D(esp+0x50) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__d0);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__cc);
+	edx = (int)(car->YLocation+car->__d0);
+	D(esp+0x5c) = (int)(car->XLocation+car->__cc);
 	D(esp+0x48) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__d8);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__d4);
+	edx = (int)(car->YLocation+car->__d8);
+	D(esp+0x5c) = (int)(car->XLocation+car->__d4);
 	D(esp+0x4c) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__e0);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__dc);
+	edx = (int)(car->YLocation+car->__e0);
+	D(esp+0x5c) = (int)(car->XLocation+car->__dc);
 	D(esp+0x54) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__e8);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__e4);
+	edx = (int)(car->YLocation+car->__e8);
+	D(esp+0x5c) = (int)(car->XLocation+car->__e4);
 	D(esp+0x40) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	edx = (int)((double)car->YLocation+(double)car->__f0);
-	D(esp+0x5c) = (int)((double)car->XLocation+(double)car->__ec);
+	edx = (int)(car->YLocation+car->__f0);
+	D(esp+0x5c) = (int)(car->XLocation+car->__ec);
 	D(esp+0x44) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
 
-	car->ImgIndex = (int)((double)car->Direction/3.75);
+	// 96 images, 3.75 degrees each
+	car->ImgIndex = ((a_d&0xffffff)*96) >> 24;
 	car->ImgOffset = 0x25800*D(___243c60h)+0x640*car->ImgIndex;
-	ecx = (int)((double)car->__15e+(double)car->YLocation-20.0);
+	ecx = (int)(car->__15e+car->YLocation-20.0f);
 	ebxp = ___243d74h+(int)car->ImgOffset;
-	edip = TRX_MAS+(int)(double)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)(double)car->__15a;
+	edip = TRX_MAS+(int)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)car->__15a;
 	esi = 0xf;
 
 	// the car's pixels against walls under them, unless there are none
@@ -337,7 +353,7 @@ void race___4c434h(void){
 				edx = (int)eax%(int)ebx;
 				edx = edx-car->__16a;
 				D(esp+0x5c) = edx;
-				car->__162 = (float)(double)(int)D(esp+0x5c);
+				car->__162 = (float)(int)D(esp+0x5c);
 				eax = rand_watcom106();
 				ebx = 2*car->__16a+1;
 				edx = (int)eax>>0x1f;
@@ -356,10 +372,10 @@ void race___4c434h(void){
 				}
 
 				car->YLocation += car->__166;
-				D(esp+0x5c) = (int)((double)car->YLocation+(double)car->__15e-20.0);
+				D(esp+0x5c) = (int)(car->YLocation+car->__15e-20.0f);
 				edi = TRX_WIDTH*D(esp+0x5c);
 				car->XLocation += car->__162;
-				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)(double)car->__15a;
+				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)car->__15a;
 				ebxp = ___243d74h+car->ImgOffset;
 				esi = 0xf;
 				edx = 0;
@@ -422,8 +438,8 @@ void race___4c434h(void){
 
 		if((car->__192 != 0)&&((int)car->__192 <= 3)){
 
-			car->__fc = (float)(-1.0*(double)car->__15a);
-			car->__100 = (float)(-1.0*(double)car->__15e);
+			car->__fc = -car->__15a;
+			car->__100 = -car->__15e;
 			car->__b0 = 0.0f;
 			car->__14 = 1;
 		}
@@ -449,7 +465,7 @@ void race___4c434h(void){
 			if(car->Direction < 0.0f) car->Direction += 360.0f;
 			if(car->Direction >= 360.0f) car->Direction -= 360.0f;
 
-			car->__b0 *= (float)(7.0/8.0);
+			car->__b0 *= 7.0f/8.0f;
 
 			car->__14 = 1;
 		} // i
@@ -457,29 +473,29 @@ void race___4c434h(void){
 
 	if((D(esp+0x50) == 4)||(D(esp+0x48) == 4)||(D(esp+0x4c) == 4)||(D(esp+0x54) == 4)||(D(esp+0x40) == 4)||(D(esp+0x44) == 4)){
 
-		car->__b0 *= (float)(34.0/35.0);
+		car->__b0 *= 34.0f/35.0f;
 	}
 
 	if((D(esp+0x48) == 5)||(D(esp+0x4c) == 5)){
 
 		car->__104 += 0.2f;
-		car->__b0 *= (float)(29.0/30.0);
+		car->__b0 *= 29.0f/30.0f;
 	}
 
 	if((D(esp+0x50) == 5)||(D(esp+0x54) == 5)){
 
 		car->__104 -= 0.2f;
-		car->__b0 *= (float)(29.0/30.0);
+		car->__b0 *= 29.0f/30.0f;
 	}
 
 	if((D(esp+0x50) == 6)||(D(esp+0x48) == 6)||(D(esp+0x4c) == 6)||(D(esp+0x54) == 6)||(D(esp+0x40) == 6)||(D(esp+0x44) == 6)){
 
-		car->__b0 *= (float)(8.0/9.0);
+		car->__b0 *= 8.0f/9.0f;
 	}
 
 	if((D(esp+0x50) == 7)||(D(esp+0x48) == 7)||(D(esp+0x4c) == 7)||(D(esp+0x54) == 7)||(D(esp+0x40) == 7)||(D(esp+0x44) == 7)){
 
-		car->__b0 *= (float)(19.0/20.0);
+		car->__b0 *= 19.0f/20.0f;
 	}
 
 	if((D(esp+0x50) == 0xa)||(D(esp+0x4c) == 0xa)){
@@ -494,7 +510,7 @@ void race___4c434h(void){
 
 	if((D(esp+0x50) == 0xb)||(D(esp+0x48) == 0xb)||(D(esp+0x4c) == 0xb)||(D(esp+0x54) == 0xb)||(D(esp+0x40) == 0xb)||(D(esp+0x44) == 0xb)){
 
-		car->__b0 *= (float)(76.0/75.0);
+		car->__b0 *= 76.0f/75.0f;
 	}
 
 	if((D(esp+0x50) == 0xc)||(D(esp+0x4c) == 0xc)){
@@ -509,18 +525,16 @@ void race___4c434h(void){
 
 	if((D(esp+0x50) == 0xd)||(D(esp+0x48) == 0xd)||(D(esp+0x4c) == 0xd)||(D(esp+0x54) == 0xd)||(D(esp+0x40) == 0xd)||(D(esp+0x44) == 0xd)){
 
-		F64(esp+0x10) = 7.0*(double)car->__b0;
-		car->Direction += (float)((double)rand_watcom106()*F64(esp+0x10)*(1.0/65536.0));
-		F64(esp+0x10) = 7.0*(double)car->__b0;
-		car->Direction -= (float)((double)rand_watcom106()*F64(esp+0x10)*(1.0/65536.0));
+		car->Direction += (float)rand_watcom106()*(7.0f*car->__b0)*(1.0f/65536.0f);
+		car->Direction -= (float)rand_watcom106()*(7.0f*car->__b0)*(1.0f/65536.0f);
 		if(car->Direction < 0.0f) car->Direction += 360.0f;
 		if(car->Direction >= 360.0f) car->Direction -= 360.0f;
-		car->__b0 *= (float)(29.0/30.0);
+		car->__b0 *= 29.0f/30.0f;
 	}
 
 	if((D(esp+0x50) == 0xe)||(D(esp+0x48) == 0xe)||(D(esp+0x4c) == 0xe)||(D(esp+0x54) == 0xe)||(D(esp+0x40) == 0xe)||(D(esp+0x44) == 0xe)){
 
-		car->__b0 *= (float)(39.0/40.0);
+		car->__b0 *= 39.0f/40.0f;
 	}
 
 	car->XLocation += car->__15a;
@@ -528,9 +542,9 @@ void race___4c434h(void){
 
 	F32(esp+0x28) = (float)(int)(TRX_WIDTH-0x14);
 	if(car->XLocation > F32(esp+0x28)) car->XLocation = F32(esp+0x28);
-	if(car->XLocation < 20.0) car->XLocation = 20.0f;
+	if(car->XLocation < 20.0f) car->XLocation = 20.0f;
 
 	F32(esp+0x24) = (float)(int)(TRX_HEIGHT-0x14);		
 	if(car->YLocation > F32(esp+0x24)) car->YLocation = F32(esp+0x24);
-	if(car->YLocation < 20.0) car->YLocation = 20.0f;
+	if(car->YLocation < 20.0f) car->YLocation = 20.0f;
 }

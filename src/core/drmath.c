@@ -70,6 +70,14 @@ static int turns_deg(double deg){
 double dRMath_sin_deg(double deg){ return fix28(dRMath_sin_i(turns_deg(deg))); }
 double dRMath_cos_deg(double deg){ return fix28(dRMath_cos_i(turns_deg(deg))); }
 
+// degrees to 1/2^24 turns, from a float: 360 degrees still fit its 24 bits
+int dRMath_turns_degf(float deg){
+
+	if((deg >= 32768.0f)||(deg <= -32768.0f)) deg = fmodf(deg, 360.0f);
+
+	return (int)(deg*46603.377f);
+}
+
 #if !defined(DR_INLINE_MATH)
 double dRMath_sqrt(double dval){ return sqrt(dval); }
 double dRMath_ceil(double dval){ return ceil(dval); }

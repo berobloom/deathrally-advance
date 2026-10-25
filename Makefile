@@ -6,6 +6,8 @@ DEFINES += $(EXTRA_DEFINES)
 INCLUDES := -Iinclude -I/usr/include/SDL2
 FLAGS ?= -O3
 FLAGS += -Werror -Wno-unused-result
+# races must compute the same as on the GBA: no a*b+c fused into one rounding
+FLAGS += -ffp-contract=off
 LDFLAGS := -lm -lSDL2 -lSDL2_net
 
 BUILD := build

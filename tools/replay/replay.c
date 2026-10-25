@@ -10,7 +10,11 @@
 // stay as they were recorded.
 
 #include "drally.h"
+#include "drally_structs_free.h"
 #include "race_replay.h"
+
+	extern __BYTE__ ___1e6ed0h[];
+	extern __BYTE__ ___1de580h[];
 
 void race_logic(void);
 
@@ -27,8 +31,9 @@ int main(int argc, char * argv[]){
 	__DWORD__ * 	expected;
 	__BYTE__ * 	flat;
 	const char * 	err;
-	unsigned 	frames = 0, mismatches = 0, first_bad = 0;
+	unsigned 	frames = 0, mismatches = 0, first_bad = 0, finish[4] = { 0 };
 	int 		i;
+	struct_35e_t * 	cars = (struct_35e_t *)___1e6ed0h;
 	clock_t 	t;
 
 	if((argc != 2)&&(argc != 3)){ fprintf(stderr, "usage: replay TICKLOG.BIN [OUT.BIN]\n"); return 1; }
@@ -68,8 +73,16 @@ int main(int argc, char * argv[]){
 			*expected = h;
 		}
 		frames++;
+		for(i = 0; i < 4; i++) if(!finish[i]&&cars[i].Finished) finish[i] = frames;
 	}
 	t = clock()-t;
+
+	// how the race came out, to compare a change to the math with the
+	// original: the hashes can't, a race diverges from the first changed bit
+	for(i = 0; i < 4; i++){
+
+		printf("car %d: finished %5u, place %u, lap %u, damage %d, at %.0f,%.0f\n", i, finish[i], cars[i].Position, cars[i].Lap, (int)D(___1de580h+0x94*i+0x18), cars[i].XLocation, cars[i].YLocation);
+	}
 
 	printf("%u frames in %.2f s\n", frames, (double)t/CLOCKS_PER_SEC);
 	if(mismatches) printf("%u frames differ from the recording, the first is frame %u\n", mismatches, first_bad);

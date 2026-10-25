@@ -12,6 +12,24 @@ double dRMath_cos_deg(double deg);
 int dRMath_sin_i(int a);
 int dRMath_cos_i(int a);
 
+// single precision, for the race code the GBA runs every tick: a float's
+// soft-float operations cost about half a double's
+int dRMath_turns_degf(float deg);
+
+// v*2^-shift exactly, by lowering the exponent of (float)v
+static inline float dRMath_fixf(int v, int shift){
+
+	union { float f; unsigned int u; } b;
+
+	b.f = (float)v;
+	if(v) b.u -= (unsigned int)shift << 23;
+
+	return b.f;
+}
+
+static inline float dRMath_sin_degf(float deg){ return dRMath_fixf(dRMath_sin_i(dRMath_turns_degf(deg)), 28); }
+static inline float dRMath_cos_degf(float deg){ return dRMath_fixf(dRMath_cos_i(dRMath_turns_degf(deg)), 28); }
+
 #if defined(DR_INLINE_MATH)
 static inline double dRMath_abs(double dval){ return (dval < 0.0)?(-1.0*dval):dval; }
 static inline double dRMath_sqrt(double dval){ return sqrt(dval); }
