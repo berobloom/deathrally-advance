@@ -59,7 +59,7 @@ typedef struct {
 	s32	x, y;		// position of the car's center, 24.8 pixels
 	s32	vx, vy;		// velocity, 24.8 pixels per frame
 	s32	speed;		// along the heading, 24.8 pixels per frame
-	s32	angle;		// heading, 1/16 rotation frames, clockwise from north
+	s32	angle;		// heading, 1/16 rotation frames, counterclockwise from north
 	int	shown_frame;	// rotation frame currently in OBJ VRAM
 } car_t;
 
@@ -83,6 +83,15 @@ static const s16 sin96[CAR_FRAMES] = {
 	-4096, -4078, -4053, -4011, -3952, -3876, -3784, -3675, -3547, -3400, -3244, -3076,
 	-2896, -2706, -2496, -2276, -2048, -1810, -1567, -1316, -1060, -799, -535, -268
 };
+
+// unit vector a car moves along at rotation frame f, 4096 = 1 pixel. As in
+// race___4c434h.c: Direction = 3.75 * frame degrees, forward is
+// (-sin, -cos * 0.83), so frame 0 heads north and frame 24 west
+static void heading(int frame, s32 * dx, s32 * dy){
+
+	*dx = -sin96[frame];
+	*dy = -(sin96[(frame + 24) % CAR_FRAMES] * 850 >> 10);	// cos * 0.83
+}
 
 static void copy32(void * dst, const void * src, u32 bytes){
 
@@ -254,14 +263,15 @@ static void drive(car_t * c, u16 keys){
 	// steer faster at speed, and the other way round when reversing
 	turn = 4 + ((c->speed < 0 ? -c->speed : c->speed) * 12 >> 10);
 	if(c->speed < 0) turn = -turn;
-	if(keys & KEY_LEFT) c->angle -= turn;
-	if(keys & KEY_RIGHT) c->angle += turn;
+	if(keys & KEY_LEFT) c->angle += turn;
+	if(keys & KEY_RIGHT) c->angle -= turn;
 	c->angle = (c->angle + 16*CAR_FRAMES) % (16*CAR_FRAMES);
 
 	// the velocity follows the heading with a little slide
 	frame = c->angle >> 4;
-	hx = (sin96[frame] * c->speed) >> 12;
-	hy = -(sin96[(frame + 72) % CAR_FRAMES] * c->speed) >> 12;		// -cos
+	heading(frame, &hx, &hy);
+	hx = (hx * c->speed) >> 12;
+	hy = (hy * c->speed) >> 12;
 	c->vx += (hx - c->vx) >> 3;
 	c->vy += (hy - c->vy) >> 3;
 
@@ -278,9 +288,10 @@ static void drive(car_t * c, u16 keys){
 static int free_road(const car_t * c, int dframes){
 
 	int frame = ((c->angle >> 4) + dframes + CAR_FRAMES) % CAR_FRAMES;
-	s32 dx = sin96[frame], dy = -sin96[(frame + 72) % CAR_FRAMES];
+	s32 dx, dy;
 	int d;
 
+	heading(frame, &dx, &dy);
 	for(d = 8; d < 96; d += 8){
 
 		if(mas_at((c->x >> 8) + (dx*d >> 12), (c->y >> 8) + (dy*d >> 12)) != MAS_ROAD) break;
@@ -291,7 +302,7 @@ static int free_road(const car_t * c, int dframes){
 // stand-in for the race AI: steer toward the most open road
 static u16 autopilot(const car_t * c, int top_speed){
 
-	int left = free_road(c, -12), ahead = free_road(c, 0), right = free_road(c, 12);
+	int left = free_road(c, 12), ahead = free_road(c, 0), right = free_road(c, -12);
 	u16 keys = (c->speed < top_speed) ? KEY_A : 0;
 
 	if((ahead < 40)&&(c->speed > 2*256)) keys = KEY_B;
