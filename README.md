@@ -69,10 +69,33 @@ make run            # or ./scripts/drun, ./scripts/drun_gdb for gdb
     src/decomp        decompiled functions not yet sorted into a module
     include           headers
     tools/ipxnet      standalone IPX relay server
-    scripts           run helpers
+    tools/gbabake     turns game data into GBA layouts
+    gba/proto         Game Boy Advance rendering prototype
+    scripts           run helpers, discmp.sh to compare generated code
 
 Function files are named after their address in the original executable
 (e.g. `___3e720h.c`), keep that name when moving them between modules.
+
+#### Game Boy Advance prototype
+
+`gba/proto` tests whether the GBA can draw a race: a real track as a tile
+background streamed from ROM, four cars as sprites with the game's own 96
+rotation frames, and shadows through the OBJ window. The driving and the
+other cars' autopilot are stand-ins; none of the game's code runs yet.
+
+Needs devkitARM with libgba (`sudo dkp-pacman -S gba-dev`) and the game data
+in `game/`:
+
+```sh
+make -C gba/proto            # drproto-tr0.gba
+make -C gba/proto TRACK=5    # drproto-tr5.gba, any track 0-9
+```
+
+D-pad left/right steer, A accelerates, B brakes and reverses, R lets the
+autopilot drive, Start goes back to the grid, Select hides the meter. The
+meter shows frames per second, the share of each frame used (CPU) and the
+part of that spent on graphics (GFX). The ROMs contain game data: don't
+share them.
 
 #### Work in progress
 *   Multiplayer not available

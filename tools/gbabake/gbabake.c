@@ -1,0 +1,209 @@
+// gbabake: decode a Death Rally track and the race cars with the game's own
+// BPA/BPK readers and write them in the layouts the GBA prototype uses.
+//
+//   gbabake GAMEDIR TRACK OUTDIR
+//
+// Writes, for track TRn:
+//   track.pal    256 BGR555 colors (the track's 6-bit VGA palette)
+//   track.tiles  the track image as 8bpp 8x8 tiles, row by row
+//   track.mas    the track mask, one byte per pixel (wall/surface codes)
+//   track.inf    width and height in tiles, then in pixels, then the 4 start positions
+//                (x, y, rot), all as little-endian 32-bit values
+//   cars.obj     4 cars x 96 directions, each a 64x64 8bpp sprite in 1D
+//                tile order with the 40x40 frame at (4,4) (index 0 is clear)
+//   preview.ppm  the track and car 0's 96 frames, for checking by eye
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+
+#include "drally.h"
+#include "bpa.h"
+
+void bpk_decode2(__POINTER__ dst, __POINTER__ src);
+void bpk_decode4(__DWORD__ size, __DWORD__ offset, __POINTER__ dst, __POINTER__ src);
+
+#define CAR_FRAMES	96
+#define CAR_W		40
+#define OBJ_W		64
+#define CAR_PAD		4	// frame at (4,4), so it fits in the sprite's first 6 tile rows
+
+#pragma pack(push, 1)
+typedef struct { __DWORD__ x, y, rot; } startup_t;
+typedef struct {
+	__DWORD__	w, h, unk0;
+	startup_t	startups[4];
+} inf_t;
+#pragma pack(pop)
+
+// models of the 4 cars in the prototype, as named in race___42824h.c
+static const char * car_models[4] = { "LOTUS", "CAMARO", "PORCHE", "SEDAN" };
+// their body colors, 6-bit VGA: red, blue, yellow, green
+static const int car_colors[4][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
+
+// car n's 10 body colors from 15+10*n on, as ___4a064h_cdecl builds them
+static void car_ramp(__BYTE__ * pal, int n){
+
+	int 	i, k;
+
+	for(i = 0; i < 5; i++){
+		for(k = 0; k < 3; k++){
+
+			pal[3*(15+10*n+i)+k] = (int)((0.18*i+0.1)*car_colors[n][k]);
+			pal[3*(15+10*n+i+5)+k] = (int)(12.6*i+(1.0-0.2*i)*car_colors[n][k]);
+		}
+	}
+}
+
+static __POINTER__ read_entry(const char * bpa_name, const char * entry){
+
+	BPA *		bpa;
+	__POINTER__	buf;
+
+	if(!(bpa = bpa_open(bpa_name))){ fprintf(stderr, "can't open %s\n", bpa_name); exit(1); }
+	bpa_search(bpa, entry);
+	if(!bpa_entry_size(bpa)){ fprintf(stderr, "%s: no %s\n", bpa_name, entry); exit(1); }
+	buf = calloc(1, bpa_entry_size(bpa) + 0x10000);
+	bpa_read(bpa, buf);
+	bpa_close(bpa);
+
+	return buf;
+}
+
+static FILE * out(const char * dir, const char * name){
+
+	char	path[PATH_MAX+32];
+	FILE *	fd;
+
+	snprintf(path, sizeof(path), "%s/%s", dir, name);
+	if(!(fd = fopen(path, "wb"))){ perror(path); exit(1); }
+
+	return fd;
+}
+
+static void put32(FILE * fd, __DWORD__ v){
+
+	fputc(v, fd); fputc(v >> 8, fd); fputc(v >> 16, fd); fputc(v >> 24, fd);
+}
+
+int main(int argc, char * argv[]){
+
+	char		bpa_name[16], entry[32], outdir[PATH_MAX];
+	__POINTER__	src, ima, mas, spins;
+	__BYTE__	pal[0x300], obj[OBJ_W*OBJ_W];
+	inf_t *		inf;
+	int 		track, w, h, tw, th, tx, ty, x, y, n, f, i;
+	FILE *		fd;
+
+	if(argc != 4){ fprintf(stderr, "usage: gbabake GAMEDIR TRACK OUTDIR\n"); return 1; }
+	track = atoi(argv[2]);
+	if(!realpath(argv[3], outdir)){ perror(argv[3]); return 1; }
+	if(chdir(argv[1])){ perror(argv[1]); return 1; }
+
+	snprintf(bpa_name, sizeof(bpa_name), "TR%d.BPA", track);
+
+	snprintf(entry, sizeof(entry), "TR%d-INF.BIN", track);
+	inf = (inf_t *)read_entry(bpa_name, entry);
+	w = inf->w; h = inf->h;
+	tw = (w+7)/8; th = (h+7)/8;
+
+	snprintf(entry, sizeof(entry), "TR%d-IMA.BPK", track);
+	src = read_entry(bpa_name, entry);
+	bpk_decode4(0x300, 0xa, pal, src);
+	ima = calloc(1, w*h);
+	bpk_decode4(w*h, 0x30a, ima, src);
+	free(src);
+	for(n = 0; n < 4; n++) car_ramp(pal, n);
+
+	fd = out(outdir, "track.pal");
+	for(n = 0; n < 0x100; n++){
+
+		__WORD__ c = (pal[3*n] >> 1) | ((pal[3*n+1] >> 1) << 5) | ((pal[3*n+2] >> 1) << 10);
+		fputc(c, fd); fputc(c >> 8, fd);
+	}
+	fclose(fd);
+
+	fd = out(outdir, "track.tiles");
+	for(ty = 0; ty < th; ty++){
+		for(tx = 0; tx < tw; tx++){
+			for(y = 0; y < 8; y++){
+				for(x = 0; x < 8; x++){
+
+					int px = 8*tx+x, py = 8*ty+y;
+					fputc(((px < w)&&(py < h)) ? ima[py*w+px] : 0, fd);
+				}
+			}
+		}
+	}
+	fclose(fd);
+
+	snprintf(entry, sizeof(entry), "TR%d-MAS.BPK", track);
+	src = read_entry(bpa_name, entry);
+	mas = calloc(1, w*h);
+	bpk_decode4(w*h, 0x30a, mas, src);
+	free(src);
+
+	fd = out(outdir, "track.mas");
+	fwrite(mas, 1, w*h, fd);
+	fclose(fd);
+
+	fd = out(outdir, "track.inf");
+	put32(fd, tw); put32(fd, th); put32(fd, w); put32(fd, h);
+	for(n = 0; n < 4; n++){ put32(fd, inf->startups[n].x); put32(fd, inf->startups[n].y); put32(fd, inf->startups[n].rot); }
+	fclose(fd);
+
+	fd = out(outdir, "cars.obj");
+	spins = calloc(1, CAR_FRAMES*CAR_W*CAR_W);
+	for(n = 0; n < 4; n++){
+
+		snprintf(entry, sizeof(entry), "%s.BPK", car_models[n]);
+		src = read_entry("ENGINE.BPA", entry);
+		bpk_decode2(spins, src);
+		free(src);
+
+		// same recoloring as race___42824h.c: car n gets its own body colors
+		for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((spins[i] >= 0xf)&&(spins[i] <= 0x18)) spins[i] += 0xa*n;
+
+		for(f = 0; f < CAR_FRAMES; f++){
+
+			memset(obj, 0, sizeof(obj));
+			for(y = 0; y < CAR_W; y++){
+				for(x = 0; x < CAR_W; x++){
+
+					int ox = x+CAR_PAD, oy = y+CAR_PAD;
+					// 1D sprite layout: 8x8 tiles row by row, 8 tiles per row
+					obj[64*((oy/8)*8+ox/8)+8*(oy%8)+ox%8] = spins[f*CAR_W*CAR_W+y*CAR_W+x];
+				}
+			}
+			fwrite(obj, 1, sizeof(obj), fd);
+		}
+
+		if(n == 0){
+
+			// preview: the track, then car 0's frames in rows of 24 below it
+			FILE * pv = out(outdir, "preview.ppm");
+			int pw = (w > 24*CAR_W) ? w : 24*CAR_W, ph = h+4*CAR_W;
+			fprintf(pv, "P6 %d %d 63\n", pw, ph);
+			for(y = 0; y < ph; y++){
+				for(x = 0; x < pw; x++){
+
+					int c = 0;
+					if(y < h){ if(x < w) c = ima[y*w+x]; }
+					else {
+						int fy = (y-h)/CAR_W, fx = x/CAR_W;
+						if(fx < 24) c = spins[(fy*24+fx)*CAR_W*CAR_W+((y-h)%CAR_W)*CAR_W+x%CAR_W];
+					}
+					fwrite(pal+3*c, 1, 3, pv);
+				}
+			}
+			fclose(pv);
+		}
+	}
+	fclose(fd);
+
+	printf("TR%d: %dx%d (%dx%d tiles), start (%u,%u) rot %u\n", track, w, h, tw, th,
+		inf->startups[0].x, inf->startups[0].y, inf->startups[0].rot);
+	return 0;
+}

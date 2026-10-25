@@ -17,3 +17,6 @@ z_regex*
 *_ok.c
 *.zip
 *_32b.c
+/gba/proto/build/
+*.gba
+/tools/gbabake/gbabake
