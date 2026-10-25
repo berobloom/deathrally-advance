@@ -2,6 +2,7 @@ CC := gcc
 MSBUILD := MSBuild.exe
 
 DEFINES := -DDR_MULTIPLAYER -DIPXNET -DDR_LETTERBOX #-DDR_CDCHECK
+DEFINES += $(EXTRA_DEFINES)
 INCLUDES := -Iinclude -I/usr/include/SDL2
 FLAGS ?= -O3
 FLAGS += -Werror -Wno-unused-result
@@ -25,7 +26,7 @@ $(BUILD)/%.o: src/%.c Makefile
 
 -include $(DEPS)
 
-.PHONY: all clean run check dRally.exe
+.PHONY: all clean run check ticklog dRally.exe
 
 run: $(TARGET)
 	./scripts/drun
@@ -34,6 +35,12 @@ run: $(TARGET)
 check:
 	@$(MAKE) --no-print-directory BUILD=$(BUILD)/check TARGET=$(BUILD)/check/drally_lto \
 		FLAGS="-O1 -flto=auto -Werror -Wno-unused-result"
+
+# records the first race to game/TICKLOG.BIN, for replaying race_logic()
+# elsewhere (gba/replay); the AI drives every car
+ticklog:
+	@$(MAKE) --no-print-directory BUILD=$(BUILD)/ticklog TARGET=$(BUILD)/ticklog/drally_ticklog \
+		EXTRA_DEFINES=-DDR_TICKLOG
 
 dRally.exe:
 	@$(MSBUILD)

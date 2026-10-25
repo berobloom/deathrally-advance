@@ -1,19 +1,20 @@
 
 #include "drally.h"
 
-static unsigned int __seed = 1;
+// not static: the race replay (race_ticklog.c) saves and restores it
+unsigned int watcom106_seed = 1;
 
 void srand_watcom106(unsigned int seed){
 
-    __seed = seed;
+    watcom106_seed = seed;
 }
 
 int rand_watcom106(void){
 
-    __seed *= 0x41c64e6d;
-    __seed += 0x3039;
+    watcom106_seed *= 0x41c64e6d;
+    watcom106_seed += 0x3039;
  
-	return (__seed>>0x10)&0x7fff;
+	return (watcom106_seed>>0x10)&0x7fff;
 }
 
 char * strupr_watcom106(char * s){

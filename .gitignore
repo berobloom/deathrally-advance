@@ -20,3 +20,5 @@ z_regex*
 /gba/proto/build/
 *.gba
 /tools/gbabake/gbabake
+/gba/replay/build/
+TICKLOG.BIN
