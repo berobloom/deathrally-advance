@@ -257,7 +257,7 @@ int ___1e7c48h[0x100];
 int ___1e8048h[0x100];
 int ___1e8448h[0x100];
 int ___1e8848h[100][100];
-__BYTE__ ___1f2488h[0x1680];
+DR_COLD __BYTE__ ___1f2488h[0x1680];
 __BYTE__ ___1f3b08h[0x4cf40];
 __BYTE__ ___240b48h[100*0x2c];
 int TRX_OHI_DAT[0x100];

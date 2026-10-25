@@ -11,6 +11,17 @@
 
 #include "types.h"
 
+// where the GBA (gba/replay) wants code and data that aren't in the
+// default places: DR_HOT for the race code's innermost loops, as ARM code
+// in IWRAM, DR_COLD for big race state it seldom reads, in EWRAM to leave
+// IWRAM to the rest. Nothing on the desktop
+#if !defined(DR_HOT)
+#define DR_HOT
+#endif
+#if !defined(DR_COLD)
+#define DR_COLD
+#endif
+
 
 typedef void (*void_cb)(void);
 

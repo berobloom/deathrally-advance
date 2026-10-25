@@ -9,7 +9,7 @@ void srand_watcom106(unsigned int seed){
     watcom106_seed = seed;
 }
 
-int rand_watcom106(void){
+DR_HOT int rand_watcom106(void){
 
     watcom106_seed *= 0x41c64e6d;
     watcom106_seed += 0x3039;

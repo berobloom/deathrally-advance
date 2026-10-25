@@ -10,14 +10,14 @@
 //
 // Angles are in 1/2^24 turns; the table's 4096 steps are interpolated with
 // the lower 12 bits.
-int dRMath_sin_i(int a){
+DR_HOT int dRMath_sin_i(int a){
 
 	int 	i = (a >> 12)&0xfff, f = a&0xfff;
 
 	return dRMath_sin_tab[i]+(((dRMath_sin_tab[i+1]-dRMath_sin_tab[i])*f) >> 12);
 }
 
-int dRMath_cos_i(int a){
+DR_HOT int dRMath_cos_i(int a){
 
 	return dRMath_sin_i(a+(1 << 22));
 }
@@ -71,7 +71,7 @@ double dRMath_sin_deg(double deg){ return fix28(dRMath_sin_i(turns_deg(deg))); }
 double dRMath_cos_deg(double deg){ return fix28(dRMath_cos_i(turns_deg(deg))); }
 
 // degrees to 1/2^24 turns, from a float: 360 degrees still fit its 24 bits
-int dRMath_turns_degf(float deg){
+DR_HOT int dRMath_turns_degf(float deg){
 
 	if((deg >= 32768.0f)||(deg <= -32768.0f)) deg = fmodf(deg, 360.0f);
 

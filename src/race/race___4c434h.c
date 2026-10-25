@@ -62,7 +62,7 @@ static __DWORD__ helper00(int i){
 // image's first): the wall's mask value, with its column and row in
 // ___243cb0h and ___243cb4h, or 0xf if there is none. Only the pixels in
 // the 8x8 blocks of the wall map that have walls are searched
-static __DWORD__ helper02(__BYTE__ * img, __BYTE__ * mas, int x, int y){
+DR_HOT static __DWORD__ helper02(__BYTE__ * img, __BYTE__ * mas, int x, int y){
 
 	int 		i, j, k, end, i0, i1, w = TRX_WIDTH;
 	unsigned 	cells;

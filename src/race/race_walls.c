@@ -41,7 +41,7 @@ void race_walls_free(void){
 // 0 if the w x h pixels from (x, y) on hold no wall. Areas that reach past
 // the track's edges get 1: the race code reads those from the next or the
 // previous row of the mask, so they need the full test
-int race_walls_near(int x, int y, int w, int h){
+DR_HOT int race_walls_near(int x, int y, int w, int h){
 
 	int 	bx, by;
 
@@ -60,7 +60,7 @@ int race_walls_near(int x, int y, int w, int h){
 // which of the 8x8 blocks of the wall map that the w x h pixels from
 // (x, y) on reach into, column by column from x >> 3, hold a wall: bit k
 // for column (x >> 3)+k, all of them where the area isn't on the track
-unsigned race_walls_cells(int x, int y, int w, int h){
+DR_HOT unsigned race_walls_cells(int x, int y, int w, int h){
 
 	int 		bx, by;
 	unsigned 	cells = 0;

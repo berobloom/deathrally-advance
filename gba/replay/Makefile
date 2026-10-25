@@ -31,6 +31,8 @@ CFLAGS := $(ARCH) -O2 -ffunction-sections -fdata-sections -Wno-unused-result \
 # long calls: the soft-float routines in IWRAM are then called through a
 # bx in the caller instead of a veneer run as ARM code from ROM
 CFLAGS += -mlong-calls
+CFLAGS += -D'DR_HOT=__attribute__((section(".iwram"),target("arm"),noinline))' \
+	-D'DR_COLD=__attribute__((section(".sbss")))'
 LDFLAGS := -specs=gba.specs $(ARCH) -Wl,--gc-sections -L$(DEVKITPRO)/libgba/lib
 
 ifneq ($(FRAMES),)
