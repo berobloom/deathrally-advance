@@ -85,6 +85,15 @@ int main(int argc, char * argv[]){
 	}
 
 	printf("%u frames in %.2f s\n", frames, (double)t/CLOCKS_PER_SEC);
+
+	// what the logic drew into the track, which the hashes leave out
+	{
+		__DWORD__ 	h = 0x811c9dc5;
+		unsigned 	k;
+
+		for(k = 0; k < race_replay_buf_size(3); k++) h = (h^(*race_replay_buf(3))[k])*0x01000193;
+		printf("track image %08x\n", h);
+	}
 	if(mismatches) printf("%u frames differ from the recording, the first is frame %u\n", mismatches, first_bad);
 	else printf("all hashes match the recording\n");
 

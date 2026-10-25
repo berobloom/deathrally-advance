@@ -12,6 +12,35 @@
 
 int rand_watcom106(void);
 
+// draws obstacle o's 16x16 image, its non-zero pixels, into the track.
+// From locals: through the globals the compiler would read them again
+// after every pixel, as any byte written might be one of them
+static void helper00(__DWORD__ o){
+
+	__BYTE__ * 	src = RACE_OBSTACLE_BPK+0x100*D(___1f2488h+o+8)-0x100;
+	__BYTE__ * 	dst = TRX_IMA+TRX_WIDTH*(D(___1f2488h+o+4)-8)+D(___1f2488h+o)-8;
+	int 		w = TRX_WIDTH, x, y;
+
+	for(y = 0; y < 0x10; y++, src += 0x10, dst += w){
+
+		for(x = 0; x < 0x10; x++) if(src[x] != 0) dst[x] = src[x];
+	}
+}
+
+// 1 if t is in one of the 24 windows top-9 to top-1, top-29 to top-21 and
+// so on that an obstacle blinks in, which the code tested one by one
+static int helper01(int t, int top){
+
+	int 	d, r;
+
+	if((t <= top-470)||(t >= top)) return 0;
+
+	d = top-t;
+	r = d-20*((d*3277) >> 16);	// d%20, for d below 470
+
+	return (r >= 1)&&(r <= 9);
+}
+
 void race___5209ch(void){
 
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi, ebp;
@@ -208,42 +237,7 @@ void race___5209ch(void){
 									if((int)edx >= 0x10) break;
 								}
 
-								edi ^= edi;
-								eax = D(esp+0x30);
-								D(esp+0x34) = edi;
-								edx = 0x120*eax;
-
-								while(1){
-
-									ebx = D(esp+0x34);
-									ebpp = RACE_OBSTACLE_BPK;
-									eax = 0;
-									D(esp+0x40) = ebx;
-
-									while(1){
-
-										ebxp = ebpp+0x100*D(___1f2488h+edx+8)+eax+D(esp+0x40);
-
-										if(B(ebxp+(int)0xffffff00) != 0){
-
-											ecx = D(___1f2488h+edx+4)+edi;
-											esi = TRX_WIDTH;
-											ecx -= 0x8;
-											esi = esi*ecx;
-											B(TRX_IMA+eax+D(___1f2488h+edx)+esi-8) = B(ebxp+(int)0xffffff00);
-										}
-
-										eax++;
-										if((int)eax >= 0x10) break;
-									}
-
-									esi = D(esp+0x34);
-									edi++;
-									esi += 0x10;
-									RACE_OBSTACLE_BPK = ebpp;
-									D(esp+0x34) = esi;
-									if((int)edi >= 0x10) break;
-								}
+								helper00(0x120*D(esp+0x30));
 							}
 						}
 					}
@@ -264,62 +258,11 @@ void race___5209ch(void){
 
 	while(1){
 
-		edx = 0x7d0;
-		ebx = D(esp+0x1c);
-		eax = 0x7c6;
-		ecx ^= ecx;
+		ecx = helper01(D(___1f2488h+D(esp+0x1c)+0x10), 0x7d0);
 
-		while(1){
+		if(ecx != 0) helper00(D(esp+0x1c));
 
-			esi = D(ebx+___1f2488h+0x10);
-			if(((int)eax < (int)esi)&&((int)edx > (int)esi)) ecx = 0x1;
-			edx -= 0x14;
-			eax -= 0x14;
-			if((int)edx < 0x604) break;
-		}
-
-		if(ecx != 0){
-
-			D(esp+0x38) = 0;
-			D(esp+0xc) = 0;
-
-			while(1){
-
-				D(esp+0x3c) = D(esp+0x38);
-
-				eax = 0;
-				while(1){
-
-					ebxp = ebpp+0x100*D(___1f2488h+D(esp+0x1c)+8)+eax+D(esp+0x3c);
-
-					if(B(ebxp+(int)0xffffff00) != 0){
-
-						B(TRX_IMA+eax+D(___1f2488h+D(esp+0x1c))+TRX_WIDTH*(D(esp+0xc)+D(___1f2488h+D(esp+0x1c)+4)-8)-8) = B(ebxp+(int)0xffffff00);
-					}
-
-					eax++;
-					if((int)eax >= 0x10) break;
-				}
-
-				D(esp+0xc)++;
-				D(esp+0x38) += 0x10;
-				if(0x10 <= (int)D(esp+0xc)) break;
-			}
-		}
-
-		edx = 0x7c6;
-		eax = D(esp+0x1c);
-		ebx = 0x7bc;
-		ecx = 0;
-
-		while(1){
-
-			esi = D(eax+___1f2488h+0x10);
-			if(((int)ebx < (int)esi)&&((int)edx > (int)esi)) ecx = 0x1;
-			edx -= 0x14;
-			ebx -= 0x14;
-			if((int)edx < 0x5fa) break;
-		}
+		ecx = helper01(D(___1f2488h+D(esp+0x1c)+0x10), 0x7c6);
 
 		RACE_OBSTACLE_BPK = ebpp;
 
