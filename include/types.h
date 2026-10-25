@@ -52,12 +52,14 @@ typedef unsigned char   __BYTE__;
 typedef signed char     __SIGNED_BYTE__;
 typedef uint16_t        __WORD__;
 typedef int16_t         __SIGNED_WORD__;
-typedef uint32_t        __DWORD__;
-typedef int32_t         __SIGNED_DWORD__;
+// int, not (u)int32_t: newlib on ARM makes those long, which doesn't mix
+// with the int pointers the code passes around
+typedef unsigned int    __DWORD__;
+typedef int             __SIGNED_DWORD__;
 typedef uint64_t        __QWORD__;
 typedef int64_t         __SIGNED_QWORD__;
 typedef __BYTE__ *      __POINTER__;
-typedef int32_t         __BOOL__;
+typedef int             __BOOL__;
 
 typedef uintptr_t       __UNSIGNED__;       // size_t
 typedef intptr_t        __SIGNED__;         // ptrdiff_t

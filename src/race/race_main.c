@@ -6,6 +6,7 @@
 #include "sfx.h"
 #include "drally_structs_free.h"
 #include "drally_net.h"
+#include "race_replay.h"
 
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
@@ -143,14 +144,8 @@ void race___4083ch(void);
 void race___4adach(void);
 void race___4580ch(void);
 void __VGA13_SETMODE(void);
+void race_logic(void);
 
-static void helper01(void (*cb)(int)){
-
-	int 	n;
-
-	n = -1;
-	while(++n < NUM_OF_CARS) cb(n);
-}
 
 static __WORD__ helper22(const char * cp){
 
@@ -188,30 +183,6 @@ static __WORD__ helper33(void){
 	return ecx;
 }
 
-static void race___4b62ch_helper(int n){
-
-	//D(___243c60h) = n;
-
-	if(D(___243ce0h) != 0){
-
-		race___4b62ch(n);
-	}
-	else {
-#if defined(DR_MULTIPLAYER)
-		if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER
-			if(MY_CAR_IDX != n) race___4b62ch(n);
-#if defined(DR_MULTIPLAYER)
-		}
-#endif // DR_MULTIPLAYER
-	}
-}
-
-static void race___4c434h_helper(int n){ D(___243c60h) = n; race___4c434h(); }
-static void race___514d8h_helper(int n){ D(___243c60h) = n; race___514d8h(); }
-static void race___52ac4h_helper(int n){ D(___243c60h) = n; race___52ac4h(); }
-static void race___526ach_helper(int n){ D(___243c60h) = n; race___526ach(); }
-static void race___4ff50h_helper(int n){ D(___243c60h) = n; race___4ff50h(); }
 
 // ___56774h
 void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racers
@@ -306,245 +277,14 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 
 	while(1){
 
-		resetCounter(4);
-		setCounter(5, getCounter(2));
-		resetCounter(2);
-		s_35e[MY_CAR_IDX].__a4 = s_35e[MY_CAR_IDX].ActionFlags_i;
+#if defined(DR_TICKLOG)
+		race_ticklog_before();
+#endif // DR_TICKLOG
+		race_logic();
+#if defined(DR_TICKLOG)
+		race_ticklog_after();
+#endif // DR_TICKLOG
 
-		if((int)D(___196df0h) > 0){
-
-			D(___196df0h) -= D(___243334h);
-
-			if((int)D(___196df0h) <= 0){
-
-				dRally_Sound_pushEffect(2, SFX_LAP_RECORD, 0, 0x10000, 0x50000, 0x8000);
-				D(___196df0h) = 0;
-			}
-		}
-
-#if defined(DR_MULTIPLAYER)
-		if((___19bd60h != 0)&&(D(___24387ch) != 0)) race___44a78h();
-#endif // DR_MULTIPLAYER
-
-		D(___243d08h) = 0;
-
-		if((int)getCounter(5) > 0){
-
-			while(1){
-
-				s_35e[MY_CAR_IDX].__a4--;
-				if((int)s_35e[MY_CAR_IDX].__a4 < 0) s_35e[MY_CAR_IDX].__a4 = 0xf;
-				D(___243d08h)++;
-				s_35e[MY_CAR_IDX].Ctrls[getCounter(5)-D(___243d08h)] = s_35e[MY_CAR_IDX].ActionFlags[s_35e[MY_CAR_IDX].__a4];
-				if((int)D(___243d08h) >= (int)getCounter(5)) break;
-			}
-		}
-
-		race___563ach();	// HORNS
-		race___5209ch();
-	
-		if((int)getCounter(5) > 0){
-
-			while(1){
-
-				incCounter(1);
-
-				if((int)getCounter(1) > 0xbe){
-
-					helper01(&race___4b62ch_helper);
-					k = -1; while(++k < NUM_OF_CARS) s_35e[k].__14 = 0;
-					helper01(&race___4c434h_helper);
-					k = -1; while(++k < NUM_OF_CARS) s_35e[k].__18 = 0;
-					k = -1; while(++k < NUM_OF_CARS) s_35e[k].__1c = 0;
-					race___4dcach();
-					helper01(&race___514d8h_helper);
-
-#if defined(DR_MULTIPLAYER)
-					if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER
-						helper01(&race___52ac4h_helper);
-#if defined(DR_MULTIPLAYER)
-					}
-#endif // DR_MULTIPLAYER
-
-					helper01(&race___526ach_helper);
-					helper01(&race___4ff50h_helper);
-				}
-
-				k = -1;
-				while(++k < NUM_OF_CARS){
-
-					if((int)0 < (int)s_35e[k].__192) s_35e[k].__192--;
-					if((int)0 < (int)s_35e[k].__196) s_35e[k].__196--;
-					if((int)0 < (int)s_35e[k].__17a) s_35e[k].__17a--;
-
-					if(s_35e[k].__14 == 1) s_35e[k].__192 += 2;
-
-					if(s_35e[k].__18 == 1){
-
-						s_35e[k].XLocation = s_35e[k].__14e;
-						s_35e[k].__196 += 2;
-					}
-
-					if(s_35e[k].__1c == 1){
-
-						s_35e[k].YLocation = s_35e[k].__152;
-						s_35e[k].__196 += 2;
-					}
-
-					s_35e[k].__152 = s_35e[k].YLocation;
-					s_35e[k].__156 = s_35e[k].Direction;
-					s_35e[k].__14e = s_35e[k].XLocation;
-
-					if((s_35e[k].__192 == 2)||(s_35e[k].__196 == 2)){
-
-						if(s_35e[k].Finished == 0){
-
-							D(esp+0x18) = 0x400-s_94[k].__1c;
-							D(___2438cch) = (int)((double)D(esp+0x18)*(double)(s_35e[k].__fc*s_35e[k].__fc+s_35e[k].__100*s_35e[k].__100));
-							if((int)D(___2438cch) > 0x2710) D(___2438cch) = 0x2710;
-							s_94[k].__18 -= D(___2438cch);
-							if((int)0 > (int)s_94[k].__18) s_94[k].__18 = 0;
-						}
-					}
-				}
-
-				if(s_35e[MY_CAR_IDX].__14||s_35e[MY_CAR_IDX].__18||s_35e[MY_CAR_IDX].__1c){
-
-					D(___2438cch) = (int)(25000.0*sqrt((double)(s_35e[MY_CAR_IDX].__fc*s_35e[MY_CAR_IDX].__fc+s_35e[MY_CAR_IDX].__100*s_35e[MY_CAR_IDX].__100)));
-
-					if((int)D(___2438cch) > 0x10000) D(___2438cch) = 0x10000;
-
-					if((s_35e[MY_CAR_IDX].__18 != 0)||(s_35e[MY_CAR_IDX].__1c != 0)){
-
-						switch((int)getCounter(3)%3){
-						case 0:
-							dRally_Sound_pushEffect(5, SFX_CAR_HIT_1, 0, D(___2438cch), 0x21000, 0x8000);
-							break;
-						case 1:
-							dRally_Sound_pushEffect(5, SFX_METAL, 0, D(___2438cch), 0x23000, 0x8000);
-							break;
-						case 2:
-							dRally_Sound_pushEffect(5, SFX_CAR_HIT_3, 0, D(___2438cch), 0x23000, 0x8000);
-							break;
-						default:
-							break;
-						}
-					}
-
-					D(___243d08h) = rand_watcom106()%0x6000;
-
-					switch(s_35e[MY_CAR_IDX].__18e){
-					case 0:
-						switch((int)getCounter(3)%3){
-						case 0:
-							dRally_Sound_pushEffect(5, SFX_METAL_HIT, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-							break;
-						case 1:
-							dRally_Sound_pushEffect(5, SFX_CAR_HIT_2, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-							break;
-						case 2:
-							dRally_Sound_pushEffect(5, SFX_CAR_HIT_3, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-							break;
-						default:
-							break;
-						}
-						break;
-					case 1:
-						dRally_Sound_pushEffect(5, SFX_CAR_HIT_1, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-						break;
-					case 2:
-						dRally_Sound_pushEffect(5, SFX_CAR_HIT_2, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-						break;
-					case 3:
-						dRally_Sound_pushEffect(5, SFX_CAR_HIT_3, 0, D(___2438cch), D(___243d08h)+0x22000, 0x8000);
-						break;
-					default:
-						break;
-					}
-				}
-
-				if(((int)D(___2438d4h) > 0)&&(D(___196ddch) == 0)){
-
-					if(((int)s_94[MY_CAR_IDX].__18 > 0)&&(s_35e[MY_CAR_IDX].Finished == 0)){
-						
-						if(D(___196de0h) == 2){
-
-							dRally_Sound_pushEffect(6, SFX_BRAKES, 0, D(___2438d4h), 0x28000, 0x8000);
-							D(___196ddch) = 1;
-						}
-					}
-				}
-
-				if((D(___2438d4h) == 0)&&(D(___196ddch) == 1)){
-					
-					dRally_Sound_freeEffectChannel(6);
-					D(___196ddch) = 0;
-				}
-
-				D(___2438d4h) = 0;
-
-				if(((int)s_94[MY_CAR_IDX].__18 <= 0)||(s_35e[MY_CAR_IDX].Finished != 0)){
-
-					dRally_Sound_freeEffectChannel(1);
-					dRally_Sound_freeEffectChannel(6);
-				}
-
-				F32(esp+0x14) = (float)dRMath_abs((double)s_35e[MY_CAR_IDX].__b0/(double)s_94[MY_CAR_IDX].__4);
-				D(___196df8h) = (int)((double)(5*s_35e[MY_CAR_IDX].__19e)*(double)F32(esp+0x14)+(double)(s_35e[MY_CAR_IDX].__19a+0x28000));
-				dRally_Sound_adjustEffect(1, 0x10000, D(___196df8h), 0x8000);
-				race___54668h();	// POSITION, LAP COUNTER
-				race___55ae0h();	// POSITION, LAP COUNTER
-
-#if defined(DR_MULTIPLAYER)
-				if((___19bd60h == 0)||(D(___243318h) == 0)){
-#endif // DR_MULTIPLAYER
-					race___56170h();
-#if defined(DR_MULTIPLAYER)
-				}
-
-				if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER			
-					if((s_35e[MY_CAR_IDX].Finished != 0)||((int)s_94[MY_CAR_IDX].__18 <= 0)) D(___2438c8h)++;
-#if defined(DR_MULTIPLAYER)
-				}
-#endif // DR_MULTIPLAYER		
-		
-				D(___243c60h) = 0;
-				D(___243d0ch) = 0;
-
-				if(NUM_OF_CARS > 0){
-
-					while(1){
-
-						if(s_35e[D(___243c60h)].__b0 <= 0.5f){
-
-							if((s_35e[D(___243c60h)].Finished != 0)||((int)s_94[D(___243c60h)].__18 <= 0)) D(___243d0ch)++;
-						}
-
-						D(___243c60h)++;
-						if((int)D(___243c60h) >= NUM_OF_CARS) break;
-					}
-				}
-
-				eax = NUM_OF_CARS-1;
-				if((int)eax <= (int)D(___243d0ch)) D(___2438c8h)++;
-				incCounter(4);
-				decCounter(5);
-				if((int)getCounter(5) <= 0) break;
-			} // w
-		}
-	
-#if defined(DR_MULTIPLAYER)
-		if(___19bd60h == 0){
-#endif // DR_MULTIPLAYER		
-			if(s_94[0].__0 != 6) race___4c21ch();
-#if defined(DR_MULTIPLAYER)
-		}
-
-		if((___19bd60h != 0)&&(D(___24387ch) != 0)) race___44304h();
-
-#endif // DR_MULTIPLAYER
 		if(kmap[DR_SCAN_F12] != 0) race___49390h();
 		if(kmap[DR_SCAN_F1] != 0){
 
@@ -824,6 +564,9 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 		if(D(___243d14h) != 0) break;
 	} // w
 
+#if defined(DR_TICKLOG)
+	race_ticklog_end();
+#endif // DR_TICKLOG
 	race___46a10h();	// LEAVING RACE SCREEN ANIMATION
 	race___46738h__VGA13_PRESENTCLEARSCREEN();
 
