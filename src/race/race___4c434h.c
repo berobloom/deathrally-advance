@@ -57,6 +57,51 @@ static __DWORD__ helper00(int i){
 	return rslt;
 }
 
+// the first of the car's 40x40 pixels, row by row, that is solid in its
+// image (img) and a wall in the mask under it (mas, the pixel under the
+// image's first): the wall's mask value, with its column and row in
+// ___243cb0h and ___243cb4h, or 0xf if there is none. Only the pixels in
+// the 8x8 blocks of the wall map that have walls are searched
+static __DWORD__ helper02(__BYTE__ * img, __BYTE__ * mas, int x, int y){
+
+	int 		i, j, k, end, i0, i1, w = TRX_WIDTH;
+	unsigned 	cells;
+
+	for(j = 0; j < 0x28; j = end){
+
+		end = ((y+j)|7)+1-y;
+		if(end > 0x28) end = 0x28;
+		if(!(cells = race_walls_cells(x, y+j, 0x28, end-j))) continue;
+
+		for(; j < end; j++){
+
+			// the block columns, at most 6 of them, from x's
+			for(k = 0; k < 6; k++){
+
+				if(!(cells&(1u << k))) continue;
+
+				i0 = ((x >> 3)+k)*8-x;
+				i1 = i0+8;
+				if(i0 < 0) i0 = 0;
+				if(i1 > 0x28) i1 = 0x28;
+
+				for(i = i0; i < i1; i++){
+
+					if(((signed char)img[0x28*j+i] > 3)&&((mas[w*j+i]&0xf) < 4)){
+
+						D(___243cb0h) = i;
+						D(___243cb4h) = j;
+
+						return mas[w*j+i]&0xf;
+					}
+				}
+			}
+		}
+	}
+
+	return 0xf;
+}
+
 static void helper01(float d_sign){
 
 	struct_35e_t * s_35e;
@@ -86,7 +131,6 @@ void race___4c434h(void){
 	int 	a_d;
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi;
 	__BYTE__ 	esp[0x64];
-	int 	breaker, i, j;
 	__POINTER__ 	ebxp;
 	__POINTER__ 	edip;
 	struct_35e_t * 	s_35e;	
@@ -294,29 +338,7 @@ void race___4c434h(void){
 	ecx = (int)(car->__15e+car->YLocation-20.0f);
 	ebxp = ___243d74h+(int)car->ImgOffset;
 	edip = TRX_MAS+(int)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)car->__15a;
-	esi = 0xf;
-
-	// the car's pixels against walls under them, unless there are none
-	j = race_walls_near((int)car->XLocation-0x14+(int)car->__15a, ecx, 0x28, 0x28) ? -1 : 0x28;
-	while(++j < 0x28){
-
-		breaker = 0;
-
-		i = -1;
-		while(++i < 0x28){
-
-			if(((signed char)B(ebxp+0x28*j+i) > 3)&&((signed char)(B(edip+TRX_WIDTH*j+i)&0xf) < 4)){
-
-				esi = B(edip+TRX_WIDTH*j+i)&0xf;
-				D(___243cb0h) = i;
-				D(___243cb4h) = j;
-				breaker = 1;
-				break;
-			}
-		}
-
-		if(breaker == 1) break;
-	}
+	esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, ecx);
 
 	car->__14 = esi;
 
@@ -377,54 +399,7 @@ void race___4c434h(void){
 				car->XLocation += car->__162;
 				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)car->__15a;
 				ebxp = ___243d74h+car->ImgOffset;
-				esi = 0xf;
-				edx = 0;
-				eax = 0;
-
-				ecx = 0;
-				if(race_walls_near((int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c), 0x28, 0x28)) while(1){
-
-					if((signed char)B(ebxp) <= 3){
-
-						edip++;
-						ebxp++;
-						ecx++;
-
-						if(ecx == 0x28){
-
-							edip = edip+TRX_WIDTH-0x28;
-							edx++;
-							if(edx == 0x28) break;
-							ecx = 0;
-						}
-					}
-					else {
-
-						L(eax) = B(edip)&0xf;
-
-						if((signed char)L(eax) >= 4){
-
-							edip++;
-							ebxp++;
-							ecx++;
-
-							if(ecx == 0x28){
-
-								edip = edip+TRX_WIDTH-0x28;
-								edx++;
-								if(edx == 0x28) break;
-								ecx = 0;
-							}
-						}
-						else {
-
-							esi = eax;
-							D(___243cb0h) = ecx;
-							D(___243cb4h) = edx;
-							break;
-						}
-					}
-				} // w
+				esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c));
 
 				car->__14 = esi;
 

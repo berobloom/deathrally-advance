@@ -27,18 +27,6 @@ void decCounter(int n){
 	if(n == 6) D(___2438d0h)--;
 }
 
-__DWORD__ getCounter(int n){
-
-	if(n == 1) return D(___243ca4h);
-	if(n == 2) return D(SUPERGLOBAL___243898h);
-	if(n == 3) return D(SUPERGLOBAL___243894h);
-	if(n == 4) return D(___243ca8h);
-	if(n == 5) return D(___243874h);
-	if(n == 6) return D(___2438d0h);
-
-	return 0;
-}
-
 void resetCounter(int n){
 
 	if(n == 1) D(___243ca4h) = 0;

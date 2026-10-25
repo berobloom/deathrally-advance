@@ -28,6 +28,9 @@ GAME_LIB := $(BUILD)/libgame.a
 ARCH := -mthumb -mthumb-interwork -mcpu=arm7tdmi -mtune=arm7tdmi
 CFLAGS := $(ARCH) -O2 -ffunction-sections -fdata-sections -Wno-unused-result \
 	-DDR_REPLAY -DDR_INLINE_MATH -I../../include/nosdl -I../../include -I../../src/race -I$(DEVKITPRO)/libgba/include
+# long calls: the soft-float routines in IWRAM are then called through a
+# bx in the caller instead of a veneer run as ARM code from ROM
+CFLAGS += -mlong-calls
 LDFLAGS := -specs=gba.specs $(ARCH) -Wl,--gc-sections -L$(DEVKITPRO)/libgba/lib
 
 ifneq ($(FRAMES),)

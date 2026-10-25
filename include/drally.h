@@ -116,7 +116,27 @@ double create_double(int LSB, int, int, int, int, int, int, int MSB);
 
 void incCounter(int n);
 void decCounter(int n);
-__DWORD__ getCounter(int n);
+
+// inline: the race code reads counter 4, its slot in the cars' controls,
+// a few hundred times a tick
+	extern __BYTE__ ___243ca4h[];
+	extern __BYTE__ SUPERGLOBAL___243898h[];
+	extern __BYTE__ SUPERGLOBAL___243894h[];
+	extern __BYTE__ ___243ca8h[];
+	extern __BYTE__ ___243874h[];
+	extern __BYTE__ ___2438d0h[];
+
+static inline __DWORD__ getCounter(int n){
+
+	if(n == 1) return D(___243ca4h);
+	if(n == 2) return D(SUPERGLOBAL___243898h);
+	if(n == 3) return D(SUPERGLOBAL___243894h);
+	if(n == 4) return D(___243ca8h);
+	if(n == 5) return D(___243874h);
+	if(n == 6) return D(___2438d0h);
+
+	return 0;
+}
 void resetCounter(int n);
 void setCounter(int n, __DWORD__ val);
 

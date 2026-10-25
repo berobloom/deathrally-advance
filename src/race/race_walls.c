@@ -56,3 +56,23 @@ int race_walls_near(int x, int y, int w, int h){
 
 	return 0;
 }
+
+// which of the 8x8 blocks of the wall map that the w x h pixels from
+// (x, y) on reach into, column by column from x >> 3, hold a wall: bit k
+// for column (x >> 3)+k, all of them where the area isn't on the track
+unsigned race_walls_cells(int x, int y, int w, int h){
+
+	int 		bx, by;
+	unsigned 	cells = 0;
+
+	if((x < 0)||(y < 0)||(x+w > TRX_WIDTH)||(y+h > TRX_HEIGHT)) return ~0u;
+
+	for(by = y >> WALL_BLOCK; by <= (y+h-1) >> WALL_BLOCK; by++){
+		for(bx = x >> WALL_BLOCK; bx <= (x+w-1) >> WALL_BLOCK; bx++){
+
+			if(walls[walls_w*by+bx]) cells |= 1u << (bx-(x >> WALL_BLOCK));
+		}
+	}
+
+	return cells;
+}

@@ -18,6 +18,7 @@ void race_free(void);
 void race_walls_build(void);
 void race_walls_free(void);
 int race_walls_near(int x, int y, int w, int h);
+unsigned race_walls_cells(int x, int y, int w, int h);
 
 // bss.c: 1024*cos and 1024*sin tables, 3601 entries
 extern int * ___243310h;
