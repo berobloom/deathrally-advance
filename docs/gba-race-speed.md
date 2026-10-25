@@ -45,7 +45,7 @@ The busiest 1,000 frames (the start, with all cars close together) take 211,000 
 
 ## Next Steps, Most Promising First
 
-The first item below is done: it took a tick from 222,000 to 199,000 cycles. The logic now fits the budget, so the next milestone is running it in `gba/proto`, in place of the stand-in driving.
+The first item below is done: it took a tick from 222,000 to 199,000 cycles. The logic now runs in a playable race, `gba/race`, so its budget there is what counts. A frame is 280,896 cycles. Drawing takes about 28,000 of them, and `race_render()` without its drawing takes another 28,000. That leaves about 225,000 for the logic at one tick a frame, and about 190,000 a tick at the game's real 70 ticks a second. In the busiest stretches of a race a tick takes up to 240,000, and those seconds drop to 30-35 frames per second. `race_render()`'s 28,000 is also worth a look: it is double-precision code that has never been profiled.
 
 1. **(Done) Byte-wise struct access.** `struct_35e_t` (the cars) is `#pragma pack(push,1)` in `include/drally_structs_free.h`. Several race files also put `#pragma pack(1)` before their own structs, for example `spectator_t` in `race___52ac4h.c`, and without a pop it applies to the rest of the file. GCC therefore reads every 32-bit car field as 4 byte loads plus 3 shifts and 3 ORs. Checked with the ARM compiler:
    - `pack(2)` gives exactly the same layout as `pack(1)` for all five structs in that header.

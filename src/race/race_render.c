@@ -43,7 +43,9 @@ void race___4ee9ch(void);
 // (the camera, animations, explosions, the lap times, the ticks a frame
 // takes), without drawing anything: what a port that draws the race its
 // own way, like the GBA's, needs. The race then goes as it does drawn
+#if !defined(DR_RACE_NODRAW)
 int race_draw = 1;
+#endif
 
 // a frame's rendering, after race_logic()
 void race_render(void){
@@ -98,7 +100,12 @@ void race_render(void){
 		race___56594h();	// INRACE CHEATS
 	}
 	if((int)getCounter(1) < 0x122) race___42218h();
+#if defined(DR_RACE_NODRAW)
+	// always the wide view, whose HUD keeps no state of its own
+	race___40db4h();
+#else
 	(CURRENT_VIEWPORT_W != 0x140) ? race___40f48h() : race___40db4h();
+#endif
 
 	D(___243c60h) = -1;
 	while(++D(___243c60h) < NUM_OF_CARS){

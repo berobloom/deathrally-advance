@@ -32,43 +32,44 @@ static void helper_copy(__POINTER__ dst, int dstX, int dstY, __POINTER__ src){
 // TIRE DUSTING
 void race___50ef4h(void){
 
-	int 			i0, j0, n;
-	struct_35e_t * 	s_35e;
+	int 			i0, j0, n, ticks;
+	struct_35e_t * 	car;
 
-
-	s_35e = (struct_35e_t *)___1e6ed0h;
+	// read once: D() loads byte by byte, and again after every store
+	car = &((struct_35e_t *)___1e6ed0h)[D(___243c60h)];
+	ticks = D(___243334h);
 
 	n = -1;
 	while(++n < 15){
 
 // LEFT
-		if((int)s_35e[D(___243c60h)].__1e2[n] > 0){
+		if((int)car->__1e2[n] > 0){
 
-			i0 = s_35e[D(___243c60h)].__25a[n]+CURRENT_VIEWPORT_X-TRX_VIEWPORT_TL_X;
-			j0 = s_35e[D(___243c60h)].__2d2[n]-TRX_VIEWPORT_TL_Y;
+			i0 = car->__25a[n]+CURRENT_VIEWPORT_X-TRX_VIEWPORT_TL_X;
+			j0 = car->__2d2[n]-TRX_VIEWPORT_TL_Y;
 
 			if((i0 >= 4 + CURRENT_VIEWPORT_X)&&((i0+4) < 0x140)&&(j0 >= 4)&&((j0+4) < 0xc8)){
 
-				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((s_35e[D(___243c60h)].__1e2[n]-1)/4));
+				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((car->__1e2[n]-1)/4));
 			}
 
-			s_35e[D(___243c60h)].__1e2[n] += D(___243334h);
-			if((int)s_35e[D(___243c60h)].__1e2[n] > 0xc) s_35e[D(___243c60h)].__1e2[n] = 0;
+			car->__1e2[n] += ticks;
+			if((int)car->__1e2[n] > 0xc) car->__1e2[n] = 0;
 		}
 
 // RIGHT
-		if((int)s_35e[D(___243c60h)].__21e[n] > 0){
+		if((int)car->__21e[n] > 0){
 
-			i0 = s_35e[D(___243c60h)].__296[n]+CURRENT_VIEWPORT_X-TRX_VIEWPORT_TL_X;
-			j0 = s_35e[D(___243c60h)].__30e[n]-TRX_VIEWPORT_TL_Y;
+			i0 = car->__296[n]+CURRENT_VIEWPORT_X-TRX_VIEWPORT_TL_X;
+			j0 = car->__30e[n]-TRX_VIEWPORT_TL_Y;
 
 			if((i0 >= 4 + CURRENT_VIEWPORT_X)&&((i0+4) < 0x140)&&(j0 >= 4)&&((j0+4) < 0xc8)){
 
-				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((s_35e[D(___243c60h)].__21e[n]-1)/4));
+				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((car->__21e[n]-1)/4));
 			}
 
-			s_35e[D(___243c60h)].__21e[n] += D(___243334h);
-			if((int)s_35e[D(___243c60h)].__21e[n] > 0xc) s_35e[D(___243c60h)].__21e[n] = 0;
+			car->__21e[n] += ticks;
+			if((int)car->__21e[n] > 0xc) car->__21e[n] = 0;
 		}
 	}
 }

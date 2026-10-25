@@ -15,7 +15,13 @@ void dRally_Race_toggleSettings(int);
 void race_msg(int msg_no);
 void race_alloc(void);
 void race_free(void);
+// a build that never draws the race the game's way (the GBA's) defines
+// DR_RACE_NODRAW, which leaves the drawing code out
+#if defined(DR_RACE_NODRAW)
+#define race_draw 0
+#else
 extern int race_draw;
+#endif
 void race_render(void);
 void race_render_after(void);
 void race_walls_build(void);

@@ -1,7 +1,7 @@
 // gbabake: decode a Death Rally track and the race cars with the game's own
 // BPA/BPK readers and write them in the layouts the GBA prototype uses.
 //
-//   gbabake GAMEDIR TRACK OUTDIR
+//   gbabake GAMEDIR TRACK OUTDIR [TICKLOG.BIN]
 //
 // Writes, for track TRn:
 //   track.pal    256 BGR555 colors (the track's 6-bit VGA palette)
@@ -12,6 +12,10 @@
 //   cars.obj     4 cars x 96 directions, each a 64x64 8bpp sprite in 1D
 //                tile order with the 40x40 frame at (4,4) (index 0 is clear)
 //   preview.ppm  the track and car 0's 96 frames, for checking by eye
+//
+// With a race recorded on this track by the desktop game (make ticklog),
+// also race.bin, the recording up to the race's start, which gba/race
+// starts the race from; cars.obj then has the recorded race's cars.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,6 +87,43 @@ static FILE * out(const char * dir, const char * name){
 	return fd;
 }
 
+// a recording's car images (its buffer 4, see race_replay.h), after it
+// checked that it was made on a w x h track. Writes race.bin
+static __POINTER__ read_race(const char * path, int w, int h, const char * outdir){
+
+	FILE * 		fd;
+	long 		size;
+	__DWORD__ * 	log;
+	__DWORD__ * 	p;
+	__POINTER__ 	spins = 0;
+	int 		i;
+
+	if(!(fd = fopen(path, "rb"))){ perror(path); exit(1); }
+	fseek(fd, 0, SEEK_END);
+	size = ftell(fd);
+	fseek(fd, 0, SEEK_SET);
+	log = malloc(size);
+	if(fread(log, 1, size, fd) != (size_t)size){ perror(path); exit(1); }
+	fclose(fd);
+
+	if(log[0] != 0x4c545244){ fprintf(stderr, "%s: not a recording\n", path); exit(1); }
+	p = log+4+log[3];
+	for(i = 0; i < 8; i++){
+
+		if((i == 0)&&(p[0] != (__DWORD__)(w*h))){ fprintf(stderr, "%s: recorded on another track\n", path); exit(1); }
+		if(i == 4) spins = (__POINTER__)(p+1);
+		p += 1+(p[0]+3)/4;
+	}
+	p += (log[2]+3)/4;	// the globals at the start
+
+	fd = out(outdir, "race.bin");
+	fwrite(log, 4, p-log, fd);
+	fwrite((__DWORD__ []){ 0xffffffff }, 4, 1, fd);
+	fclose(fd);
+
+	return spins;
+}
+
 static void put32(FILE * fd, __DWORD__ v){
 
 	fputc(v, fd); fputc(v >> 8, fd); fputc(v >> 16, fd); fputc(v >> 24, fd);
@@ -91,15 +132,22 @@ static void put32(FILE * fd, __DWORD__ v){
 int main(int argc, char * argv[]){
 
 	char		bpa_name[16], entry[32], outdir[PATH_MAX];
-	__POINTER__	src, ima, mas, spins;
+	__POINTER__	src, ima, mas, spins, race_spins = 0;
 	__BYTE__	pal[0x300], obj[OBJ_W*OBJ_W];
 	inf_t *		inf;
 	int 		track, w, h, tw, th, tx, ty, x, y, n, f, i;
 	FILE *		fd;
 
-	if(argc != 4){ fprintf(stderr, "usage: gbabake GAMEDIR TRACK OUTDIR\n"); return 1; }
+	if((argc != 4)&&(argc != 5)){ fprintf(stderr, "usage: gbabake GAMEDIR TRACK OUTDIR [TICKLOG.BIN]\n"); return 1; }
 	track = atoi(argv[2]);
 	if(!realpath(argv[3], outdir)){ perror(argv[3]); return 1; }
+	if(argc == 5){
+
+		char 	race[PATH_MAX];
+
+		if(!realpath(argv[4], race)){ perror(argv[4]); return 1; }
+		argv[4] = strdup(race);
+	}
 	if(chdir(argv[1])){ perror(argv[1]); return 1; }
 
 	snprintf(bpa_name, sizeof(bpa_name), "TR%d.BPA", track);
@@ -154,17 +202,27 @@ int main(int argc, char * argv[]){
 	for(n = 0; n < 4; n++){ put32(fd, inf->startups[n].x); put32(fd, inf->startups[n].y); put32(fd, inf->startups[n].rot); }
 	fclose(fd);
 
+	if(argc == 5) race_spins = read_race(argv[4], w, h, outdir);
+
 	fd = out(outdir, "cars.obj");
 	spins = calloc(1, CAR_FRAMES*CAR_W*CAR_W);
 	for(n = 0; n < 4; n++){
 
-		snprintf(entry, sizeof(entry), "%s.BPK", car_models[n]);
-		src = read_entry("ENGINE.BPA", entry);
-		bpk_decode2(spins, src);
-		free(src);
+		if(race_spins){
 
-		// same recoloring as race___42824h.c: car n gets its own body colors
-		for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((spins[i] >= 0xf)&&(spins[i] <= 0x18)) spins[i] += 0xa*n;
+			// recolored already
+			memcpy(spins, race_spins+n*CAR_FRAMES*CAR_W*CAR_W, CAR_FRAMES*CAR_W*CAR_W);
+		}
+		else {
+
+			snprintf(entry, sizeof(entry), "%s.BPK", car_models[n]);
+			src = read_entry("ENGINE.BPA", entry);
+			bpk_decode2(spins, src);
+			free(src);
+
+			// same recoloring as race___42824h.c: car n gets its own body colors
+			for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((spins[i] >= 0xf)&&(spins[i] <= 0x18)) spins[i] += 0xa*n;
+		}
 
 		for(f = 0; f < CAR_FRAMES; f++){
 

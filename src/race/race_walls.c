@@ -21,30 +21,60 @@ static int 		walls_w, walls_h;
 // row, or a first column of 40 if there are none
 static __BYTE__ 	car_boxes[4*96][4];
 
+// pixels read 4 at a time, which the GBA reads from ROM about as fast as one
+typedef __DWORD__ __attribute__((may_alias)) px4_t;
+
+// bit 0 of each byte of the result: whether that pixel is solid, above 3
+static __DWORD__ solid4(__DWORD__ px){
+
+	px &= 0xfcfcfcfc;
+	px |= px >> 4;
+	px |= px >> 2;
+
+	return (px|(px >> 1)) & 0x01010101;
+}
+
 static void car_boxes_build(void){
 
-	int 		n, x, y;
-	__BYTE__ * 	img;
+	int 		n, x, y, x0, x1, y0, y1;
+	const px4_t * 	img;
+	__DWORD__ 	cols[10], row;
 
 	for(n = 0; n < 4*96; n++){
 
-		__BYTE__ * 	b = car_boxes[n];
-
-		img = ___243d74h+0x640*n;
-		b[0] = 0x28; b[1] = 0; b[2] = 0x28; b[3] = 0;
+		// the rows with solid pixels, and the columns, as bits
+		img = (const px4_t *)(___243d74h+0x640*n);
+		y0 = 0x28; y1 = 0;
+		memset(cols, 0, sizeof(cols));
 
 		for(y = 0; y < 0x28; y++){
-			for(x = 0; x < 0x28; x++){
 
-				if(img[0x28*y+x] > 3){
+			row = 0;
+			for(x = 0; x < 10; x++){
 
-					if(x < b[0]) b[0] = x;
-					if(x > b[1]) b[1] = x;
-					if(y < b[2]) b[2] = y;
-					if(y > b[3]) b[3] = y;
-				}
+				__DWORD__ 	s = solid4(img[10*y+x]);
+
+				cols[x] |= s;
+				row |= s;
+			}
+			if(row){
+
+				if(y < y0) y0 = y;
+				y1 = y;
 			}
 		}
+
+		x0 = 0x28; x1 = 0;
+		for(x = 0; x < 0x28; x++){
+
+			if((cols[x >> 2] >> (8*(x&3)))&1){
+
+				if(x < x0) x0 = x;
+				x1 = x;
+			}
+		}
+
+		car_boxes[n][0] = x0; car_boxes[n][1] = x1; car_boxes[n][2] = y0; car_boxes[n][3] = y1;
 	}
 }
 
@@ -58,19 +88,39 @@ const __BYTE__ * race_car_box(__DWORD__ img_offset){
 // before this
 void race_walls_build(void){
 
-	int 	x, y;
+	int 		x, y, w, h, ww;
+	__BYTE__ * 	mas, * row;
 
 	car_boxes_build();
 
-	walls_w = (TRX_WIDTH+7) >> WALL_BLOCK;
-	walls_h = (TRX_HEIGHT+7) >> WALL_BLOCK;
+	w = TRX_WIDTH;
+	h = TRX_HEIGHT;
+	walls_w = ww = (w+7) >> WALL_BLOCK;
+	walls_h = (h+7) >> WALL_BLOCK;
 	free(walls);
 	walls = calloc(walls_w*walls_h, 1);
 
-	for(y = 0; y < TRX_HEIGHT; y++){
-		for(x = 0; x < TRX_WIDTH; x++){
+	mas = TRX_MAS;
+	for(y = 0; y < h; y++){
 
-			if((B(TRX_MAS+TRX_WIDTH*y+x)&0xf) < 4) walls[walls_w*(y >> WALL_BLOCK)+(x >> WALL_BLOCK)] = 1;
+		row = walls+ww*(y >> WALL_BLOCK);
+		x = 0;
+		// a mask value below 4 has bits 2 and 3 clear, 4 at a time where
+		// the rows are word-aligned
+		if(!(w&3)&&!((unsigned long)mas&3)){
+
+			const px4_t * 	m = (const px4_t *)(mas+w*y);
+
+			for(; x < w; x += 4){
+
+				__DWORD__ 	px = *m++;
+
+				if((((px >> 2)|(px >> 3)) & 0x01010101) != 0x01010101) row[x >> WALL_BLOCK] = 1;
+			}
+		}
+		for(; x < w; x++){
+
+			if((mas[w*y+x]&0xf) < 4) row[x >> WALL_BLOCK] = 1;
 		}
 	}
 }
