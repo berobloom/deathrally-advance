@@ -46,3 +46,33 @@ void setCounter(int n, __DWORD__ val){
 	if(n == 5) D(___243874h) = val;
 	if(n == 6) D(___2438d0h) = val;
 }
+
+#if defined(DR_ALIGNED_CHECK)
+// see D() in drally.h
+unsigned dr_misaligned, dr_misaligned_line;
+const char * dr_misaligned_file;
+
+#if defined(__unix__)
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
+static void dr_misaligned_report(void){
+
+	if(dr_misaligned) fprintf(stderr, "DR_ALIGNED_CHECK: %u unaligned accesses, the first at %s:%u\n", dr_misaligned, dr_misaligned_file, dr_misaligned_line);
+	else fprintf(stderr, "DR_ALIGNED_CHECK: every access aligned\n");
+}
+
+// and when killed, as the test scripts stop the game
+static void dr_misaligned_term(int sig){
+
+	exit(1);
+}
+
+__attribute__((constructor)) static void dr_misaligned_init(void){
+
+	atexit(dr_misaligned_report);
+	signal(SIGTERM, dr_misaligned_term);
+}
+#endif // __unix__
+#endif // DR_ALIGNED_CHECK

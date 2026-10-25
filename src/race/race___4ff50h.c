@@ -112,7 +112,7 @@ DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, in
 		if(___19bd60h == 0){
 #endif // DR_MULTIPLAYER
 
-			j = rand_watcom106()%5;
+			j = dRMath_mod15(rand_watcom106(), 5);
 			i = -1;
 			while(++i < 4){
 
@@ -134,12 +134,12 @@ DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, in
 
 							if((int)ecx > 0x1000){
 
-								dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, ecx, 0x50000, 0x8000);
+								dRally_Sound_pushEffect(3, 7+dRMath_mod15(rand_watcom106(), 3), 0, ecx, 0x50000, 0x8000);
 							}
 						}
 						else {
 
-							dRally_Sound_pushEffect(3, 7+rand_watcom106()%3, 0, 0x9000, 0x50000, 0x8000);
+							dRally_Sound_pushEffect(3, 7+dRMath_mod15(rand_watcom106(), 3), 0, 0x9000, 0x50000, 0x8000);
 						}
 					}
 				}
@@ -155,7 +155,7 @@ DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, in
 void race___4ff50h(void){
 
 	__DWORD__ 		eax, ebx, ecx, edx;
-	__BYTE__ 		esp[0x144];
+	__BYTE__ 		esp[0x144] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	int 			i;
 	int 			cx[4], cy[4];
 	struct_35e_t * 	s_35e;
@@ -188,16 +188,16 @@ void race___4ff50h(void){
 
 		if((int)ecx > 0x1000){
 			
-			dRally_Sound_pushEffect(10, 19+rand_watcom106()%2, 0, ecx, 0x21000, 0x8000);
+			dRally_Sound_pushEffect(10, 19+dRMath_mod15(rand_watcom106(), 2), 0, ecx, 0x21000, 0x8000);
 		}
 	}
 	else {
 
-		dRally_Sound_pushEffect(9, 19+rand_watcom106()%2, 0, 0x9000, 0x21000, 0x8000);
+		dRally_Sound_pushEffect(9, 19+dRMath_mod15(rand_watcom106(), 2), 0, 0x9000, 0x21000, 0x8000);
 	}
 
-	D(esp+0xd4) = helper00(256.0*dRMath_sin_deg(((double)s_35e[D(___243c60h)].Direction+180.0)))-3+rand_watcom106()%6;
-	D(esp+0xd0) = helper00(256.0*dRMath_cos_deg(((double)s_35e[D(___243c60h)].Direction+180.0))*LOC_83)-3+rand_watcom106()%6;
+	D(esp+0xd4) = helper00(256.0*dRMath_sin_deg(((double)s_35e[D(___243c60h)].Direction+180.0)))-3+dRMath_mod15(rand_watcom106(), 6);
+	D(esp+0xd0) = helper00(256.0*dRMath_cos_deg(((double)s_35e[D(___243c60h)].Direction+180.0))*LOC_83)-3+dRMath_mod15(rand_watcom106(), 6);
 
 	// the cars' positions as integers: the trace doesn't move them
 	for(i = 0; i < (int)D(NUM_OF_CARS); i++){

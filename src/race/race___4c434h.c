@@ -130,7 +130,7 @@ void race___4c434h(void){
 	float 	d_hypotenuse, d_a, d_b, sin_d, cos_d;
 	int 	a_d;
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi;
-	__BYTE__ 	esp[0x64];
+	__BYTE__ 	esp[0x64] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	__POINTER__ 	ebxp;
 	__POINTER__ 	edip;
 	struct_35e_t * 	s_35e;	

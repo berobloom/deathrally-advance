@@ -18,7 +18,7 @@ static __DWORD__ helper00(int i, float f){
 static double helper01(__DWORD__ val){
 
 	__DWORD__	eax, edx, cf;
-	__BYTE__ 	esp[4];
+	__BYTE__ 	esp[4] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 
 	eax = val;
 	edx = eax;
@@ -62,7 +62,7 @@ static int min3(int a, int b, int c){ return (a < b) ? ((a < c) ? a : c) : ((b <
 void race___4dcach(void){
 
 	__DWORD__ 		eax, edx;
-	__BYTE__ 		esp[0xd4];
+	__BYTE__ 		esp[0xd4] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	int 			bl1, bl2;
 	int 			n, k, i, j, l;
 	struct_35e_t * 	s_35e;
@@ -73,9 +73,9 @@ void race___4dcach(void){
 	n = -1;
 	while(++n < (int)D(NUM_OF_CARS)){
 
-		s_35e[n].__fc = (float)(double)s_35e[n].__fc/1.15;
-		s_35e[n].__100 = (float)(double)s_35e[n].__100/1.15;
-		s_35e[n].__104 = (float)(double)s_35e[n].__104/1.2;
+		s_35e[n].__fc = dRMath_divdf(s_35e[n].__fc, 1.15, 1.0/1.15);
+		s_35e[n].__100 = dRMath_divdf(s_35e[n].__100, 1.15, 1.0/1.15);
+		s_35e[n].__104 = dRMath_divdf(s_35e[n].__104, 1.2, 1.0/1.2);
 	}
 	
 	n = -1;

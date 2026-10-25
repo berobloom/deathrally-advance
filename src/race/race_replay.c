@@ -165,6 +165,17 @@ const char * race_replay_start(__DWORD__ * log, __BYTE__ * flat){
 		log += (size+3)/4;
 	}
 
+	// D() loads whole words in the logic built with DR_ALIGNED (see
+	// aligned.mk), which C doesn't promise for the __BYTE__ arrays
+	for(i = 0; i < race_replay_count(); i++){
+
+		if(!(vars[i].size&3)&&((unsigned long)vars[i].p&3)){
+
+			snprintf(err, sizeof(err), "global %u isn't word-aligned", i);
+			return err;
+		}
+	}
+
 	memcpy(flat, log, n);
 	race_replay_scatter(flat);	// so that race_replay_buf_size() works
 	race_walls_build();

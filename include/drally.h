@@ -30,7 +30,39 @@ typedef void (*void_cb)(void);
 // Q/D/W/P read and write at any byte address, as the original x86 code
 // did. Through a packed, may_alias struct they stay lvalues, and CPUs that
 // can't load unaligned words (the GBA's ARM7) get byte loads instead.
-#if defined(__GNUC__)
+//
+// DR_ALIGNED (the GBA build) has them load whole words instead, which takes
+// a tick of the race from 192,900 to 182,100 cycles. An unaligned address
+// would then read the wrong bytes without any error, so DR_ALIGNED_CHECK
+// tests each one and counts those that aren't aligned: dr_misaligned, the
+// first at dr_misaligned_file and dr_misaligned_line.
+#if defined(DR_ALIGNED)
+typedef __QWORD__ __attribute__((may_alias)) __aqword__;
+typedef __DWORD__ __attribute__((may_alias)) __adword__;
+typedef __WORD__ __attribute__((may_alias)) __aword__;
+typedef __POINTER__ __attribute__((may_alias)) __apointer__;
+#if defined(DR_ALIGNED_CHECK)
+extern unsigned dr_misaligned, dr_misaligned_line;
+extern const char * dr_misaligned_file;
+static inline void * dr_aligned(void * p, unsigned mask, const char * file, unsigned line){
+
+	if(((unsigned long)p&mask)&&(dr_misaligned++ == 0)){
+
+		dr_misaligned_file = file;
+		dr_misaligned_line = line;
+	}
+
+	return p;
+}
+#define DR_AL(p, mask)	dr_aligned((void *)(p), mask, __FILE__, __LINE__)
+#else
+#define DR_AL(p, mask)	((void *)(p))
+#endif // DR_ALIGNED_CHECK
+#define Q(q)    (*(__aqword__ *)DR_AL(q, 3))
+#define D(d)	(*(__adword__ *)DR_AL(d, 3))
+#define W(w)	(*(__aword__ *)DR_AL(w, 1))
+#define P(p)    (*(__apointer__ *)DR_AL(p, 3))
+#elif defined(__GNUC__)
 typedef struct { __QWORD__ v; } __attribute__((packed, may_alias)) __uqword__;
 typedef struct { __DWORD__ v; } __attribute__((packed, may_alias)) __udword__;
 typedef struct { __WORD__ v; } __attribute__((packed, may_alias)) __uword__;

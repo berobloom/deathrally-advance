@@ -17,7 +17,7 @@ void race___563ach(void){
 
 	double 			d_tmp;
 	__DWORD__ 		eax, ebx, ecx, edx, edi, esi, ebp;
-	__BYTE__ 		esp[0x10];
+	__BYTE__ 		esp[0x10] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	struct_35e_t * 	s_35e;
 
 

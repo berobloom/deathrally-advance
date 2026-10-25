@@ -201,7 +201,7 @@ void race___4b62ch(int idx){
 			}
 		}
 
-		if((rand_watcom106()%2) == 0){
+		if((dRMath_mod15(rand_watcom106(), 2)) == 0){
 
 			if((int)s_35e[idx].__196 > 3){
 
@@ -257,7 +257,7 @@ void race___4b62ch(int idx){
 	helper_machine_gun(50.0f, -sin_d, -cos_d, idx);
 	helper_machine_gun(80.0f, -sin_d, -cos_d, idx);
 
-	if((s_35e[idx].__186 == 70)&&((rand_watcom106()%5) == 0)) s_35e[idx].__35a = 1;
+	if((s_35e[idx].__186 == 70)&&((dRMath_mod15(rand_watcom106(), 5)) == 0)) s_35e[idx].__35a = 1;
 	if(s_35e[idx].__186 == 0) s_35e[idx].__35a = 0;
 	if(s_35e[idx].__35a == 1) *ctrl |= CTRL_HORN;
 }

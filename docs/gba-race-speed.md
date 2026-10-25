@@ -27,9 +27,13 @@ The game runs its logic 70 times a second. At 60 frames per second a frame is 28
 | Structs packed to 2 (cars) and 4 (the rest) instead of 1, same layouts | 204,500 | yes |
 | Spectators not packed | 198,800 | yes |
 | Machine-gun trace as ARM in IWRAM | 196,800 | yes |
-| Car collisions inside the images' boxes, skid marks per wheel, bitwise rounding | **192,900** | yes |
+| Car collisions inside the images' boxes, skid marks per wheel, bitwise rounding | 192,900 | yes |
+| `D()` loads whole words in the logic's files (`DR_ALIGNED`, checked) | 182,200 | yes |
+| `rand() % n` and `/0x640` by multiply and shift (Thumb has no division) | 178,900 | yes |
+| `/1.15` and `/1.2` in double by a multiply, dividing only near a float's rounding point | 177,300 | yes |
+| Spectators, obstacles and tire dust as ARM in IWRAM, `sqrt()` in IWRAM, newlib's file handles and the car boxes out of it | **167,500** | yes |
 
-The busiest 1,000 frames (the start, with all cars close together) take 211,000 cycles a tick. Only one frame that runs a single tick takes longer than a GBA frame (frame 475, 299,000 cycles, near the start). One more frame runs two ticks and takes 349,000 cycles. `gba/replay` lists the five slowest frames, and `PROFILE=1` gives each function's slowest call.
+The busiest 1,000 frames (the start, with all cars close together) take 180,000 cycles a tick. `gba/replay` lists the five slowest frames, and `PROFILE=1` gives each function's slowest call.
 
 "Exact" means the recording replays with the same hashes. A "new math" step needs a new recording from `tools/replay TICKLOG OUT` and a check that the race still comes out the same. The race-outcome check is the finish frame of each car, printed by `tools/replay`. Any rounding change, even one ulp in one constant, moves the finish frames by about ±50 frames. All the new-math steps stayed inside that range.
 
@@ -42,19 +46,22 @@ The busiest 1,000 frames (the start, with all cars close together) take 211,000 
 - **`(int)(double)f` is `(int)f`**, and `(f - (int)f) < 0.5` is exact in float. Many double operations could go without changing a bit.
 - **Look at the slowest calls, not only the averages.** The machine guns averaged 13,000 cycles per car but took up to 50,000, which made 291 frames take longer than a GBA frame.
 - The hash leaves out `TRX_IMA` (the track image), so `tools/replay` prints a hash of it at the end. Drawing changes need that hash to stay the same.
+- **Thumb code on the ARM7 can't divide, not even by a constant**: it has no long multiply, so `x/12` calls a library routine. For values known to be small, like `rand_watcom106()`'s 0-32767, `dRMath_div15()` multiplies and shifts instead, checked against `/` for every value.
+- **An exact shortcut can be checked exhaustively.** `dRMath_divdf()` replaces `(float)((double)f/1.15)` with a multiply, and divides only where that could round differently. It was compared with the division for every one of the 2^32 float bit patterns.
+- **Word loads need aligned addresses, and nothing says so.** On the ARM7 an unaligned `ldr` reads rotated bytes without an error. `DR_ALIGNED` applies only to the files listed in `src/race/aligned.mk`. Drawing code writes 4 pixels at any x, so it stays with byte loads. `make ALIGNED_CHECK=1` (desktop) and `ALIGNED_CHECK=1` (GBA builds) count every unaligned access in those files, and `race_replay_start()` refuses globals that aren't word-aligned.
 
 ## Next Steps, Most Promising First
 
-The first item below is done: it took a tick from 222,000 to 199,000 cycles. The logic now runs in a playable race, `gba/race`, so its budget there is what counts. A frame is 280,896 cycles. Drawing takes about 28,000 of them, and `race_render()` without its drawing takes another 28,000. That leaves about 225,000 for the logic at one tick a frame, and about 190,000 a tick at the game's real 70 ticks a second. In the busiest stretches of a race a tick takes up to 240,000, and those seconds drop to 30-35 frames per second. `race_render()`'s 28,000 is also worth a look: it is double-precision code that has never been profiled.
+Items 1-4 below are done. The logic now runs in a playable race, `gba/race`, so its budget there is what counts. A frame is 280,896 cycles. Drawing takes about 28,000 of them, and `race_render()` without its drawing takes about 25,000. That leaves about 225,000 for the logic at one tick a frame, and about 190,000 a tick at the game's real 70 ticks a second. In the busiest stretches of a race a tick now takes up to 213,000 (it was 240,000), and a whole race runs at 59.5 frames per second, no second below 56. The real 70 ticks a second still needs about 10% more.
 
 1. **(Done) Byte-wise struct access.** `struct_35e_t` (the cars) is `#pragma pack(push,1)` in `include/drally_structs_free.h`. Several race files also put `#pragma pack(1)` before their own structs, for example `spectator_t` in `race___52ac4h.c`, and without a pop it applies to the rest of the file. GCC therefore reads every 32-bit car field as 4 byte loads plus 3 shifts and 3 ORs. Checked with the ARM compiler:
    - `pack(2)` gives exactly the same layout as `pack(1)` for all five structs in that header.
    - `pack(4)` (natural) gives the same layout for every struct except `struct_35e_t`. Its `Finished` at 0x10a and its size 0x35e need 2-byte alignment.
 
    So: `pack(push,2)` for `struct_35e_t`, natural packing for the others, and `spectator_t` with no packing (all dwords). This likely saves a lot across all the race code and stays bit-exact. The replay hashes check it, because raw-offset `D()` accesses would break if the layout moved.
-2. **The `D()`/`F32()` macros** (`include/drally.h`) read through a packed `may_alias` struct, which means byte loads on the GBA. For globals known to be 4-aligned (most of the `___xxxxxxh` arrays), a word-access variant would be much cheaper. Do the hottest files first.
-3. **The double divisions that are left** (`__divdf3`, about 3% of the logic): `race___4dcach` divides by 1.15 and 1.2 three times per car, and there are others. Each costs hundreds of cycles. Replacing them with float, or with multiplying by the reciprocal, is a new-math step.
-4. **`sqrtf`** (newlib, Thumb in ROM, about 2%). Copy `libm`'s `ef_sqrt` object into IWRAM the way `gba/replay/Makefile` does for libgcc.
+2. **(Done) The `D()`/`F32()` macros** (`include/drally.h`) read through a packed `may_alias` struct, which means byte loads on the GBA. For globals known to be 4-aligned (most of the `___xxxxxxh` arrays), a word-access variant would be much cheaper. Do the hottest files first.
+3. **(Done for `4dcach`) The double divisions that are left** (`__divdf3`, about 3% of the logic): `race___4dcach` divides by 1.15 and 1.2 three times per car, and there are others. Each costs hundreds of cycles. Replacing them with float, or with multiplying by the reciprocal, is a new-math step.
+4. **(Done) `sqrtf`** (newlib, Thumb in ROM, about 2%). Copy `libm`'s `ef_sqrt` object into IWRAM the way `gba/replay/Makefile` does for libgcc.
 5. **More `DR_HOT`:** IWRAM ends at about 27.5 KB of 32 KB, so little is left after the stack. Moving `car_boxes` (1.5 KB) and other cold data to EWRAM would make room. Candidates are `helper_machine_gun`, `race___52ac4h`'s spectator loop, the obstacle and skid-mark draw helpers, and `race___55ae0h`. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
 6. The rest of the AI and physics float math into fixed point, if the steps above don't reach the target.
 

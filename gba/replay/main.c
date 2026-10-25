@@ -21,6 +21,9 @@
 #include "race_replay.h"
 
 extern const __DWORD__ ticklog[];
+// make ALIGNED_CHECK=1: the word loads at unaligned addresses, see drally.h
+extern unsigned dr_misaligned __attribute__((weak)), dr_misaligned_line __attribute__((weak));
+extern const char * dr_misaligned_file __attribute__((weak));
 
 void race_logic(void);
 __DWORD__ getCounter(int n);
@@ -265,6 +268,11 @@ int main(void){
 	say("worst frame %u.%u%%, %u frames take longer than a frame", PCT(worst), over);
 	for(i = 0; i < 5; i++) say("  frame %u: %u cycles", slow_f[i], slow_t[i]);
 	say("busiest 1000 frames: %u cycles a tick, %u.%u%% of the CPU at 70 ticks/s", win_worst, PCT((unsigned long long)win_worst*70/60));
+	if(&dr_misaligned){
+
+		if(dr_misaligned) say("ALIGNED_CHECK: %u unaligned, the first at %s:%u", dr_misaligned, dr_misaligned_file, dr_misaligned_line);
+		else say("ALIGNED_CHECK: every access aligned");
+	}
 #if defined(PROFILE)
 	for(i = 0; i < PROF_N; i++){
 

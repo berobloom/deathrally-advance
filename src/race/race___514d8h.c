@@ -29,7 +29,7 @@ static int helper00(double dval){
 void race___514d8h(void){
 
 	__DWORD__ 	eax, ebx, ecx, edx, edi;
-	__BYTE__ 	esp[0xc8];
+	__BYTE__ 	esp[0xc8] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	__POINTER__ 	edxp;
 	int 			i, j, n;
 	__BYTE__ 		px;
@@ -168,11 +168,11 @@ void race___514d8h(void){
 
 						if((int)s_94[n].__18 < 0) s_94[n].__18 = 0;
 
-						s_35e[n].__fc += (float)(0.5*(double)(int)(rand_watcom106()%3-1));
-						s_35e[n].__100 += (float)(0.5*(double)(int)(rand_watcom106()%3-1));
-						s_35e[n].XLocation += (float)(int)(rand_watcom106()%11-5);
-						s_35e[n].YLocation += (float)(int)(rand_watcom106()%11-5);
-						s_35e[n].__104 = (float)(int)(rand_watcom106()%22-10);
+						s_35e[n].__fc += (float)(0.5*(double)(int)(dRMath_mod15(rand_watcom106(), 3)-1));
+						s_35e[n].__100 += (float)(0.5*(double)(int)(dRMath_mod15(rand_watcom106(), 3)-1));
+						s_35e[n].XLocation += (float)(int)(dRMath_mod15(rand_watcom106(), 11)-5);
+						s_35e[n].YLocation += (float)(int)(dRMath_mod15(rand_watcom106(), 11)-5);
+						s_35e[n].__104 = (float)(int)(dRMath_mod15(rand_watcom106(), 22)-10);
 						s_35e[n].__b0 *= -0.7f;
 
 						if(n != MY_CAR_IDX){

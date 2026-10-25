@@ -89,7 +89,7 @@ void race___526ach(void){
 						if(D(___243c60h) == D(MY_CAR_IDX)) dRally_Sound_pushEffect(2, SFX_SIENI, 0, 0x10000, 0x50000, 0x8000);
 						break;
 					case 4:
-						D(___1f2488h+0x120*n+0x1c) = (rand_watcom106()%4)+2;
+						D(___1f2488h+0x120*n+0x1c) = (dRMath_mod15(rand_watcom106(), 4))+2;
 						D(___1de580h+0x94*D(___243c60h)+0x18) += 0x400*D(___1f2488h+0x120*n+0x1c);
 						if((int)D(___1de580h+0x94*D(___243c60h)+0x18) > 0x19000) D(___1de580h+0x94*D(___243c60h)+0x18) = 0x19000;
 						break;
@@ -112,7 +112,7 @@ void race___526ach(void){
 					D(___1f2488h+0x120*n+0x18) = D(___1f2488h+0x120*n+8);
 					D(___196dd0h) = 0xf0;
 					D(___1f2488h+0x120*n+8) = 0;
-					D(___1f2488h+0x120*n+0xc) = (rand_watcom106()%0x96)+0xc8;
+					D(___1f2488h+0x120*n+0xc) = (dRMath_mod15(rand_watcom106(), 0x96))+0xc8;
 					D(___1f2488h+0x120*n+0x10) = 0;
 				}
 			}

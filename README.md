@@ -54,8 +54,8 @@ For each frame the recording holds what changed in the logic's globals before it
 Results in mGBA, for a whole 4-lap race (10,821 frames) with the AI driving all four cars:
 
 * **The GBA computes exactly the same race as the desktop build of the same code.** Every frame's hash matches.
-* **A tick of the logic takes 193,000 cycles on average, 211,000 in the busiest 1,000 frames.** The original code took 3.9 million. The game runs its logic 70 times a second, so 60 frames per second needs a tick in about 200,000 cycles, with room left for drawing. That target is met now. Only one frame of the race that runs a single tick takes longer than a GBA frame.
-* **How it got there:** `sin()` and `cos()` from a table, libgcc's soft-float in IWRAM, a map of where the walls are, single precision instead of double in the physics, AI and skid marks, cheaper searches, and the innermost loops as ARM code in IWRAM. Each step was checked against the replay. The steps that changed the math were also checked against how the race comes out (see below).
+* **A tick of the logic takes 167,500 cycles on average, 180,000 in the busiest 1,000 frames.** The original code took 3.9 million. The game runs its logic 70 times a second, so 60 frames per second needs a tick in about 200,000 cycles, with room left for drawing.
+* **How it got there:** `sin()` and `cos()` from a table, libgcc's soft-float in IWRAM, a map of where the walls are, single precision instead of double in the physics, AI and skid marks, cheaper searches, the innermost loops as ARM code in IWRAM, word loads instead of byte loads, and no library divisions. Each step was checked against the replay. The steps that changed the math were also checked against how the race comes out (see below).
 
 `tools/replay` replays a recording on the desktop. It prints each car's finish frame and place and a hash of the track image, and it can write the recording again with the current build's hashes, which is what the GBA then checks against. The finish frames tell whether a change to the math changed the driving: rounding one constant differently moves them by about 50 frames.
 
@@ -72,7 +72,7 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 
 The starting grid, car images and other race state come from a race recorded by the desktop game (see above). `tools/gbabake` bakes them into the ROM with the track.
 
-In mGBA a whole race runs at 56 frames per second on average. Most seconds run at a full 60, and a few busy ones, with all four cars close together, drop to 30-35. When a frame runs long the game slows down rather than skipping ticks. To keep the game at 60 frames per second it runs one tick a frame by default, so it plays at 6/7 of its real speed. `make TICKS=70` gives the real speed and drops more frames.
+In mGBA a whole race runs at 59.5 frames per second on average. Most seconds run at a full 60, and none drops below 56. When a frame runs long the game slows down rather than skipping ticks. To keep the game at 60 frames per second it runs one tick a frame by default, so it plays at 6/7 of its real speed. `make TICKS=70` gives the real speed, but then it runs at 30 frames per second.
 
 ### Building
 
@@ -88,7 +88,7 @@ make -C gba/proto TRACK=5    # any track, 0-9
 make -C gba/race RACE=game/TICKLOG.BIN TRACK=8   # a race, from a recording made on that track
 ```
 
-Each prototype ROM holds one track and is about 3 MB, a race ROM about 5 MB. `gbabake` refuses a recording made on another track than `TRACK`.
+Each prototype ROM holds one track and is about 2 MB, a race ROM about 4 MB. `gbabake` refuses a recording made on another track than `TRACK`.
 
 ### Controls
 
@@ -124,7 +124,7 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 Not done yet:
 
 * Setting up a race on the GBA itself. It now starts from one the desktop recorded.
-* A steady 60 frames per second at the game's real speed. In the busiest stretches a tick of the logic takes up to about 240,000 cycles. One tick a frame needs it under about 225,000, and the game's real 70 ticks a second needs about 190,000.
+* A steady 60 frames per second at the game's real speed. In the busiest stretches a tick of the logic takes up to about 213,000 cycles. The game's real 70 ticks a second needs about 190,000.
 * Skid marks, wrecks and the track under obstacles, which the race code draws into the track image. The port needs a writable overlay for the tiles they touch.
 * Explosions, spectators, mines, shots and the rest of the race's pictures, and the race's own HUD.
 * Menus, shops and the underground market, which are drawn at 640x480.

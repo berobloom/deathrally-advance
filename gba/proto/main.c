@@ -40,9 +40,9 @@ extern const u8 cars_obj[];
 #define SCREEN_W		240
 #define SCREEN_H		160
 #define CAR_FRAMES		96
-#define CAR_OBJ_BYTES		(64*64)
-#define CAR_PAD			4		// the 40x40 frame sits at (4,4) in its 64x64 sprite
-#define CAR_UPLOAD_BYTES	(6*8*64)	// so only the first 6 rows of tiles hold pixels
+#define CAR_OBJ_BYTES		(64*64)		// OBJ VRAM for each car's 64x64 sprite
+#define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
+#define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars.obj
 #define NUM_CARS		4
 #define MAS_ROAD		15		// track mask value of drivable road
 
@@ -320,10 +320,14 @@ static int car_on_screen(int n){
 // copy a car's rotation frame into its OBJ VRAM if it changed and is in view
 static void upload_car(int n){
 
-	int frame = cars[n].angle >> 4;
+	int frame = cars[n].angle >> 4, r;
 
 	if((frame == cars[n].shown_frame)||!car_on_screen(n)) return;
-	copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES, cars_obj + (n*CAR_FRAMES + frame)*CAR_OBJ_BYTES, CAR_UPLOAD_BYTES);
+	// a row of tiles at a time: the sprite's rows are 8 tiles wide
+	for(r = 0; r < CAR_TILES; r++){
+
+		copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64, cars_obj + (n*CAR_FRAMES + frame)*CAR_FRAME_BYTES + r*CAR_TILES*64, CAR_TILES*64);
+	}
 	cars[n].shown_frame = frame;
 }
 
@@ -333,7 +337,7 @@ static void place_cars(void){
 
 	for(n = 0; n < NUM_CARS; n++){
 
-		int sx = (cars[n].x >> 8) - cam_x - (CAR_PAD+20), sy = (cars[n].y >> 8) - cam_y - (CAR_PAD+20);
+		int sx = (cars[n].x >> 8) - cam_x - 20, sy = (cars[n].y >> 8) - cam_y - 20;
 		int tile = n*CAR_OBJ_BYTES/32;
 		int hidden = !car_on_screen(n);
 

@@ -27,6 +27,7 @@
 #include "drally_keyboard.h"
 #include "drally_structs_free.h"
 #include "drally_race.h"
+#include "drmath.h"
 #include "race_replay.h"
 
 // baked by tools/gbabake, see assets.S
@@ -35,6 +36,9 @@ extern const u8 track_tiles[];
 extern const u32 track_inf[];
 extern const u8 cars_obj[];
 extern const __DWORD__ race_bin[];
+// make ALIGNED_CHECK=1: the word loads at unaligned addresses, see drally.h
+extern unsigned dr_misaligned __attribute__((weak)), dr_misaligned_line __attribute__((weak));
+extern const char * dr_misaligned_file __attribute__((weak));
 
 void race_logic(void);
 void race___40164h(void);
@@ -67,9 +71,9 @@ void race___40164h(void);
 #define SCREEN_H		160
 #define CAR_FRAMES		96
 #define CAR_IMG_BYTES		(40*40)		// a rotation frame in the game's car images
-#define CAR_OBJ_BYTES		(64*64)
-#define CAR_PAD			4		// the 40x40 frame sits at (4,4) in its 64x64 sprite
-#define CAR_UPLOAD_BYTES	(6*8*64)	// so only the first 6 rows of tiles hold pixels
+#define CAR_OBJ_BYTES		(64*64)		// OBJ VRAM for each car's 64x64 sprite
+#define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
+#define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars.obj
 #define NUM_CARS		4
 // the game's timer runs at 70 Hz. A tick of the logic takes up to about
 // 210,000 cycles (gba/replay), so 70 of them leave too little of the
@@ -293,10 +297,14 @@ static int car_on_screen(int n){
 // where ImgOffset points into them
 static void upload_car(int n){
 
-	int frame = car(n)->ImgOffset/CAR_IMG_BYTES;
+	int frame = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6), r;	// ImgOffset/CAR_IMG_BYTES
 
 	if((frame == shown_frame[n])||!car_on_screen(n)) return;
-	copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES, cars_obj + frame*CAR_OBJ_BYTES, CAR_UPLOAD_BYTES);
+	// a row of tiles at a time: the sprite's rows are 8 tiles wide
+	for(r = 0; r < CAR_TILES; r++){
+
+		copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64, cars_obj + frame*CAR_FRAME_BYTES + r*CAR_TILES*64, CAR_TILES*64);
+	}
 	shown_frame[n] = frame;
 }
 
@@ -306,7 +314,7 @@ static void place_cars(void){
 
 	for(n = 0; n < NUM_CARS; n++){
 
-		int sx = (int)car(n)->XLocation - cam_x - (CAR_PAD+20), sy = (int)car(n)->YLocation - cam_y - (CAR_PAD+20);
+		int sx = (int)car(n)->XLocation - cam_x - 20, sy = (int)car(n)->YLocation - cam_y - 20;
 		int tile = n*CAR_OBJ_BYTES/32;
 		int hidden = (n >= NUM_OF_CARS)||!car_on_screen(n);
 
@@ -400,6 +408,15 @@ int main(void){
 	u32 		last_vblank, last_report = 0, ticks_due = 0, t, frame_start;
 	u32 		busy = 0, logic = 0, render = 0, ticks = 0, logic_max = 0;
 	char 		line[32];
+
+	// the IWRAM below the stack, marked so that ojgbarun's stackfree= can
+	// tell how much of it the stack ever reaches
+	{
+		extern u32 __iheap_start[];
+		u32 * p = __iheap_start, * sp = __builtin_frame_address(0);
+
+		for(; p < sp-64; p++) *p = 0x57AC57AC;
+	}
 
 	REG_WAITCNT = 0x4007;		// ROM at 3/2 wait states with prefetch, works on flash carts
 	REG_DEBUG_ENABLE = 0xC0DE;
@@ -528,6 +545,7 @@ int main(void){
 					(int)car(n)->Direction, car(n)->Lap, car(n)->Position, car(n)->Finished);
 			}
 #endif
+			if(&dr_misaligned&&dr_misaligned) say("ALIGNED_CHECK: %u unaligned, the first at %s:%u", dr_misaligned, dr_misaligned_file, dr_misaligned_line);
 			last_report = vblanks;
 			frames = 0; busy = logic = render = ticks = logic_max = 0;
 		}

@@ -39,7 +39,7 @@ void race___55ae0h(void){
     int             i, j, n, LapPrevious, LapBest, LapRecord;
 	double 	        d_tmp;
 	__DWORD__ 	    eax, ebx, ecx, edx, ebp;
-	__BYTE__ 	    esp[0xc];
+	__BYTE__ 	    esp[0xc] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
     struct_54_t *   s_54;
     struct_94_t *   s_94;
     struct_35e_t *  s_35e;

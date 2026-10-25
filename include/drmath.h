@@ -27,6 +27,40 @@ static inline float dRMath_fixf(int v, int shift){
 	return b.f;
 }
 
+// x/n and x%n for x from 0 to 32767 (what rand_watcom106() returns) and a
+// constant n up to 1024 or 0x6000, by a multiply and a shift: the GBA's
+// Thumb code has no division, so / and % call a library routine, even by
+// a constant. Checked against / for every such x and n
+static inline int dRMath_div15(int x, int n){
+
+	int 		s = 48-__builtin_clz(n);
+	unsigned 	m = (unsigned)(((1ull << s)+n-1)/n);
+
+	return (int)(((unsigned)x*m) >> s);
+}
+
+static inline int dRMath_mod15(int x, int n){ return x-n*dRMath_div15(x, n); }
+
+// (float)((double)f/c), given rc = 1.0/c, with a multiply instead of the
+// division, which soft-float takes several times as long for. The product
+// is within a few units in its last place of the quotient, so rounding it
+// to float gives the same float, unless it lies about halfway between two
+// floats: then, and for floats too small to be normal, it divides
+static inline float dRMath_divdf(float f, double c, double rc){
+
+	union { double d; unsigned long long u; } q;
+	unsigned 	low, exp;
+
+	q.d = (double)f*rc;
+	exp = (unsigned)(q.u >> 52)&0x7ff;
+	low = (unsigned)q.u&0x1fffffff;		// the bits a float drops
+
+	if(exp == 0) return (float)q.d;		// zero
+	if((exp < 1023-126)||(low-0x10000000+16 < 32)) return (float)((double)f/c);
+
+	return (float)q.d;
+}
+
 static inline float dRMath_sin_degf(float deg){ return dRMath_fixf(dRMath_sin_i(dRMath_turns_degf(deg)), 28); }
 static inline float dRMath_cos_degf(float deg){ return dRMath_fixf(dRMath_cos_i(dRMath_turns_degf(deg)), 28); }
 

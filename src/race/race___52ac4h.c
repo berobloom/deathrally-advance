@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drmath.h"
 #include "drally_structs_free.h"
 
 typedef struct spectator_s {
@@ -26,7 +27,7 @@ int rand_watcom106(void);
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2);
 
 // run over spectator
-void race___52ac4h(void){
+DR_HOT void race___52ac4h(void){
 
 	__DWORD__ 		n, a, b, c, d;
 	int 			x, y;
@@ -57,10 +58,10 @@ void race___52ac4h(void){
 
 				if((int)D(0x94*D(___243c60h)+___1de580h+0x18) < 0) D(0x94*D(___243c60h)+___1de580h+0x18) = 0;
 
-				s_35e[D(___243c60h)].XLocation += (float)(rand_watcom106()%7-3);
-				s_35e[D(___243c60h)].YLocation += (float)(rand_watcom106()%7-3);
+				s_35e[D(___243c60h)].XLocation += (float)(dRMath_mod15(rand_watcom106(), 7)-3);
+				s_35e[D(___243c60h)].YLocation += (float)(dRMath_mod15(rand_watcom106(), 7)-3);
 				s_35e[D(___243c60h)].__b0 *= -0.1f;
-				s_35e[D(___243c60h)].__104 = (float)(rand_watcom106()%0xa-5);
+				s_35e[D(___243c60h)].__104 = (float)(dRMath_mod15(rand_watcom106(), 0xa)-5);
 				s_35e[D(___243c60h)].__352 = 0x2d;
 				x = (int)s_35e[D(___243c60h)].XLocation;
 				y = (int)s_35e[D(___243c60h)].YLocation;
@@ -71,11 +72,11 @@ void race___52ac4h(void){
 					b = (int)((double)s_35e[D(___243c60h)].YLocation-(double)s_35e[D(MY_CAR_IDX)].YLocation);
 					c = 0x10000-0x4b*sqrt(a*a+b*b);
 
-					if((int)c > 0x1000) dRally_Sound_pushEffect(3, rand_watcom106()%3+7, 0, c,  0x50000, 0x8000);
+					if((int)c > 0x1000) dRally_Sound_pushEffect(3, dRMath_mod15(rand_watcom106(), 3)+7, 0, c,  0x50000, 0x8000);
 				}
 				else {
 
-					dRally_Sound_pushEffect(3, rand_watcom106()%3+7, 0, 0x9000, 0x50000, 0x8000);
+					dRally_Sound_pushEffect(3, dRMath_mod15(rand_watcom106(), 3)+7, 0, 0x9000, 0x50000, 0x8000);
 				}
 			}
 		}

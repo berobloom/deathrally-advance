@@ -22,6 +22,14 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(FLAGS) $(LDFLAGS)
 
+# make ALIGNED_CHECK=1 checks that the files the GBA builds with DR_ALIGNED
+# only load aligned words, see src/race/aligned.mk
+ifdef ALIGNED_CHECK
+include src/race/aligned.mk
+$(RACE_ALIGNED_SRCS:%.c=$(BUILD)/%.o): DEFINES += -DDR_ALIGNED -DDR_ALIGNED_CHECK
+$(BUILD)/core/counters.o: DEFINES += -DDR_ALIGNED_CHECK
+endif
+
 $(BUILD)/%.o: src/%.c Makefile
 	@mkdir -p $(@D)
 	$(CC) -g -MMD -MP -c -o $@ $< $(INCLUDES) $(FLAGS) $(DEFINES)

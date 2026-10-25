@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drmath.h"
 
 	extern __POINTER__ RACE_OBSTACLE_BPK;
 	extern __BYTE__ ___196dd0h[];
@@ -41,10 +42,10 @@ static int helper01(int t, int top){
 	return (r >= 1)&&(r <= 9);
 }
 
-void race___5209ch(void){
+DR_HOT void race___5209ch(void){
 
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi, ebp;
-	__BYTE__ 	esp[0x44];
+	__BYTE__ 	esp[0x44] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	__POINTER__ 	ebxp;
 	__POINTER__ 	ebpp;
 	__POINTER__ 	esp0x14;
@@ -113,7 +114,7 @@ void race___5209ch(void){
 
 				while(1){
 					eax = rand_watcom106();
-					edx = eax % 0xc;
+					edx = dRMath_mod15(eax, 0xc);	// eax is from rand_watcom106()
 					D(esp+0x30) = edx;
 					if(B(esp+edx) != 1) break;
 				}
@@ -150,7 +151,7 @@ void race___5209ch(void){
 							if((int)D(esp+0x18) < 4){
 
 								eax = rand_watcom106();
-								edx = eax % 0x64;
+								edx = dRMath_mod15(eax, 0x64);	// eax is from rand_watcom106()
 								eax = 0x94*D(MY_CAR_IDX);
 
 								if(D(eax+___1de580h+0x2c) == 0){
@@ -303,7 +304,7 @@ void race___5209ch(void){
 			D(___1f2488h+D(esp+0x2c)+8) = 0;
 			D(___196dd0h) = 0x118;
 			eax = rand_watcom106();
-			edx = eax % 0xc8;
+			edx = dRMath_mod15(eax, 0xc8);	// eax is from rand_watcom106()
 			D(___1f2488h+D(esp+0x2c)+0xc) = edx+0x12c;
 		}
 

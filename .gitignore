@@ -25,3 +25,4 @@ TICKLOG.BIN
 /tools/replay/build/
 /tools/replay/replay
 /gba/race/build/
+*.sav

@@ -183,7 +183,7 @@ static void race___4ff50h_helper(int n){ D(___243c60h) = n; race___4ff50h(); }
 void race_logic(void){
 
 	__DWORD__ 	eax;
-	__BYTE__ 	esp[0x1c];
+	__BYTE__ 	esp[0x1c] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	int 	k;
 	struct_35e_t *	s_35e;
 	struct_94_t * 	s_94;
@@ -317,7 +317,7 @@ void race_logic(void){
 					}
 				}
 
-				D(___243d08h) = rand_watcom106()%0x6000;
+				D(___243d08h) = dRMath_mod15(rand_watcom106(), 0x6000);
 
 				switch(s_35e[MY_CAR_IDX].__18e){
 				case 0:

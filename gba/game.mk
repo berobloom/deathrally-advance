@@ -9,6 +9,7 @@ DEVKITARM ?= $(DEVKITPRO)/devkitARM
 PREFIX := $(DEVKITARM)/bin/arm-none-eabi-
 CC := $(PREFIX)gcc
 OBJCOPY := $(PREFIX)objcopy
+OBJDUMP := $(PREFIX)objdump
 AR := $(PREFIX)ar
 GBAFIX := $(DEVKITPRO)/tools/bin/gbafix
 
@@ -31,21 +32,45 @@ CFLAGS += -D'DR_HOT=__attribute__((section(".iwram"),target("arm"),noinline))' \
 LDFLAGS := -specs=gba.specs $(ARCH) -Wl,--gc-sections -L$(DEVKITPRO)/libgba/lib
 
 # libgcc's soft-float and division routines are ARM code; read from ROM
-# over its 16-bit bus they take several times as long as from IWRAM
+# over its 16-bit bus they take several times as long as from IWRAM.
+# $(LIBGCC_OBJS) holds these and the other library objects moved here
 LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
 LIBGCC_IWRAM := _arm_addsubdf3 _arm_muldivdf3 _arm_cmpdf2 _arm_unorddf2 _arm_fixdfsi _arm_fixunsdfsi \
 	_arm_truncdfsf2 _arm_addsubsf3 _arm_muldivsf3 _arm_cmpsf2 _arm_unordsf2 _arm_fixsfsi \
 	_udivsi3 _divsi3 _dvmd_tls
-LIBGCC_OBJS := $(LIBGCC_IWRAM:%=$(BUILD)/libgcc/%.o)
+# and so is newlib's sqrt(), Thumb code
+LIBM := $(shell $(CC) $(ARCH) -print-file-name=libm.a)
+LIBM_IWRAM := libm_a-e_sqrt libm_a-ef_sqrt libm_a-w_sqrt libm_a-wf_sqrt
+# newlib's 4 KB table of file handles, which stdio pulls in, is better off
+# in EWRAM than taking up an eighth of IWRAM
+LIBSYSBASE := $(shell $(CC) $(ARCH) -print-file-name=libsysbase.a)
+LIBGCC_OBJS := $(LIBGCC_IWRAM:%=$(BUILD)/libgcc/%.o) $(LIBM_IWRAM:%=$(BUILD)/libm/%.o) \
+	$(BUILD)/libsysbase/libsysbase_libsysbase_a-handle_manager.o
 
 $(BUILD)/libgcc/%.o: $(LIBGCC)
 	@mkdir -p $(@D)
 	@cd $(@D) && $(AR) x $(LIBGCC) $*.o
 	@$(OBJCOPY) --rename-section .text=.iwram $@
 
+$(BUILD)/libm/%.o: $(LIBM)
+	@mkdir -p $(@D)
+	@cd $(@D) && $(AR) x $(LIBM) $*.o
+	@$(OBJCOPY) $$($(OBJDUMP) -h $@ | awk '$$2 ~ /^\.text/ { print "--rename-section " $$2 "=.iwram" }') $@
+
+$(BUILD)/libsysbase/%.o: $(LIBSYSBASE)
+	@mkdir -p $(@D)
+	@cd $(@D) && $(AR) x $(LIBSYSBASE) $*.o
+	@$(OBJCOPY) --rename-section .data.handles=.ewram.handles $@
+
 $(GAME_LIB): $(GAME_OBJS)
 	@rm -f $@
 	@$(AR) rcs $@ $^
+
+include ../../src/race/aligned.mk
+ALIGNED_FLAGS := -DDR_ALIGNED $(if $(ALIGNED_CHECK),-DDR_ALIGNED_CHECK)
+$(RACE_ALIGNED_SRCS:%.c=$(BUILD)/game/%.o): CFLAGS += $(ALIGNED_FLAGS)
+# counters.c holds the check's counts
+$(BUILD)/game/core/counters.o: CFLAGS += $(if $(ALIGNED_CHECK),-DDR_ALIGNED_CHECK)
 
 $(BUILD)/game/%.o: ../../src/%.c
 	@mkdir -p $(@D)

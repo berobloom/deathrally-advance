@@ -85,7 +85,7 @@ static int helper44(int idx){
 void race___54668h(void){
 
 	int 			br0, k, n;
-	__BYTE__ 		esp[0x124];
+	__BYTE__ 		esp[0x124] __attribute__((aligned(4)));	// D() loads words here, see aligned.mk
 	float 			x1f, x2f, x3f, x4f, y1f, y2f, y3f, y4f;
 	struct_35e_t * 	s_35e;
 	struct_94_t *	s_94;

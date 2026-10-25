@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drmath.h"
 #include "drally_race.h"
 
 	extern int TRX_WIDTH;
@@ -19,7 +20,7 @@ static int 		walls_w, walls_h;
 // and the box around each car image's solid pixels (above 3), 96 images
 // of 40x40 for each of the 4 cars: first and last column, first and last
 // row, or a first column of 40 if there are none
-static __BYTE__ 	car_boxes[4*96][4];
+DR_COLD static __BYTE__ 	car_boxes[4*96][4];
 
 // pixels read 4 at a time, which the GBA reads from ROM about as fast as one
 typedef __DWORD__ __attribute__((may_alias)) px4_t;
@@ -80,7 +81,8 @@ static void car_boxes_build(void){
 
 const __BYTE__ * race_car_box(__DWORD__ img_offset){
 
-	return car_boxes[img_offset/0x640];
+	// img_offset/0x640, the images being below 2^21 bytes
+	return car_boxes[dRMath_div15(img_offset >> 6, 25)];
 }
 
 // after the track and the car images are loaded: race___42824h() decodes

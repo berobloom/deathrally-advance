@@ -30,7 +30,7 @@ static void helper_copy(__POINTER__ dst, int dstX, int dstY, __POINTER__ src){
 }
 
 // TIRE DUSTING
-void race___50ef4h(void){
+DR_HOT void race___50ef4h(void){
 
 	int 			i0, j0, n, ticks;
 	struct_35e_t * 	car;

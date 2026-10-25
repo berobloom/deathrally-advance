@@ -9,8 +9,8 @@
 //   track.mas    the track mask, one byte per pixel (wall/surface codes)
 //   track.inf    width and height in tiles, then in pixels, then the 4 start positions
 //                (x, y, rot), all as little-endian 32-bit values
-//   cars.obj     4 cars x 96 directions, each a 64x64 8bpp sprite in 1D
-//                tile order with the 40x40 frame at (4,4) (index 0 is clear)
+//   cars.obj     4 cars x 96 directions, each 40x40 8bpp as 5x5 tiles, row by row
+//                (index 0 is clear)
 //   preview.ppm  the track and car 0's 96 frames, for checking by eye
 //
 // With a race recorded on this track by the desktop game (make ticklog),
@@ -31,8 +31,7 @@ void bpk_decode4(__DWORD__ size, __DWORD__ offset, __POINTER__ dst, __POINTER__ 
 
 #define CAR_FRAMES	96
 #define CAR_W		40
-#define OBJ_W		64
-#define CAR_PAD		4	// frame at (4,4), so it fits in the sprite's first 6 tile rows
+#define CAR_TILES	(CAR_W/8)	// a frame is 5x5 tiles of the 64x64 sprite it is shown in
 
 #pragma pack(push, 1)
 typedef struct { __DWORD__ x, y, rot; } startup_t;
@@ -133,7 +132,7 @@ int main(int argc, char * argv[]){
 
 	char		bpa_name[16], entry[32], outdir[PATH_MAX];
 	__POINTER__	src, ima, mas, spins, race_spins = 0;
-	__BYTE__	pal[0x300], obj[OBJ_W*OBJ_W];
+	__BYTE__	pal[0x300], obj[CAR_W*CAR_W];
 	inf_t *		inf;
 	int 		track, w, h, tw, th, tx, ty, x, y, n, f, i;
 	FILE *		fd;
@@ -230,9 +229,8 @@ int main(int argc, char * argv[]){
 			for(y = 0; y < CAR_W; y++){
 				for(x = 0; x < CAR_W; x++){
 
-					int ox = x+CAR_PAD, oy = y+CAR_PAD;
-					// 1D sprite layout: 8x8 tiles row by row, 8 tiles per row
-					obj[64*((oy/8)*8+ox/8)+8*(oy%8)+ox%8] = spins[f*CAR_W*CAR_W+y*CAR_W+x];
+					// 8x8 tiles row by row, 5 tiles per row
+					obj[64*((y/8)*CAR_TILES+x/8)+8*(y%8)+x%8] = spins[f*CAR_W*CAR_W+y*CAR_W+x];
 				}
 			}
 			fwrite(obj, 1, sizeof(obj), fd);
