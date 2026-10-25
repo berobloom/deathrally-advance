@@ -66,9 +66,9 @@ void race___4ff50h(void){
 
 	s_35e[D(___243c60h)].__1b6 = 1;
 	ebx = 4*D(___1de580h+0x94*D(___243c60h)+0x60)+0x94*D(___243c60h);
-	D(esp+0xe8) = helper00((double)(int)D(___1de580h+ebx+0x74)*dRMath_sin(((((double)(int)D(___1de580h+ebx+0x64)+(double)s_35e[D(___243c60h)].Direction)+180.0)*LOC_PI)/180.0));
+	D(esp+0xe8) = helper00((double)(int)D(___1de580h+ebx+0x74)*dRMath_sin_deg((((double)(int)D(___1de580h+ebx+0x64)+(double)s_35e[D(___243c60h)].Direction)+180.0)));
 	edx = 4*D(___1de580h+0x94*D(___243c60h)+0x60)+0x94*D(___243c60h);
-	D(esp+0xe4) = helper00((double)(int)D(___1de580h+edx+0x74)*(LOC_83*dRMath_cos(((double)(int)D(___1de580h+edx+0x64)+(double)s_35e[D(___243c60h)].Direction+180.0)*LOC_PI/180.0)));
+	D(esp+0xe4) = helper00((double)(int)D(___1de580h+edx+0x74)*(LOC_83*dRMath_cos_deg(((double)(int)D(___1de580h+edx+0x64)+(double)s_35e[D(___243c60h)].Direction+180.0))));
 	D(___2432b0h) = (int)((double)s_35e[D(___243c60h)].XLocation-4.0+(double)(int)D(esp+0xe8));
 	D(___2432b4h) = (int)((double)s_35e[D(___243c60h)].YLocation-4.0+(double)(int)D(esp+0xe4));
 	D(___2432b8h) = D(esp+0xe8)+s_35e[D(___243c60h)].__4-0x4;
@@ -90,8 +90,8 @@ void race___4ff50h(void){
 		dRally_Sound_pushEffect(9, 19+rand_watcom106()%2, 0, 0x9000, 0x21000, 0x8000);
 	}
 
-	D(esp+0xd4) = helper00(256.0*dRMath_sin(((double)s_35e[D(___243c60h)].Direction+180.0)*LOC_PI/180.0))-3+rand_watcom106()%6;
-	D(esp+0xd0) = helper00(256.0*dRMath_cos(((double)s_35e[D(___243c60h)].Direction+180.0)*LOC_PI/180.0)*LOC_83)-3+rand_watcom106()%6;
+	D(esp+0xd4) = helper00(256.0*dRMath_sin_deg(((double)s_35e[D(___243c60h)].Direction+180.0)))-3+rand_watcom106()%6;
+	D(esp+0xd0) = helper00(256.0*dRMath_cos_deg(((double)s_35e[D(___243c60h)].Direction+180.0))*LOC_83)-3+rand_watcom106()%6;
 
 	n = -1;
 	while(++n < 26){

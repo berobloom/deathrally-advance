@@ -22,16 +22,53 @@ int dRMath_cos_i(int a){
 	return dRMath_sin_i(a+(1 << 22));
 }
 
+// the GBA does doubles in software, where these bit tricks are much cheaper
+// than the operations they stand for: the exponent of a double's upper
+// word, and dividing by 2^28 by lowering it
+typedef union { double d; __QWORD__ q; } dbits_t;
+
+static int big(double dval, int e){
+
+	dbits_t 	b;
+
+	b.d = dval;
+
+	return (int)((b.q >> 52)&0x7ff) >= 1023+e;
+}
+
+// 4.28 fixed point to double, exactly as v*(1.0/268435456.0) would
+static double fix28(int v){
+
+	dbits_t 	b;
+
+	b.d = (double)v;
+	if(v) b.q -= (__QWORD__)28 << 52;
+
+	return b.d;
+}
+
 // radians to 1/2^24 turns. fmod() is exact, so far-off angles still agree everywhere
 static int turns(double dval){
 
-	if((dval > 512.0)||(dval < -512.0)) dval = fmod(dval, 6.283185307179586);
+	if(big(dval, 9)) dval = fmod(dval, 6.283185307179586);
 
 	return (int)(dval*2670176.857720436);
 }
 
-double dRMath_sin(double dval){ return dRMath_sin_i(turns(dval))*(1.0/268435456.0); }
-double dRMath_cos(double dval){ return dRMath_cos_i(turns(dval))*(1.0/268435456.0); }
+double dRMath_sin(double dval){ return fix28(dRMath_sin_i(turns(dval))); }
+double dRMath_cos(double dval){ return fix28(dRMath_cos_i(turns(dval))); }
+
+// degrees, which is what the race code has: it saves the two soft-float
+// operations, one a division, that turned them into radians
+static int turns_deg(double deg){
+
+	if(big(deg, 14)) deg = fmod(deg, 360.0);
+
+	return (int)(deg*46603.37777777778);
+}
+
+double dRMath_sin_deg(double deg){ return fix28(dRMath_sin_i(turns_deg(deg))); }
+double dRMath_cos_deg(double deg){ return fix28(dRMath_cos_i(turns_deg(deg))); }
 
 #if !defined(DR_INLINE_MATH)
 double dRMath_sqrt(double dval){ return sqrt(dval); }

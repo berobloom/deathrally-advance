@@ -7,6 +7,8 @@
 // and return 4.28 fixed point
 double dRMath_sin(double dval);
 double dRMath_cos(double dval);
+double dRMath_sin_deg(double deg);
+double dRMath_cos_deg(double deg);
 int dRMath_sin_i(int a);
 int dRMath_cos_i(int a);
 

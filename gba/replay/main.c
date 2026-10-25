@@ -40,11 +40,10 @@ __DWORD__ getCounter(int n);
 #define NOWHERE			((__POINTER__)0x00010000)
 
 #if defined(PROFILE)
-// make PROFILE=1 wraps race_logic()'s parts (-Wl,--wrap) to time each one;
-// time spent in sin() and cos() also counts toward their callers
+// make PROFILE=1 wraps race_logic()'s parts (-Wl,--wrap) to time each one
 #define PROFILED(PX)	PX(race___4b62ch) PX(race___4c434h) PX(race___4dcach) PX(race___514d8h) \
 	PX(race___52ac4h) PX(race___526ach) PX(race___4ff50h) PX(race___54668h) PX(race___55ae0h) \
-	PX(race___56170h) PX(race___563ach) PX(race___5209ch) PX(race___4c21ch) PX(sin) PX(cos)
+	PX(race___56170h) PX(race___563ach) PX(race___5209ch) PX(race___4c21ch)
 enum {
 #define PX(f)	PROF_##f,
 	PROFILED(PX)
@@ -57,15 +56,12 @@ static const char * prof_names[PROF_N] = {
 #undef PX
 };
 static unsigned long long 	prof_cycles[PROF_N];
-static int 			in_libm;	// soft-float calls inside sin() and cos() aren't counted
+static int 			prof_in = PROF_N;	// the part running now, for PROFILE=2
 static unsigned 		prof_calls[PROF_N];
 static u32 cycles(void);
-#define PROF_WRAP(ret, f, decl, args) \
-	ret __real_##f decl; \
-	ret __wrap_##f decl { u32 t = cycles(); ret r = __real_##f args; in_libm = 0; prof_cycles[PROF_##f] += cycles()-t; prof_calls[PROF_##f]++; return r; }
 #define PROF_WRAP_VOID(f, decl, args) \
 	void __real_##f decl; \
-	void __wrap_##f decl { u32 t = cycles(); __real_##f args; prof_cycles[PROF_##f] += cycles()-t; prof_calls[PROF_##f]++; }
+	void __wrap_##f decl { u32 t = cycles(); prof_in = PROF_##f; __real_##f args; prof_in = PROF_N; prof_cycles[PROF_##f] += cycles()-t; prof_calls[PROF_##f]++; }
 PROF_WRAP_VOID(race___4b62ch, (int n), (n))
 PROF_WRAP_VOID(race___4c434h, (void), ())
 PROF_WRAP_VOID(race___4dcach, (void), ())
@@ -79,10 +75,9 @@ PROF_WRAP_VOID(race___56170h, (void), ())
 PROF_WRAP_VOID(race___563ach, (void), ())
 PROF_WRAP_VOID(race___5209ch, (void), ())
 PROF_WRAP_VOID(race___4c21ch, (void), ())
-PROF_WRAP(double, sin, (double x), ((in_libm++, x)))
-PROF_WRAP(double, cos, (double x), ((in_libm++, x)))
 
-// and counts the soft-float calls: ret, name, parameters, arguments
+#if PROFILE >= 2
+// PROFILE=2 also counts the soft-float calls: ret, name, parameters, arguments
 #define FLOATOPS(F) \
 	F(double, __aeabi_dadd, (double a, double b), (a, b)) F(double, __aeabi_dsub, (double a, double b), (a, b)) \
 	F(double, __aeabi_dmul, (double a, double b), (a, b)) F(double, __aeabi_ddiv, (double a, double b), (a, b)) \
@@ -108,12 +103,14 @@ static const char * fop_names[FOP_N] = {
 #undef PF
 };
 static unsigned 	fop_calls[FOP_N];
+static unsigned 	fop_in[PROF_N+1];	// calls made in each part, the rest in race_logic() itself
 static unsigned long long 	fop_cycles;	// in all of them, with the wrappers' own cost
 #define PF(ret, f, decl, args) \
 	ret __real_##f decl; \
-	ret __wrap_##f decl { if(in_libm) return __real_##f args; u32 t = cycles(); ret r = __real_##f args; fop_cycles += cycles()-t; fop_calls[FOP_##f]++; return r; }
+	ret __wrap_##f decl { u32 t = cycles(); ret r = __real_##f args; fop_cycles += cycles()-t; fop_calls[FOP_##f]++; fop_in[prof_in]++; return r; }
 FLOATOPS(PF)
 #undef PF
+#endif // PROFILE >= 2
 #endif // PROFILE
 
 // sound isn't measured here
@@ -164,7 +161,8 @@ int main(void){
 	const __DWORD__ * 	expected;
 	unsigned 		i, n, frames, mismatches, first_bad;
 	u32 			t, tmax[MAX_TICKS+1], fcount[MAX_TICKS+1], ticks, worst;
-	unsigned long long 	tsum[MAX_TICKS+1], total;
+	unsigned long long 	tsum[MAX_TICKS+1], total, win_cycles = 0;
+	u32 			win_ticks = 0, win_worst = 0;
 
 	irqInit();
 	irqEnable(IRQ_VBLANK);
@@ -227,7 +225,16 @@ int main(void){
 		if(t > tmax[k]) tmax[k] = t;
 		total += t; ticks += k; frames++;
 		if(t > worst) worst = t;
-		if(frames%1000 == 0) say("frame %u: %u ticks, %u bad", frames, ticks, mismatches);
+		// cars that finish or are wrecked stop costing, so the busiest
+		// stretch says more than the whole race's average
+		win_cycles += t; win_ticks += k;
+		if(frames%1000 == 0){
+
+			t = win_ticks ? win_cycles/win_ticks : 0;
+			say("frames %u-%u: %u cycles a tick, %u bad", frames-1000, frames, t, mismatches);
+			if(t > win_worst) win_worst = t;
+			win_cycles = win_ticks = 0;
+		}
 	}
 
 	say("%u frames, %u ticks", frames, ticks);
@@ -241,18 +248,25 @@ int main(void){
 	say("per tick: %u cycles = %u.%u%% of a frame", t, PCT(t));
 	say("70 ticks/s at 60 fps: %u.%u%% of the CPU", PCT((unsigned long long)t*70/60));
 	say("worst frame %u.%u%%", PCT(worst));
+	say("busiest 1000 frames: %u cycles a tick, %u.%u%% of the CPU at 70 ticks/s", win_worst, PCT((unsigned long long)win_worst*70/60));
 #if defined(PROFILE)
 	for(i = 0; i < PROF_N; i++){
 
 		if(prof_calls[i]) say("%-14s %7u calls %6u cycles each, %u.%u%% a tick", prof_names[i], prof_calls[i],
 			(u32)(prof_cycles[i]/prof_calls[i]), PCT(ticks ? prof_cycles[i]/ticks : 0));
 	}
+#if PROFILE >= 2
 	for(i = 0, t = 0; i < FOP_N; i++){
 
 		t += fop_calls[i];
 		if(fop_calls[i]) say("%-16s %6u a tick", fop_names[i]+7, ticks ? fop_calls[i]/ticks : 0);
 	}
 	say("soft-float calls: %u a tick, %u cycles", ticks ? t/ticks : 0, ticks ? (u32)(fop_cycles/ticks) : 0);
+	for(i = 0; i <= PROF_N; i++){
+
+		if(fop_in[i]) say("  in %-14s %5u a tick", (i < PROF_N) ? prof_names[i] : "race_logic", ticks ? fop_in[i]/ticks : 0);
+	}
+#endif // PROFILE >= 2
 #endif // PROFILE
 
 	while(1) VBlankIntrWait();

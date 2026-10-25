@@ -67,9 +67,9 @@ static void helper_machine_gun(double dval, int idx){
 	
 	s_35e = (struct_35e_t *)___1e6ed0h;
 
-	theta = ((double)s_35e[idx].Direction+180.0)*LOC_PI/180.0;
-	i = (int)((double)s_35e[idx].XLocation+dval*dRMath_sin(theta));
-	j = (int)((double)s_35e[idx].YLocation+dval*dRMath_cos(theta));
+	theta = ((double)s_35e[idx].Direction+180.0);
+	i = (int)((double)s_35e[idx].XLocation+dval*dRMath_sin_deg(theta));
+	j = (int)((double)s_35e[idx].YLocation+dval*dRMath_cos_deg(theta));
 
 	n = -1;
 	while(++n < (int)D(NUM_OF_CARS)){
@@ -100,9 +100,9 @@ void race___4b62ch(int idx){
 	D(___243cfch) = 0;
 
 
-	theta = ((double)s_35e[idx].Direction+180.0)*LOC_PI/180.0;
-	i = (int)((double)s_35e[idx].XLocation+35.0*dRMath_sin(theta));
-	j = (int)((double)s_35e[idx].YLocation+35.0*dRMath_cos(theta));
+	theta = ((double)s_35e[idx].Direction+180.0);
+	i = (int)((double)s_35e[idx].XLocation+35.0*dRMath_sin_deg(theta));
+	j = (int)((double)s_35e[idx].YLocation+35.0*dRMath_cos_deg(theta));
 
 	n = -1;
 	while(++n < (int)D(NUM_OF_CARS)){
@@ -124,9 +124,9 @@ void race___4b62ch(int idx){
 		}
 	}
 
-	theta = ((double)s_35e[idx].Direction+180.0)*LOC_PI/180.0;
-	i = (int)((double)s_35e[idx].XLocation+25.0*dRMath_sin(theta));
-	j = (int)((double)s_35e[idx].YLocation+25.0*dRMath_cos(theta));
+	theta = ((double)s_35e[idx].Direction+180.0);
+	i = (int)((double)s_35e[idx].XLocation+25.0*dRMath_sin_deg(theta));
+	j = (int)((double)s_35e[idx].YLocation+25.0*dRMath_cos_deg(theta));
 
 	n = -1;
 	while(++n < (int)getCounter(6)){
@@ -161,14 +161,14 @@ void race___4b62ch(int idx){
 
 		if((0.0f < s_94[idx].__4)||(s_35e[idx].__b0 > 0.5f)){
 
-			theta = ((double)s_35e[idx].Direction+180.0+26.0)*LOC_PI/180.0;
-			i = helper00(TRX_WIDTH-1, (int)((double)s_35e[idx].XLocation+40.0*dRMath_sin(theta)));
-			j = helper00(TRX_HEIGHT-1, (int)((double)s_35e[idx].YLocation+40.0*dRMath_cos(theta)));
+			theta = ((double)s_35e[idx].Direction+180.0+26.0);
+			i = helper00(TRX_WIDTH-1, (int)((double)s_35e[idx].XLocation+40.0*dRMath_sin_deg(theta)));
+			j = helper00(TRX_HEIGHT-1, (int)((double)s_35e[idx].YLocation+40.0*dRMath_cos_deg(theta)));
 			b1 = 0x10-B(TRX_LR1+TRX_WIDTH_QTR*j+i);
 			
-			theta = ((double)s_35e[idx].Direction+180.0-26.0)*LOC_PI/180.0;
-			i = helper00(TRX_WIDTH-1, (int)((double)s_35e[idx].XLocation+40.0*dRMath_sin(theta)));
-			j = helper00(TRX_HEIGHT-1, (int)((double)s_35e[idx].YLocation+40.0*dRMath_cos(theta)));
+			theta = ((double)s_35e[idx].Direction+180.0-26.0);
+			i = helper00(TRX_WIDTH-1, (int)((double)s_35e[idx].XLocation+40.0*dRMath_sin_deg(theta)));
+			j = helper00(TRX_HEIGHT-1, (int)((double)s_35e[idx].YLocation+40.0*dRMath_cos_deg(theta)));
 			b2 = 0x10-B(TRX_LR1+TRX_WIDTH_QTR*j+i);
 
 			if(s_35e[idx].__186 != 0){
@@ -219,9 +219,9 @@ void race___4b62ch(int idx){
 	if((int)s_35e[idx].__17e > 0) s_35e[idx].__17e -= 1;
 	if((int)s_35e[idx].__182 > 0) s_35e[idx].__182 -= 1;
 
-	theta = (double)s_35e[idx].Direction*LOC_PI/180.0;
-	i = (int)((double)s_35e[idx].XLocation+55.0*dRMath_sin(theta));
-	j = (int)((double)s_35e[idx].YLocation+55.0*dRMath_cos(theta));
+	theta = (double)s_35e[idx].Direction;
+	i = (int)((double)s_35e[idx].XLocation+55.0*dRMath_sin_deg(theta));
+	j = (int)((double)s_35e[idx].YLocation+55.0*dRMath_cos_deg(theta));
 
 	n = -1;
 	while(++n < (int)D(NUM_OF_CARS)){

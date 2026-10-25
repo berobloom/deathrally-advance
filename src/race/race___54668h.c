@@ -69,21 +69,21 @@ void race___54668h(void){
 	n = -1;
 	while(++n < NUM_OF_CARS){
 
-		angle = ((double)s_35e[n].Direction+(180.0-22.0))*dR_PI/180.0;
-		s_35e[n].X1__10e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin(angle));
-		s_35e[n].Y1__112 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos(angle)*5.0/6.0);
+		angle = ((double)s_35e[n].Direction+(180.0-22.0));
+		s_35e[n].X1__10e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin_deg(angle));
+		s_35e[n].Y1__112 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos_deg(angle)*5.0/6.0);
 
-		angle = ((double)s_35e[n].Direction+(180.0+22.0))*dR_PI/180.0;
-		s_35e[n].X2__11e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin(angle));
-		s_35e[n].Y2__122 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos(angle)*5.0/6.0);
+		angle = ((double)s_35e[n].Direction+(180.0+22.0));
+		s_35e[n].X2__11e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin_deg(angle));
+		s_35e[n].Y2__122 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos_deg(angle)*5.0/6.0);
 
-		angle = ((double)s_35e[n].Direction+(-22.0))*dR_PI/180.0;
-		s_35e[n].X3__12e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin(angle));
-		s_35e[n].Y3__132 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos(angle)*5.0/6.0);
+		angle = ((double)s_35e[n].Direction+(-22.0));
+		s_35e[n].X3__12e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin_deg(angle));
+		s_35e[n].Y3__132 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos_deg(angle)*5.0/6.0);
 
-		angle = ((double)s_35e[n].Direction+(22.0))*dR_PI/180.0;
-		s_35e[n].X4__13e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin(angle));
-		s_35e[n].Y4__142 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos(angle)*5.0/6.0);
+		angle = ((double)s_35e[n].Direction+(22.0));
+		s_35e[n].X4__13e = (float)((double)s_35e[n].XLocation+12.0*dRMath_sin_deg(angle));
+		s_35e[n].Y4__142 = (float)((double)s_35e[n].YLocation+12.0*dRMath_cos_deg(angle)*5.0/6.0);
 
 
 		if(((int)s_94[n].__18 > 0)&&helper33(n, 0.55)) s_35e[n].__104 += (float)((double)(rand_watcom106()-rand_watcom106())/65536.0);

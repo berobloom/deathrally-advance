@@ -58,9 +58,9 @@ void race___514d8h(void){
 							if(((s_35e[n].Ctrls[getCounter(4)]&2) == 0)||(( s_35e[n].Ctrls[getCounter(4)]&0x40) == 0)){
 
 								s_35e[n].__1a6 = 0x32;
-								D(esp+0x60) = helper00(2.3*dRMath_sin((double)s_35e[n].Direction*LOC_PI/180.0)*(double)s_94[n].__10);
+								D(esp+0x60) = helper00(2.3*dRMath_sin_deg((double)s_35e[n].Direction)*(double)s_94[n].__10);
 								D(esp+0x88) = (int)((double)(int)D(esp+0x60)+(double)s_35e[n].XLocation-4.0);
-								D(esp+0x70) = helper00(2.3*dRMath_cos((double)s_35e[n].Direction*LOC_PI/180.0)*LOC_83*(double)s_94[n].__10);
+								D(esp+0x70) = helper00(2.3*dRMath_cos_deg((double)s_35e[n].Direction)*LOC_83*(double)s_94[n].__10);
 								D(esp+0x74) = (int)((double)(int)D(esp+0x70)+(double)s_35e[n].YLocation-4.0);
 								edi = getCounter(6);
 								ebx = 0;

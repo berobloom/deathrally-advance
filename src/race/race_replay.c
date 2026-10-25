@@ -83,16 +83,16 @@ void race_replay_scatter(const __BYTE__ * flat){
 __DWORD__ race_replay_hash(const __BYTE__ * flat){
 
 	__DWORD__ 	h = 0x811c9dc5;
-	unsigned 	i, o, n = race_replay_size(), obst = 0;
+	unsigned 	i, k, o, n = race_replay_size(), obst = 0;
 
 	for(i = 0; vars[i].p != rv____1f2488h; i++) obst += vars[i].size;
 
-	for(i = 0; i < n; i += 4){
+	for(i = 0; i < obst; i += 4) h = (h^D(flat+i))*0x01000193;
+	for(k = 0; k < 20; k++, i += 0x120){
 
-		o = i-obst;
-		if((i >= obst)&&(o < 20*0x120)&&(o%0x120 >= 0x20)) continue;
-		h = (h^D(flat+i))*0x01000193;
+		for(o = 0; o < 0x20; o += 4) h = (h^D(flat+i+o))*0x01000193;
 	}
+	for(; i < n; i += 4) h = (h^D(flat+i))*0x01000193;
 
 	return h;
 }

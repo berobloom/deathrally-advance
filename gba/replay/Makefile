@@ -33,14 +33,17 @@ LDFLAGS := -specs=gba.specs $(ARCH) -Wl,--gc-sections -L$(DEVKITPRO)/libgba/lib
 ifneq ($(FRAMES),)
 CFLAGS += -DREPLAY_FRAMES=$(FRAMES)
 endif
-# PROFILE=1 times each part of race_logic(), see main.c
+# PROFILE=1 times each part of race_logic(), PROFILE=2 also counts the
+# soft-float calls (and makes everything slower), see main.c
 ifneq ($(PROFILE),)
-CFLAGS += -DPROFILE
+CFLAGS += -DPROFILE=$(PROFILE)
 LDFLAGS += $(foreach f,race___4b62ch race___4c434h race___4dcach race___514d8h race___52ac4h \
 	race___526ach race___4ff50h race___54668h race___55ae0h race___56170h race___563ach \
-	race___5209ch race___4c21ch sin cos,-Wl,--wrap=$(f)) \
-	$(foreach f,dadd dsub dmul ddiv fadd fsub fmul fdiv f2d d2f i2d ui2d d2iz d2uiz f2iz i2f \
+	race___5209ch race___4c21ch,-Wl,--wrap=$(f))
+ifeq ($(PROFILE),2)
+LDFLAGS += $(foreach f,dadd dsub dmul ddiv fadd fsub fmul fdiv f2d d2f i2d ui2d d2iz d2uiz f2iz i2f \
 	dcmplt dcmpgt dcmpeq fcmpgt fcmpge fcmple fcmplt,-Wl,--wrap=__aeabi_$(f))
+endif
 endif
 
 # libgcc's soft-float and division routines are ARM code; read from ROM
