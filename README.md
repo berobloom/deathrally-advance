@@ -53,11 +53,13 @@ For each frame the recording holds what changed in the logic's globals before it
 
 Results in mGBA, for a whole 4-lap race (10,821 frames) with the AI driving all four cars:
 
-* **The GBA computes exactly the same race.** Every frame's hash matches the desktop's, `sin()` and `cos()` included.
-* **It is about 16 times too slow.** A tick of the logic takes 3.9 million cycles, 13.7 GBA frames. The game runs its logic 70 times a second, so 60 frames per second needs a tick in about 200,000 cycles, with room left for drawing.
-* **Where the time goes:** `sin()` and `cos()` are called 174 times a tick at about 12,000 cycles each, half of the total. The other 2,200 soft-float calls a tick (the code keeps floats but computes in double) take about a quarter, and software integer division about a tenth. The rest is the race code itself, mostly the car physics (`race___4c434h`) and the AI (`race___4b62ch`), which run once per car.
+* **The GBA computes exactly the same race as the desktop build of the same code.** Every frame's hash matches.
+* **A tick of the logic takes 222,000 cycles on average, 238,000 in the busiest 1,000 frames.** The original code took 3.9 million. The game runs its logic 70 times a second, so 60 frames per second needs a tick in about 200,000 cycles, with room left for drawing. That is close, but not there yet.
+* **How it got there:** `sin()` and `cos()` from a table, libgcc's soft-float in IWRAM, a map of where the walls are, single precision instead of double in the physics, AI and skid marks, cheaper searches, and the innermost loops as ARM code in IWRAM. Each step was checked against the replay. The steps that changed the math were also checked against how the race comes out (see below).
 
-So the race code needs to move to fixed-point math with table-based `sin()` and `cos()`, and its hot loops to ARM code in IWRAM. The replay checks those changes: recorded again with the changed desktop code, a race has to replay with matching hashes.
+`tools/replay` replays a recording on the desktop. It prints each car's finish frame and place and a hash of the track image, and it can write the recording again with the current build's hashes, which is what the GBA then checks against. The finish frames tell whether a change to the math changed the driving: rounding one constant differently moves them by about 50 frames.
+
+The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-race-speed.md).
 
 ### Building
 
@@ -93,7 +95,7 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 
 Not done yet:
 
-* Making the game's race code fast enough: it runs on the GBA and computes the same race as the desktop, but about 16 times too slowly (see [The Race Code on the GBA](#the-race-code-on-the-gba)).
+* Making the game's race code fast enough: it runs on the GBA and computes the same race as the desktop, at about 110% of the time a tick can take (see [The Race Code on the GBA](#the-race-code-on-the-gba)).
 * Skid marks, wrecks and the track under obstacles, which the race code draws into the track image. The port needs a writable overlay for the tiles they touch.
 * Menus, shops and the underground market, which are drawn at 640x480.
 * Music and sound (the S3M and XM songs, through Maxmod).
@@ -174,6 +176,7 @@ Multiplayer is not available yet.
     tools/gbabake     turns game data into GBA layouts
     gba/proto         Game Boy Advance rendering prototype
     gba/replay        runs recorded races through the race logic on the GBA
+    tools/replay      the same on the desktop, and re-hashes recordings after a math change
     include/nosdl     SDL stand-in for building the game's code without SDL
     scripts           run helpers, discmp.sh to compare generated code
 
