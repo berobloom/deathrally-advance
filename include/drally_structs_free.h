@@ -1,9 +1,14 @@
 #ifndef __DRALLY_STRUCTS_FREE_H
 #define __DRALLY_STRUCTS_FREE_H
 
+#include <stddef.h>
 #include "drally.h"
 
-#pragma pack(push,1)
+// The layouts are the original executable's. Packing to 2 (the cars, whose
+// Finished is at 0x10a and whose size is 0x35e) or 4 (the others) gives
+// the same layouts as packing to 1, and lets the GBA's ARM7 read a field
+// with one or two loads instead of four byte loads
+#pragma pack(push,2)
 typedef struct struct_35e_s {
     __DWORD__   __0;                // +000
     __DWORD__   __4;                // +004
@@ -109,6 +114,9 @@ typedef struct struct_35e_s {
     __DWORD__   __356;              // +356
     __DWORD__   __35a;              // +35a
 } struct_35e_t;
+#pragma pack(pop)
+
+#pragma pack(push,4)
 
 typedef struct struct_94_s {
     __DWORD__   __0;                // +00
@@ -184,6 +192,14 @@ typedef struct cardata_s {
 } cardata_t;
 
 #pragma pack(pop)
+
+_Static_assert(sizeof(struct_35e_t) == 0x35e, "struct_35e_t layout");
+_Static_assert(offsetof(struct_35e_t, Finished) == 0x10a, "struct_35e_t layout");
+_Static_assert(offsetof(struct_35e_t, __35a) == 0x35a, "struct_35e_t layout");
+_Static_assert(sizeof(struct_94_t) == 0x94, "struct_94_t layout");
+_Static_assert(sizeof(struct_54_t) == 0x54, "struct_54_t layout");
+_Static_assert(sizeof(kb_control_t) == 0x20, "kb_control_t layout");
+_Static_assert(sizeof(cardata_t) == 0x6e0, "cardata_t layout");
 
 
 #endif // __DRALLY_STRUCTS_FREE_H

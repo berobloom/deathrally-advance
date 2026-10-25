@@ -2,7 +2,6 @@
 #include "drmath.h"
 #include "drally_structs_free.h"
 
-#pragma pack(1)
 typedef struct spectator_s {
 	__DWORD__		x;				// +00
 	__DWORD__		y;				// +04
@@ -13,6 +12,8 @@ typedef struct spectator_s {
 	__DWORD__		dead;			// +18
 	__DWORD__		timestamp;		// +1C
 } spectator_t;
+
+_Static_assert(sizeof(spectator_t) == 0x20, "spectator_t layout");
 
 	extern __BYTE__ ___243c60h[];
 	extern __BYTE__ ___1de580h[];

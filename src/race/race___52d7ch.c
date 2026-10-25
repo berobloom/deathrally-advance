@@ -1,7 +1,6 @@
 #include "drally.h"
 #include "drally_structs_free.h"
 
-#pragma pack(1)
 typedef struct spectator_s {
 	int			x;
 	int			y;
@@ -12,6 +11,8 @@ typedef struct spectator_s {
 	__DWORD__		dead;
 	__DWORD__		timestamp;
 } spectator_t;
+
+_Static_assert(sizeof(spectator_t) == 0x20, "spectator_t layout");
 
 #define SPECTATORS ___1df720h
 	extern spectator_t ___1df720h[];
