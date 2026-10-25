@@ -59,6 +59,9 @@ static void helper_drug(int eax, int edx, int i, int action, int idx){
 }
 
 // sin_b and cos_b of the direction behind the car
+// the cars' positions as integers, which the AI doesn't change
+static int 	car_x[4], car_y[4];
+
 static void helper_machine_gun(float dval, float sin_b, float cos_b, int idx){
 
 	int 			i, j, n;
@@ -74,7 +77,7 @@ static void helper_machine_gun(float dval, float sin_b, float cos_b, int idx){
 
 		if(idx != n){
 			
-			if((dRMath_abs_i((int)s_35e[n].XLocation-i) < 20)&&(dRMath_abs_i((int)s_35e[n].YLocation-j) < 20)){
+			if((dRMath_abs_i(car_x[n]-i) < 20)&&(dRMath_abs_i(car_y[n]-j) < 20)){
 					
 				s_35e[idx].Ctrls[getCounter(4)] |= CTRL_MACHINE_GUN;
 			}
@@ -99,6 +102,12 @@ void race___4b62ch(int idx){
 	D(___243cfch) = 0;
 	ctrl = &s_35e[idx].Ctrls[getCounter(4)];
 
+	for(n = 0; n < (int)D(NUM_OF_CARS); n++){
+
+		car_x[n] = (int)s_35e[n].XLocation;
+		car_y[n] = (int)s_35e[n].YLocation;
+	}
+
 	// the points ahead of and behind the car are at the direction or 180
 	// degrees from it, so they all come from one sine and cosine
 	a_d = dRMath_turns_degf(s_35e[idx].Direction);
@@ -113,8 +122,8 @@ void race___4b62ch(int idx){
 
 		if(idx != n){
 
-			ebx = i-(int)s_35e[n].XLocation;
-			edx = j-(int)s_35e[n].YLocation;
+			ebx = i-car_x[n];
+			edx = j-car_y[n];
 
 			if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(edx) < 20)){
 
@@ -231,7 +240,7 @@ void race___4b62ch(int idx){
 
 		if(idx != n){
 
-			if((dRMath_abs_i((int)s_35e[n].XLocation-i) < 20)&&(dRMath_abs_i((int)s_35e[n].YLocation-j) < 20)){
+			if((dRMath_abs_i(car_x[n]-i) < 20)&&(dRMath_abs_i(car_y[n]-j) < 20)){
 
 				if(s_35e[idx].MineTimer == 0){
 				

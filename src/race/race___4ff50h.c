@@ -51,7 +51,8 @@ void race___4ff50h(void){
 
 	__DWORD__ 		eax, ebx, ecx, edx, esi;
 	__BYTE__ 		esp[0x144];
-	int 			i, j, n;
+	int 			i, j, n, me;
+	int 			cx[4], cy[4];
 	struct_35e_t * 	s_35e;
 
 
@@ -93,6 +94,14 @@ void race___4ff50h(void){
 	D(esp+0xd4) = helper00(256.0*dRMath_sin_deg(((double)s_35e[D(___243c60h)].Direction+180.0)))-3+rand_watcom106()%6;
 	D(esp+0xd0) = helper00(256.0*dRMath_cos_deg(((double)s_35e[D(___243c60h)].Direction+180.0))*LOC_83)-3+rand_watcom106()%6;
 
+	// the cars' positions as integers: the trace doesn't move them
+	me = D(___243c60h);
+	for(i = 0; i < (int)D(NUM_OF_CARS); i++){
+
+		cx[i] = (int)s_35e[i].XLocation;
+		cy[i] = (int)s_35e[i].YLocation;
+	}
+
 	n = -1;
 	while(++n < 26){
 
@@ -104,8 +113,8 @@ void race___4ff50h(void){
 
 			if(i != D(___243c60h)){
 
-				ebx = (int)s_35e[i].XLocation-D(esp+0xf0)-(int)s_35e[D(___243c60h)].XLocation-D(esp+0xe8);
-				esi = (int)s_35e[i].YLocation-D(esp+0xf4)-(int)s_35e[D(___243c60h)].YLocation-D(esp+0xe4);
+				ebx = cx[i]-D(esp+0xf0)-cx[me]-D(esp+0xe8);
+				esi = cy[i]-D(esp+0xf4)-cy[me]-D(esp+0xe4);
 
 				if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(esi) < 20)){
 
@@ -128,8 +137,8 @@ void race___4ff50h(void){
 			}
 		}
 
-		edx = D(esp+0xf0)+D(esp+0xe8)+(int)s_35e[D(___243c60h)].XLocation;
-		eax = D(esp+0xf4)+D(esp+0xe4)+(int)s_35e[D(___243c60h)].YLocation;
+		edx = D(esp+0xf0)+D(esp+0xe8)+cx[me];
+		eax = D(esp+0xf4)+D(esp+0xe4)+cy[me];
 
 		if(((int)eax >= 0)&&((int)eax < TRX_HEIGHT)){
 
@@ -155,8 +164,8 @@ void race___4ff50h(void){
 
 				if(___1df720h[5*i+j].dead == 0){
 
-					eax = D(esp+0xe8)+D(esp+0xf0)+(int)s_35e[D(___243c60h)].XLocation-___1df720h[5*i+j].x-8;
-					edx = D(esp+0xe4)+D(esp+0xf4)+(int)s_35e[D(___243c60h)].YLocation-___1df720h[5*i+j].y-8;
+					eax = D(esp+0xe8)+D(esp+0xf0)+cx[me]-___1df720h[5*i+j].x-8;
+					edx = D(esp+0xe4)+D(esp+0xf4)+cy[me]-___1df720h[5*i+j].y-8;
 
 					if((dRMath_abs_i(eax) < 3)&&(dRMath_abs_i(edx) < 3)){
 		
