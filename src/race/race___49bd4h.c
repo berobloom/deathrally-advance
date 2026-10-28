@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drally_structs_free.h"
+#include "drally_race.h"
 
 #pragma pack(1)
 typedef struct tr_startup_s {
@@ -58,12 +59,9 @@ void old_bpa_read(const char *, __POINTER__, const char *);
 
 void race___49bd4h(void){
 
-	int 			n;
 	tr_inf_t * 		TrxInf;
-	struct_35e_t * 	s_35e;
 
 
-	s_35e = (struct_35e_t *)___1e6ed0h;
 	TrxInf = (tr_inf_t *)___1a54d0h;
 	old_bpa_read(strcat(strcpy(TRX_BPA, ___19bd64h), ".BPA"), (__POINTER__)TrxInf, strcat(strcpy(___243d90h, ___19bd64h), "-INF.BIN"));
 
@@ -88,6 +86,21 @@ void race___49bd4h(void){
 		spectator->type = SDL_SwapLE32(spectator->type);
 		spectator->rot = SDL_SwapLE32(spectator->rot);
 	}
+
+	race_inf_apply((__BYTE__ *)TrxInf);
+}
+
+// the track's size, the cars' start places, the power-ups and the
+// spectators from TRn-INF.BIN, as the GBA also has it baked
+void race_inf_apply(const __BYTE__ * inf){
+
+	int 			n;
+	const tr_inf_t * 	TrxInf;
+	struct_35e_t * 	s_35e;
+
+
+	s_35e = (struct_35e_t *)___1e6ed0h;
+	TrxInf = (const tr_inf_t *)inf;
 
 	TRX_WIDTH = TrxInf->w;
 	TRX_HEIGHT = TrxInf->h;

@@ -23,6 +23,7 @@
 unsigned race_replay_size(void);
 unsigned race_replay_count(void);
 unsigned race_replay_var_size(unsigned i);
+const char * race_replay_var_name(unsigned i);
 void race_replay_gather(__BYTE__ * flat);
 void race_replay_scatter(const __BYTE__ * flat);
 __DWORD__ race_replay_hash(const __BYTE__ * flat);
@@ -32,13 +33,17 @@ __DWORD__ race_replay_hash(const __BYTE__ * flat);
 __POINTER__ * race_replay_buf(unsigned i);
 unsigned race_replay_buf_size(unsigned i);
 
+struct race_baked_s;
+const struct race_baked_s * race_baked_read(const char * dir);
 const char * race_replay_start(__DWORD__ * log, __BYTE__ * flat);
 int race_replay_next(void);
 __DWORD__ * race_replay_done(void);
 
+void race_ticklog_pre(int MyIndex, int NumCars);
 void race_ticklog_before(void);
 void race_ticklog_after(void);
 void race_ticklog_end(void);
 void race_check_nodraw(void);
+void race_check_setup(int MyIndex, int NumCars, const char * dir);
 
 #endif // __RACE_REPLAY_H

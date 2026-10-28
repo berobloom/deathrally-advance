@@ -160,3 +160,12 @@ void dRally_Memory_clean(void){
         memset(&___24ccb0h, 0, sizeof(AllocBase));
     }
 }
+
+void switch_b(__POINTER__ b1, __POINTER__ b2){
+
+	__BYTE__ 	b_tmp;
+
+	b_tmp = *(__BYTE__ *)b1;
+	*(__BYTE__ *)b1 = *(__BYTE__ *)b2;
+	*(__BYTE__ *)b2 = b_tmp;
+}

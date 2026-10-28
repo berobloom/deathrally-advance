@@ -4,8 +4,8 @@
 // the camera, animations and lap times without drawing) run as on the
 // desktop. The GBA draws the result its own way, as gba/proto does: the
 // track as a tile background streamed from ROM, the cars as 64x64 sprites
-// with their shadows through the OBJ window. The race starts from the start
-// of one the desktop game recorded (make ticklog), baked by tools/gbabake.
+// with their shadows through the OBJ window. race_setup() sets the race up
+// as on the desktop, from the track and cars tools/gbabake baked into the ROM.
 //
 // D-pad left/right steer, A accelerates, B brakes, R turbo, L machine gun,
 // Select drops a mine. Start lets the AI drive your car, or starts the race
@@ -34,8 +34,14 @@
 extern const u16 track_pal[256];
 extern const u8 track_tiles[];
 extern const u32 track_inf[];
-extern const u8 cars_obj[];
-extern const __DWORD__ race_bin[];
+extern const u8 track_mas[], setup_inf[], setup_vai[], setup_lr1[];
+extern const u8 setup_ski[], setup_blo[], setup_lit[], setup_varjo[], setup_drv[], setup_ohi[];
+extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
+extern const u8 cars_img[];
+extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
+#if defined(RACE_PRE)
+extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
+#endif
 // make ALIGNED_CHECK=1: the word loads at unaligned addresses, see drally.h
 extern unsigned dr_misaligned __attribute__((weak)), dr_misaligned_line __attribute__((weak));
 extern const char * dr_misaligned_file __attribute__((weak));
@@ -73,7 +79,7 @@ void race___40164h(void);
 #define CAR_IMG_BYTES		(40*40)		// a rotation frame in the game's car images
 #define CAR_OBJ_BYTES		(64*64)		// OBJ VRAM for each car's 64x64 sprite
 #define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
-#define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars.obj
+#define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars_obj
 #define NUM_CARS		4
 // the game's timer runs at 70 Hz. A tick of the logic takes up to about
 // 210,000 cycles (gba/replay), so 70 of them leave too little of the
@@ -120,13 +126,24 @@ void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){}
 void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance){}
 
 EWRAM_BSS static __BYTE__ flat[0x4000] __attribute__((aligned(4)));
-EWRAM_BSS static __BYTE__ obstacles[0x800];
+EWRAM_BSS static __BYTE__ obstacles[0x800] __attribute__((aligned(4)));
+
+static const race_baked_t baked = {
+	.inf = setup_inf, .mas = track_mas, .vai = setup_vai, .lr1 = setup_lr1,
+	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
+	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
+	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
+	.cars = cars_img,
+	// the logic draws skid marks into the track image, which isn't kept
+	.ima = NOWHERE, .obstacles = obstacles
+};
 
 static int track_w, track_h;		// in tiles
 static int track_pw, track_ph;		// in pixels; the tiles are padded to a multiple of 8
 static int cam_x, cam_y;
 static int vis_x0 = -1, vis_y0, vis_x1, vis_y1;
 static int shown_frame[NUM_CARS];	// rotation frame in each car's OBJ VRAM
+static const u8 * car_frames[NUM_CARS];	// each car's frames in cars_obj
 static volatile u32 vblanks;
 static u8 ring_row[256];		// ty % RING_H, without dividing
 static int debug_log;
@@ -293,17 +310,16 @@ static int car_on_screen(int n){
 }
 
 // copy a car's rotation frame into its OBJ VRAM if it changed and is in
-// view. cars.obj holds the race's car images in their order, so the frame is
-// where ImgOffset points into them
+// view. Car n's ImgOffset points into the n-th of 4 car images
 static void upload_car(int n){
 
-	int frame = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6), r;	// ImgOffset/CAR_IMG_BYTES
+	int frame = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6)-n*CAR_FRAMES, r;	// ImgOffset/CAR_IMG_BYTES
 
 	if((frame == shown_frame[n])||!car_on_screen(n)) return;
 	// a row of tiles at a time: the sprite's rows are 8 tiles wide
 	for(r = 0; r < CAR_TILES; r++){
 
-		copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64, cars_obj + frame*CAR_FRAME_BYTES + r*CAR_TILES*64, CAR_TILES*64);
+		copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64, car_frames[n] + frame*CAR_FRAME_BYTES + r*CAR_TILES*64, CAR_TILES*64);
 	}
 	shown_frame[n] = frame;
 }
@@ -344,16 +360,28 @@ static void follow_camera(void){
 
 static const char * start_race(void){
 
-	const char * 	err;
-	int 		n;
+	int 		n, my_index, num_cars;
 
 	if(race_replay_size() > sizeof(flat)) return "flat[] too small";
-	if((err = race_replay_start((__DWORD__ *)race_bin, flat))) return err;
+#if defined(RACE_PRE)
+	// as the desktop's menus left it
+	if(race_pre[2] != race_replay_size()) return "pre.bin is from another build";
+	my_index = race_pre[0];
+	num_cars = race_pre[1];
+	race_replay_scatter((const __BYTE__ *)(race_pre+3));
+#else
+	return "no race";
+#endif
 
-	// the logic draws skid marks into the track image, which isn't kept
-	*race_replay_buf(3) = NOWHERE;
-	memcpy(obstacles, *race_replay_buf(5), sizeof(obstacles));
-	*race_replay_buf(5) = obstacles;
+	race_baked = &baked;
+	race_setup(my_index, num_cars, &race_loaders_baked);
+	race_replay_gather(flat);
+	say("set up: globals hash %08lx", race_replay_hash(flat));
+
+	for(n = 0; n < NUM_CARS; n++){
+
+		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n)*NUM_CARS+n : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
+	}
 
 	D(___243ce0h) = 0;	// you drive, not the AI
 	// the wide view, which the HUD part of race_render() assumes
@@ -451,7 +479,7 @@ int main(void){
 	if((err = start_race())){
 
 		hud_print(0, 0, "ERR");
-		say("race.bin: %s", err);
+		say("start_race: %s", err);
 		REG_DISPCNT = MODE_0 | BG1_ON;
 		while(1) VBlankIntrWait();
 	}

@@ -199,6 +199,10 @@ void race_main(int MyIndex, int NumCars){		// my_position_index, number_of_racer
 	s_54 = (struct_54_t *)___1de7d0h;
 	s_94 = (struct_94_t *)___1de580h;
 	s_35e = (struct_35e_t *)___1e6ed0h;
+#if defined(DR_TICKLOG)
+	race_ticklog_pre(MyIndex, NumCars);
+	if(getenv("DR_CHECK_SETUP")) race_check_setup(MyIndex, NumCars, getenv("DR_CHECK_SETUP"));
+#endif // DR_TICKLOG
 	___60705h(&race___40164h);
 	race_setup(MyIndex, NumCars, &race_loaders_files);
 	race___4539ch();

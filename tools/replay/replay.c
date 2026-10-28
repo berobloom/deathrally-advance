@@ -8,13 +8,23 @@
 // change to the race code gets a recording to check gba/replay against,
 // without racing again: the input and the rest of each frame's changes
 // stay as they were recorded.
+//
+//   replay --setup TICKPRE.BIN BAKEDIR [TICKLOG.BIN]
+//
+// Sets a race up the way the GBA does, with race_setup() and the data
+// tools/gbabake baked into BAKEDIR, from the state the menus left before
+// a recorded race (TICKPRE.BIN, see race_ticklog_pre()). Prints the hash
+// of the globals after it and, given the race's TICKLOG.BIN, which of
+// them differ from how the race started there.
 
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "race_replay.h"
+#include "drally_race.h"
 
 	extern __BYTE__ ___1e6ed0h[];
 	extern __BYTE__ ___1de580h[];
+	extern __BYTE__ ___1de7d0h[];
 
 void race_logic(void);
 
@@ -22,6 +32,59 @@ void race_logic(void);
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2){}
 void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){}
 void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance){}
+
+static void * read_file(const char * path, long * size){
+
+	FILE * 	fd;
+	void * 	p;
+
+	if(!(fd = fopen(path, "rb"))){ perror(path); exit(1); }
+	fseek(fd, 0, SEEK_END);
+	*size = ftell(fd);
+	fseek(fd, 0, SEEK_SET);
+	p = malloc(*size);
+	if(fread(p, 1, *size, fd) != (size_t)*size){ perror(path); exit(1); }
+	fclose(fd);
+
+	return p;
+}
+
+static int setup(int argc, char * argv[]){
+
+	long 		size;
+	__DWORD__ * 	pre = read_file(argv[2], &size);
+	__BYTE__ * 	flat = malloc(race_replay_size()), * start;
+	unsigned 	i, o, k, diffs = 0;
+
+	if(pre[2] != race_replay_size()){ fprintf(stderr, "%s: from another build\n", argv[2]); return 1; }
+	race_replay_scatter((__BYTE__ *)(pre+3));
+	if(D(___1de7d0h+0x48) != 0){ fprintf(stderr, "%s: a reversed track, which isn't baked yet\n", argv[2]); return 1; }
+	race_baked = race_baked_read(argv[3]);
+	race_setup(pre[0], pre[1], &race_loaders_baked);
+	race_replay_gather(flat);
+	printf("set up: globals hash %08x\n", race_replay_hash(flat));
+	if(argc < 5) return 0;
+
+	// the recording's globals at its first frame
+	{
+		__DWORD__ * 	log = read_file(argv[4], &size), * p = log+4+log[3];
+
+		for(i = 0; i < RACE_REPLAY_NBUFS; i++) p += 1+(p[0]+3)/4;
+		start = (__BYTE__ *)p;
+	}
+	for(i = o = 0; i < race_replay_count(); o += race_replay_var_size(i++)){
+
+		for(k = 0; k < race_replay_var_size(i); k++){
+
+			if(flat[o+k] == start[o+k]) continue;
+			printf("%s+0x%x: %02x, recorded %02x\n", race_replay_var_name(i), k, flat[o+k], start[o+k]);
+			diffs++;
+		}
+	}
+	printf("%u bytes differ from the recording's start\n", diffs);
+
+	return 0;
+}
 
 int main(int argc, char * argv[]){
 
@@ -36,6 +99,7 @@ int main(int argc, char * argv[]){
 	struct_35e_t * 	cars = (struct_35e_t *)___1e6ed0h;
 	clock_t 	t;
 
+	if((argc >= 4)&&!strcmp(argv[1], "--setup")) return setup(argc, argv);
 	if((argc != 2)&&(argc != 3)){ fprintf(stderr, "usage: replay TICKLOG.BIN [OUT.BIN]\n"); return 1; }
 
 	if(!(fd = fopen(argv[1], "rb"))){ perror(argv[1]); return 1; }

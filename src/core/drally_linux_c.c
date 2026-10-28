@@ -346,13 +346,5 @@ void save_xm(__POINTER__ src, unsigned int size, const char * name){
 	fclose(fd);
 }
 
-void switch_b(__POINTER__ b1, __POINTER__ b2){
-
-	__BYTE__ 	b_tmp;
-
-	b_tmp = B(b1);
-	B(b1) = B(b2);
-	B(b2) = b_tmp;
-}
 
 

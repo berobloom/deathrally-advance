@@ -15,7 +15,6 @@
 #endif // DR_MULTIPLAYER
 	extern __DWORD__ MY_CAR_IDX;
 	extern int NUM_OF_CARS;
-	extern __BYTE__ ___196dach[];
 	extern __BYTE__ ___243ca0h[];
 	extern __BYTE__ ___243cdch[];
 	extern __BYTE__ ___243cb8h[];
@@ -26,17 +25,12 @@ void race___3f970h(void);
 void race___49a34h(void);
 void race___4a25ch(void);
 void race___405bch(void);
-void race___4a6b4h(void);
 void race___4083ch(void);
-void race___4adach(void);
-void race___4af3ch(void);
 void race___496b0h(void);
 #if defined(DR_MULTIPLAYER)
 void srand_watcom106(__DWORD__);
 #endif // DR_MULTIPLAYER
 
-// the desktop's: from the game's files
-const race_loaders_t race_loaders_files = { race___49bd4h, race_alloc, race___42824h };
 
 // everything race_main() does to the race's state before its first frame,
 // in the same order, without the screen and the sound. The track and the
@@ -82,10 +76,8 @@ void race_setup(int MyIndex, int NumCars, const race_loaders_t * load){
 	load->load();
 	race___4a25ch();
 	race___405bch();
-	race___4a6b4h();
 	race___4083ch();
-	race___4adach();
-	if(D(___196dach) != 0) race___4af3ch();
+	if(load->scene) load->scene();
 	race___496b0h();
 	race___405bch();
 	race___49a34h();

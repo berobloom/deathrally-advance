@@ -13,6 +13,25 @@
 //                (index 0 is clear)
 //   preview.ppm  the track and car 0's 96 frames, for checking by eye
 //
+// and what race_loaders_baked (src/race/race_load_baked.c) sets up a race
+// from, for gba/race:
+//   inf.bin      TRn-INF.BIN as it is
+//   vai.bin      TRn-VAI.BPK and TRn-LR1.BPK decoded (track.mas is TRn-MAS.BPK)
+//   lr1.bin
+//   ski.tab      TRn-SKI.TAB, -BLO.TAB and -LIT.TAB, and VARJO.TAB
+//   blo.tab
+//   lit.tab
+//   varjo.tab
+//   drv.dat      TRn-DRV.DAT and TRn-OHI.DAT
+//   ohi.dat
+//   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
+//   blowi.bin
+//   obstacle.bin
+//   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
+//                96 frames of 40x40 each, not recolored
+//   cars-all.obj the same as sprites, as in cars.obj, for each car image
+//                in each of the 4 places' colors: [image][place][frame]
+//
 // With a race recorded on this track by the desktop game (make ticklog),
 // also race.bin, the recording up to the race's start, which gba/race
 // starts the race from; cars.obj then has the recorded race's cars.
@@ -75,6 +94,21 @@ static __POINTER__ read_entry(const char * bpa_name, const char * entry){
 	return buf;
 }
 
+static __POINTER__ read_entry_size(const char * bpa_name, const char * entry, unsigned * size){
+
+	BPA *		bpa;
+	__POINTER__	buf;
+
+	if(!(bpa = bpa_open(bpa_name))){ fprintf(stderr, "can't open %s\n", bpa_name); exit(1); }
+	bpa_search(bpa, entry);
+	if(!(*size = bpa_entry_size(bpa))){ fprintf(stderr, "%s: no %s\n", bpa_name, entry); exit(1); }
+	buf = calloc(1, *size + 0x10000);
+	bpa_read(bpa, buf);
+	bpa_close(bpa);
+
+	return buf;
+}
+
 static FILE * out(const char * dir, const char * name){
 
 	char	path[PATH_MAX+32];
@@ -123,6 +157,123 @@ static __POINTER__ read_race(const char * path, int w, int h, const char * outdi
 	return spins;
 }
 
+static void write_file(const char * dir, const char * name, const void * p, unsigned size){
+
+	FILE * 	fd = out(dir, name);
+
+	fwrite(p, 1, size, fd);
+	fclose(fd);
+}
+
+// an entry as it is
+static void bake_entry(const char * bpa_name, const char * entry, const char * dir, const char * name, unsigned size){
+
+	unsigned 	n;
+	__POINTER__ 	src = read_entry_size(bpa_name, entry, &n);
+
+	if(size&&(n != size)){ fprintf(stderr, "%s: %s is %u bytes, not %u\n", bpa_name, entry, n, size); exit(1); }
+	write_file(dir, name, src, n);
+	free(src);
+}
+
+// an ENGINE.BPA picture decoded
+static void bake_bpk2(const char * entry, const char * dir, const char * name, unsigned size){
+
+	__POINTER__ 	src = read_entry("ENGINE.BPA", entry), dst = calloc(1, size);
+
+	bpk_decode2(dst, src);
+	write_file(dir, name, dst, size);
+	free(src);
+	free(dst);
+}
+
+// 96 frames of a car as 8bpp 8x8 tiles, 5x5 a frame
+static void put_frames(FILE * fd, const __BYTE__ * spins){
+
+	__BYTE__ 	obj[CAR_W*CAR_W];
+	int 		f, x, y;
+
+	for(f = 0; f < CAR_FRAMES; f++){
+
+		for(y = 0; y < CAR_W; y++){
+			for(x = 0; x < CAR_W; x++){
+
+				obj[64*((y/8)*CAR_TILES+x/8)+8*(y%8)+x%8] = spins[f*CAR_W*CAR_W+y*CAR_W+x];
+			}
+		}
+		fwrite(obj, 1, sizeof(obj), fd);
+	}
+}
+
+// what race_loaders_baked needs besides track.mas
+static void bake_setup(int track, int w, int h, const char * outdir){
+
+	static const char * 	models[7] = { "KUPLA", "PICKUP", "SEDAN", "CAMARO", "PORCHE", "LOTUS", "SPECIAL" };
+	char 		bpa_name[16], entry[32];
+	int 		wq = w >> 2, hq = h >> 2, v, n, i;
+	__POINTER__ 	src, buf, cars, car;
+	FILE * 		fd;
+
+	snprintf(bpa_name, sizeof(bpa_name), "TR%d.BPA", track);
+
+	snprintf(entry, sizeof(entry), "TR%d-INF.BIN", track);
+	bake_entry(bpa_name, entry, outdir, "inf.bin", 0);
+
+	buf = calloc(1, wq*hq);
+	snprintf(entry, sizeof(entry), "TR%d-VAI.BPK", track);
+	src = read_entry(bpa_name, entry);
+	bpk_decode4(wq*hq, 0x30a, buf, src);
+	write_file(outdir, "vai.bin", buf, wq*hq);
+	free(src);
+	snprintf(entry, sizeof(entry), "TR%d-LR1.BPK", track);
+	src = read_entry(bpa_name, entry);
+	bpk_decode4(wq*hq, 0x30a, buf, src);
+	write_file(outdir, "lr1.bin", buf, wq*hq);
+	free(src);
+	free(buf);
+
+	snprintf(entry, sizeof(entry), "TR%d-SKI.TAB", track);
+	bake_entry(bpa_name, entry, outdir, "ski.tab", 0x100);
+	snprintf(entry, sizeof(entry), "TR%d-BLO.TAB", track);
+	bake_entry(bpa_name, entry, outdir, "blo.tab", 0x100);
+	snprintf(entry, sizeof(entry), "TR%d-LIT.TAB", track);
+	bake_entry(bpa_name, entry, outdir, "lit.tab", 0x100);
+	bake_entry("ENGINE.BPA", "VARJO.TAB", outdir, "varjo.tab", 0x100);
+	snprintf(entry, sizeof(entry), "TR%d-DRV.DAT", track);
+	bake_entry(bpa_name, entry, outdir, "drv.dat", 0x800);
+	snprintf(entry, sizeof(entry), "TR%d-OHI.DAT", track);
+	bake_entry(bpa_name, entry, outdir, "ohi.dat", 0x400);
+
+	bake_bpk2("MINES1A.BPK", outdir, "mines1a.bin", 0x140);
+	bake_bpk2("BLOWI.BPK", outdir, "blowi.bin", 0x600);
+	bake_bpk2("OBSTACLE.BPK", outdir, "obstacle.bin", 0x800);
+
+	cars = calloc(13, CAR_FRAMES*CAR_W*CAR_W);
+	for(v = 0; v < 13; v++){
+
+		snprintf(entry, sizeof(entry), "%s%s", models[v%7], (v < 7) ? ".BPK" : "-S.BPK");
+		src = read_entry("ENGINE.BPA", entry);
+		bpk_decode2(cars+v*CAR_FRAMES*CAR_W*CAR_W, src);
+		free(src);
+	}
+	write_file(outdir, "cars.img", cars, 13*CAR_FRAMES*CAR_W*CAR_W);
+
+	// recolored as race___42824h() does for the car in place n
+	fd = out(outdir, "cars-all.obj");
+	car = malloc(CAR_FRAMES*CAR_W*CAR_W);
+	for(v = 0; v < 13; v++){
+		for(n = 0; n < 4; n++){
+
+			memcpy(car, cars+v*CAR_FRAMES*CAR_W*CAR_W, CAR_FRAMES*CAR_W*CAR_W);
+			for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((car[i] >= 0xf)&&(car[i] <= 0x18)) car[i] += 0xa*n;
+			put_frames(fd, car);
+		}
+	}
+	fclose(fd);
+	free(car);
+	free(cars);
+}
+
 static void put32(FILE * fd, __DWORD__ v){
 
 	fputc(v, fd); fputc(v >> 8, fd); fputc(v >> 16, fd); fputc(v >> 24, fd);
@@ -132,7 +283,7 @@ int main(int argc, char * argv[]){
 
 	char		bpa_name[16], entry[32], outdir[PATH_MAX];
 	__POINTER__	src, ima, mas, spins, race_spins = 0;
-	__BYTE__	pal[0x300], obj[CAR_W*CAR_W];
+	__BYTE__	pal[0x300];
 	inf_t *		inf;
 	int 		track, w, h, tw, th, tx, ty, x, y, n, f, i;
 	FILE *		fd;
@@ -201,6 +352,7 @@ int main(int argc, char * argv[]){
 	for(n = 0; n < 4; n++){ put32(fd, inf->startups[n].x); put32(fd, inf->startups[n].y); put32(fd, inf->startups[n].rot); }
 	fclose(fd);
 
+	bake_setup(track, w, h, outdir);
 	if(argc == 5) race_spins = read_race(argv[4], w, h, outdir);
 
 	fd = out(outdir, "cars.obj");
@@ -223,18 +375,7 @@ int main(int argc, char * argv[]){
 			for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((spins[i] >= 0xf)&&(spins[i] <= 0x18)) spins[i] += 0xa*n;
 		}
 
-		for(f = 0; f < CAR_FRAMES; f++){
-
-			memset(obj, 0, sizeof(obj));
-			for(y = 0; y < CAR_W; y++){
-				for(x = 0; x < CAR_W; x++){
-
-					// 8x8 tiles row by row, 5 tiles per row
-					obj[64*((y/8)*CAR_TILES+x/8)+8*(y%8)+x%8] = spins[f*CAR_W*CAR_W+y*CAR_W+x];
-				}
-			}
-			fwrite(obj, 1, sizeof(obj), fd);
-		}
+		put_frames(fd, spins);
 
 		if(n == 0){
 
