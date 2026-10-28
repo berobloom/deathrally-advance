@@ -5,7 +5,6 @@
 
 	extern __BYTE__ NUM_OF_CARS[];
 	extern __BYTE__ ___1e6ed0h[];
-	extern __POINTER__ ___243d74h;
 	extern __BYTE__ ___1de580h[];
 	extern __BYTE__ ___2438cch[];
 
@@ -97,8 +96,8 @@ void race___4dcach(void){
 				{
 					int 	dx = D(esp+0x68), dy = D(esp+0x64);
 					int 	w = 0x28-dRMath_abs_i(dx), h = 0x28-dRMath_abs_i(dy);
-					__BYTE__ * 	pn = ___243d74h+s_35e[n].ImgOffset+0x28*dRMath_abspos_i(dy)+dRMath_abspos_i(dx);
-					__BYTE__ * 	pk = ___243d74h+s_35e[k].ImgOffset+0x28*dRMath_absneg_i(dy)+dRMath_absneg_i(dx);
+					__BYTE__ * 	pn = race_car_img(s_35e[n].ImgOffset)+0x28*dRMath_abspos_i(dy)+dRMath_abspos_i(dx);
+					__BYTE__ * 	pk = race_car_img(s_35e[k].ImgOffset)+0x28*dRMath_absneg_i(dy)+dRMath_absneg_i(dx);
 
 					// rows from 1 and columns from 0 of the overlap, inside
 					// both images' boxes of solid pixels
@@ -210,7 +209,7 @@ void race___4dcach(void){
 
 						if((dRMath_abs_i(eax) < 0x14)&&(dRMath_abs_i(edx) < 0x14)){
 
-							if(B(___243d74h+s_35e[k].ImgOffset+(int)eax+0x28*(edx+0x14)+0x14) > 3) D(esp+0x4c) = 1;
+							if(B(race_car_img(s_35e[k].ImgOffset)+(int)eax+0x28*(edx+0x14)+0x14) > 3) D(esp+0x4c) = 1;
 						}
 
 						eax = (int)(double)s_35e[k].XLocation-(int)((double)s_35e[n].XLocation+(double)s_35e[n].__c4);
@@ -218,7 +217,7 @@ void race___4dcach(void){
 
 						if((dRMath_abs_i(eax) < 0x14)&&(dRMath_abs_i(edx) < 0x14)){
 
-							if(B(___243d74h+s_35e[k].ImgOffset+(int)eax+(int)(0x28*(edx+0x14))+0x14) > 3) D(esp+0x4c) = 1;
+							if(B(race_car_img(s_35e[k].ImgOffset)+(int)eax+(int)(0x28*(edx+0x14))+0x14) > 3) D(esp+0x4c) = 1;
 						}
 
 						if(D(esp+0x4c) == 1){

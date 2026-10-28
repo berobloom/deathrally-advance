@@ -44,7 +44,7 @@ static void car_boxes_build(void){
 	for(n = 0; n < 4*96; n++){
 
 		// the rows with solid pixels, and the columns, as bits
-		img = (const px4_t *)(___243d74h+0x640*n);
+		img = (const px4_t *)race_car_img(0x640*n);
 		y0 = 0x28; y1 = 0;
 		memset(cols, 0, sizeof(cols));
 
@@ -77,6 +77,15 @@ static void car_boxes_build(void){
 
 		car_boxes[n][0] = x0; car_boxes[n][1] = x1; car_boxes[n][2] = y0; car_boxes[n][3] = y1;
 	}
+}
+
+__BYTE__ * race_car_slot[4];
+
+void race_car_slots_contiguous(void){
+
+	int 	n;
+
+	for(n = 0; n < 4; n++) race_car_slot[n] = ___243d74h+0x25800*n;
 }
 
 const __BYTE__ * race_car_box(__DWORD__ img_offset){

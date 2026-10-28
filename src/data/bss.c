@@ -427,3 +427,9 @@ __POINTER__ ___24e58ah;
 __BYTE__ ___24e596h[0xa];
 
 __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
+
+// the track's color tables, read by race___42824h()
+__BYTE__ VARJO_TAB[0x100];
+__BYTE__ TRX_LIT_TAB[0x100];
+__BYTE__ TRX_BLO_TAB[0x100];
+__BYTE__ TRX_SKI_TAB[0x100];

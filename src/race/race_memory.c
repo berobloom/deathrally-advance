@@ -44,6 +44,7 @@ void race_alloc(void){
 	___243d5ch = ___3f71ch__allocateMemory(0x5f370);
 	BACKBUFFER = ___3f71ch__allocateMemory(0x19400)+0x200;
 	___243d74h = (car_spins_t *)___3f71ch__allocateMemory(4*sizeof(car_spins_t));
+	race_car_slots_contiguous();
 	GEN_FLA_BPK = ___3f71ch__allocateMemory(0x4b000);
 	GEN_LAM_BPK = ___3f71ch__allocateMemory(0x3840);
 	SIDEBOM1_BPK = ___3f71ch__allocateMemory(0x30);

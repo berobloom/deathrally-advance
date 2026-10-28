@@ -1,11 +1,11 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
 
 	extern __BYTE__ ___1e6ed0h[];
 	extern __BYTE__ NUM_OF_CARS[];
 	extern __BYTE__ ___243cfch[];
-	extern __POINTER__ ___243d74h;
 	extern __BYTE__ ___1df520h[];
 	extern int TRX_WIDTH;
 	extern int TRX_HEIGHT;
@@ -127,7 +127,7 @@ void race___4b62ch(int idx){
 
 			if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(edx) < 20)){
 
-				carimage = (img40x40 *)(___243d74h+s_35e[n].ImgOffset);
+				carimage = (img40x40 *)(race_car_img(s_35e[n].ImgOffset));
 
 				if((*carimage)[(int)edx+20][(int)ebx+20] > 3){
 					

@@ -178,6 +178,7 @@ const char * race_replay_start(__DWORD__ * log, __BYTE__ * flat){
 
 	memcpy(flat, log, n);
 	race_replay_scatter(flat);	// so that race_replay_buf_size() works
+	race_car_slots_contiguous();
 	race_walls_build();
 	play_p = log+(n+3)/4;
 	play_flat = flat;

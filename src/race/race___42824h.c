@@ -108,12 +108,12 @@ typedef struct x2c_s {
     extern xc50_t ___1f3b08h[];
     extern x2c_t ___240b48h[];		// <0x240b48 - 0x240b74)
     extern __POINTER__ ___243d5ch;
+    extern __BYTE__ VARJO_TAB[0x100];
+    extern __BYTE__ TRX_LIT_TAB[0x100];
+    extern __BYTE__ TRX_BLO_TAB[0x100];
+    extern __BYTE__ TRX_SKI_TAB[0x100];
 	
 	
-__BYTE__ VARJO_TAB[0x100];
-__BYTE__ TRX_LIT_TAB[0x100];
-__BYTE__ TRX_BLO_TAB[0x100];
-__BYTE__ TRX_SKI_TAB[0x100];
 
 void old_bpa_read(const char *, __POINTER__, const char *);
 void bpk_decode2(__POINTER__, __POINTER__);

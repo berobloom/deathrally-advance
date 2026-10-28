@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drmath.h"
 #include "drally_structs_free.h"
 
@@ -24,7 +25,6 @@ _Static_assert(sizeof(spectator_t) == 0x20, "spectator_t layout");
 	extern __BYTE__ MY_CAR_IDX[];
 	extern __BYTE__ ___2432b4h[];
 	extern __BYTE__ NUM_OF_CARS[];
-	extern __POINTER__ ___243d74h;
 	extern __BYTE__ ___24389ch[];
 	extern __BYTE__ ___2432c0h[];
 	extern __BYTE__ ___2432c4h[];
@@ -72,7 +72,7 @@ DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, in
 
 				if((dRMath_abs_i(ebx) < 20)&&(dRMath_abs_i(esi) < 20)){
 
-					if(B(___243d74h+s_35e[i].ImgOffset+(int)ebx+40*(esi+20)+20) > 3){
+					if(B(race_car_img(s_35e[i].ImgOffset)+(int)ebx+40*(esi+20)+20) > 3){
 
 						n = 26;
 

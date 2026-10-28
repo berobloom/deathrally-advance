@@ -14,7 +14,6 @@
 	extern int TRX_WIDTH;
 	extern int TRX_HEIGHT;
 	extern __POINTER__ TRX_MAS;
-	extern __POINTER__ ___243d74h;
 	extern __BYTE__ ___243cb0h[];
 	extern __BYTE__ ___243cb4h[];
 
@@ -336,7 +335,7 @@ void race___4c434h(void){
 	car->ImgIndex = ((a_d&0xffffff)*96) >> 24;
 	car->ImgOffset = 0x25800*D(___243c60h)+0x640*car->ImgIndex;
 	ecx = (int)(car->__15e+car->YLocation-20.0f);
-	ebxp = ___243d74h+(int)car->ImgOffset;
+	ebxp = race_car_img(car->ImgOffset);
 	edip = TRX_MAS+(int)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)car->__15a;
 	esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, ecx);
 
@@ -398,7 +397,7 @@ void race___4c434h(void){
 				edi = TRX_WIDTH*D(esp+0x5c);
 				car->XLocation += car->__162;
 				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)car->__15a;
-				ebxp = ___243d74h+car->ImgOffset;
+				ebxp = race_car_img(car->ImgOffset);
 				esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c));
 
 				car->__14 = esi;

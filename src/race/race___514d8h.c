@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 #include "drmath.h"
 #include "sfx.h"
@@ -11,7 +12,6 @@
 	extern __POINTER__ RACE_MINES1A_BPK;
 	extern __POINTER__ TRX_IMA;
 	extern int TRX_WIDTH;
-	extern __POINTER__ ___243d74h;
 	extern __POINTER__ RACE_BLOWI_BPK;
 
 int rand_watcom106(void);
@@ -143,7 +143,7 @@ void race___514d8h(void){
 			if((dRMath_abs_i(edx) < 0x14)&&(dRMath_abs_i(eax) < 0x14)){
 
 				eax = 0x28*(eax+0x14);
-				edxp = ___243d74h+(int)s_35e[n].ImgOffset+(int)edx;
+				edxp = race_car_img(s_35e[n].ImgOffset)+(int)edx;
 
 				if(B(edxp+(int)eax+0x14) > 3){
 

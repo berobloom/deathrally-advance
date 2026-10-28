@@ -30,6 +30,31 @@ int race_walls_near(int x, int y, int w, int h);
 unsigned race_walls_cells(int x, int y, int w, int h);
 const __BYTE__ * race_car_box(__DWORD__ img_offset);
 
+// car n's 96 rotation frames, 40x40 each, start at race_car_slot[n]. The
+// desktop has the 4 one after the other at ___243d74h; the GBA points
+// each into its ROM. A car's ImgOffset is 0x25800*n+0x640*frame
+extern __BYTE__ * race_car_slot[4];
+void race_car_slots_contiguous(void);
+static inline __BYTE__ * race_car_img(__DWORD__ img_offset){
+
+	int 	n = (img_offset >= 0x25800)+(img_offset >= 2*0x25800)+(img_offset >= 3*0x25800);
+
+	return race_car_slot[n]+(img_offset-0x25800*n);
+}
+
+// what race_main() does to the race's state before its first frame, with
+// the track and cars from the given loaders: race_loaders_files reads the
+// game's files
+typedef struct {
+	void 	(*inf)(void);		// the track's size, start places, power-ups and spectators
+	void 	(*alloc)(void);		// the track's and the cars' buffers
+	void 	(*load)(void);		// what goes in them, and the tables
+} race_loaders_t;
+void race___49bd4h(void);
+void race___42824h(void);
+extern const race_loaders_t race_loaders_files;
+void race_setup(int MyIndex, int NumCars, const race_loaders_t * load);
+
 // bss.c: 1024*cos and 1024*sin tables, 3601 entries
 extern int * ___243310h;
 extern int * ___243314h;
