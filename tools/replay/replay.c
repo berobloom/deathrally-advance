@@ -16,6 +16,12 @@
 // a recorded race (TICKPRE.BIN, see race_ticklog_pre()). Prints the hash
 // of the globals after it and, given the race's TICKLOG.BIN, which of
 // them differ from how the race started there.
+//
+//   replay --quick TRACK BAKEDIR SEED
+//
+// The same for a quick race (race_quick()) with gba/race's cars, to
+// compare with the hash gba/race logs. VAR_HASHES=1 also prints a hash of
+// each global, as gba/race does built with RACE_CFLAGS=-DVAR_HASHES.
 
 #include "drally.h"
 #include "drally_structs_free.h"
@@ -86,6 +92,32 @@ static int setup(int argc, char * argv[]){
 	return 0;
 }
 
+// gba/race's quick race: models and colors as in its main.c
+static int quick(char * argv[]){
+
+	static const int 	models[4] = { 3, 5, 4, 2 };
+	static const __BYTE__ 	colors[4][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
+	__BYTE__ * 		flat = malloc(race_replay_size());
+
+	race_quick(atoi(argv[2]), models, colors, strtoul(argv[4], 0, 0));
+	race_baked = race_baked_read(argv[3]);
+	race_setup(0, 4, &race_loaders_baked);
+	race_replay_gather(flat);
+	printf("set up: globals hash %08x\n", race_replay_hash(flat));
+	if(getenv("VAR_HASHES")){
+
+		unsigned 	i, o, k;
+		__DWORD__ 	h;
+
+		for(i = o = 0; i < race_replay_count(); o += race_replay_var_size(i++)){
+			for(h = 0x811c9dc5, k = 0; k < race_replay_var_size(i); k++) h = (h^flat[o+k])*0x01000193;
+			printf("var %s %08x\n", race_replay_var_name(i), h);
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char * argv[]){
 
 	FILE * 		fd;
@@ -100,6 +132,7 @@ int main(int argc, char * argv[]){
 	clock_t 	t;
 
 	if((argc >= 4)&&!strcmp(argv[1], "--setup")) return setup(argc, argv);
+	if((argc == 5)&&!strcmp(argv[1], "--quick")) return quick(argv);
 	if((argc != 2)&&(argc != 3)){ fprintf(stderr, "usage: replay TICKLOG.BIN [OUT.BIN]\n"); return 1; }
 
 	if(!(fd = fopen(argv[1], "rb"))){ perror(argv[1]); return 1; }

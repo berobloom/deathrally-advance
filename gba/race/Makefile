@@ -1,7 +1,8 @@
 # A race on the GBA, run by the game's own race code: race_setup(),
 # race_logic() and race_render() without its drawing, drawn with the GBA's
 # tiles and sprites as in gba/proto. tools/gbabake bakes the track and the
-# cars into the ROM:
+# cars into the ROM. A quick race on track n (0-9) against three of the
+# game's drivers:
 #
 #   make -C gba/race TRACK=n
 #
@@ -17,7 +18,7 @@ BAKETOOL := ../../tools/gbabake/gbabake
 
 include ../game.mk
 
-CFLAGS += -DDR_RACE_NODRAW $(RACE_CFLAGS)
+CFLAGS += -DDR_RACE_NODRAW -DTRACK=$(TRACK) $(RACE_CFLAGS)
 ifdef TICKS
 CFLAGS += -DTICKS_PER_SEC=$(TICKS)
 endif

@@ -82,8 +82,15 @@ void race___496b0h(void){
 
 	D(___196dd0h) = 0x15e;
 
-	// BIG WRENCH / DOLLAR SIGN
-	if((rand_watcom106()%4) == 0) helper00(&___1f2488h[0xc+rand_watcom106()%2], 7+rand_watcom106()%2);
+	// BIG WRENCH / DOLLAR SIGN. In the order the desktop build has always
+	// called rand_watcom106() here: C leaves the order of a call's
+	// arguments open, and ARM GCC took the place first
+	if((rand_watcom106()%4) == 0){
+
+		int 	t = 7+rand_watcom106()%2;
+
+		helper00(&___1f2488h[0xc+rand_watcom106()%2], t);
+	}
 
 	// STEROIDS DEAL
 	if(s_54[0].__4c == 1){

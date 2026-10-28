@@ -113,7 +113,13 @@ void race___54668h(void){
 			s_35e[n].Y4__142 = s_35e[n].YLocation+yp;
 		}
 
-		if(((int)s_94[n].__18 > 0)&&helper33(n, 0.55)) s_35e[n].__104 += (float)((double)(rand_watcom106()-rand_watcom106())/65536.0);
+		if(((int)s_94[n].__18 > 0)&&helper33(n, 0.55)){
+
+			// the two calls in order: C leaves the order of a-b's operands open
+			int 	r = rand_watcom106();
+
+			s_35e[n].__104 += (float)((double)(r-rand_watcom106())/65536.0);
+		}
 
 		if(((int)s_35e[n].__352 <= 0)||(s_94[MY_CAR_IDX].__2C == 0)){
 

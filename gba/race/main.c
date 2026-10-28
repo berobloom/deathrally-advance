@@ -126,6 +126,9 @@ void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){}
 void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance){}
 
 EWRAM_BSS static __BYTE__ flat[0x4000] __attribute__((aligned(4)));
+// the globals as they are at start-up: race_setup() leaves some of what a
+// race changed, so every race starts from these, like the desktop's first
+EWRAM_BSS static __BYTE__ flat_boot[0x4000] __attribute__((aligned(4)));
 EWRAM_BSS static __BYTE__ obstacles[0x800] __attribute__((aligned(4)));
 
 static const race_baked_t baked = {
@@ -363,6 +366,7 @@ static const char * start_race(void){
 	int 		n, my_index, num_cars;
 
 	if(race_replay_size() > sizeof(flat)) return "flat[] too small";
+	race_replay_scatter(flat_boot);
 #if defined(RACE_PRE)
 	// as the desktop's menus left it
 	if(race_pre[2] != race_replay_size()) return "pre.bin is from another build";
@@ -370,13 +374,41 @@ static const char * start_race(void){
 	num_cars = race_pre[1];
 	race_replay_scatter((const __BYTE__ *)(race_pre+3));
 #else
-	return "no race";
+	{
+		// gbabake's car colors (track.pal), red, blue, yellow and green
+		static const int 	models[NUM_CARS] = { 3, 5, 4, 2 };	// CAMARO, LOTUS, PORCHE, SEDAN
+		static const __BYTE__ 	colors[NUM_CARS][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
+		// RACE_CFLAGS=-DRACE_SEED=n: always the same race, to compare its
+		// hash with tools/replay --quick
+#if defined(RACE_SEED)
+		__DWORD__ 		seed = RACE_SEED;
+#else
+		__DWORD__ 		seed = cycles();
+#endif
+
+		race_quick(TRACK, models, colors, seed);
+		say("quick race on TR%d, seed %lu", TRACK, seed);
+		my_index = 0;
+		num_cars = NUM_CARS;
+	}
 #endif
 
 	race_baked = &baked;
 	race_setup(my_index, num_cars, &race_loaders_baked);
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
+	// RACE_CFLAGS=-DVAR_HASHES: each global's, as VAR_HASHES=1 tools/replay --quick prints them
+#if defined(VAR_HASHES)
+	{
+		unsigned 	i, o, k;
+		__DWORD__ 	h;
+
+		for(i = o = 0; i < race_replay_count(); o += race_replay_var_size(i++)){
+			for(h = 0x811c9dc5, k = 0; k < race_replay_var_size(i); k++) h = (h^flat[o+k])*0x01000193;
+			say("var %s %08lx", race_replay_var_name(i), h);
+		}
+	}
+#endif
 
 	for(n = 0; n < NUM_CARS; n++){
 
@@ -475,6 +507,7 @@ int main(void){
 	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN;
 	REG_BLDY = 9;
 
+	race_replay_gather(flat_boot);
 	t = vblanks;
 	if((err = start_race())){
 

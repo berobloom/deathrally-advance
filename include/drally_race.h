@@ -85,6 +85,9 @@ extern const race_baked_t * race_baked;
 extern const race_loaders_t race_loaders_baked;
 int race_car_variant(int n);
 
+// race_quick.c: the menus' part of a race, for race_setup(MyIndex 0, 4 cars)
+void race_quick(int track, const int models[4], const __BYTE__ colors[4][3], __DWORD__ seed);
+
 // bss.c: 1024*cos and 1024*sin tables, 3601 entries
 extern int * ___243310h;
 extern int * ___243314h;
