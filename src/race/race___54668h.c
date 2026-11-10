@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 #include "drmath.h"
 
@@ -43,15 +44,7 @@ static void helper11(float fval1, float fval2, __BYTE__ * bp){
 	i = helper00(fval1);
 	j = helper00(fval2);
 
-	if((B(TRX_MAS+TRX_WIDTH*j+i)&0xf) == 0xf){
-
-		__BYTE__* dest = TRX_IMA + TRX_WIDTH * j + i;
-		dest[0] = bp[dest[0]];
-		dest[1] = bp[dest[1]];
-		dest += TRX_WIDTH;
-		dest[0] = bp[dest[0]];
-		dest[1] = bp[dest[1]];
-	}
+	if((B(TRX_MAS+TRX_WIDTH*j+i)&0xf) == 0xf) race_ima_lookup(i, j, 2, 2, bp);
 }
 
 // a mark of len points from (x, y) in steps of (dx, dy). The marks of a

@@ -60,17 +60,7 @@ void race___526ach(void){
 						dRally_Sound_pushEffect(4, SFX_MINE, 0, 0x9000, 0x21000, 0x8000);
 					}
 
-					__BYTE__* s = ___1f2488h + 0x20 + 0x120 * n;
-					__BYTE__* d = TRX_IMA + D(___1f2488h + 0x120 * n) - 8 + TRX_WIDTH * (D(___1f2488h + 0x120 * n + 4) - 8);
-					int stride = TRX_WIDTH - 0x10;
-					j = 0x10;
-					do {
-						i = 0x10;
-						do {
-							*d++ = *s++;
-						} while (--i);
-						d += stride;
-					} while (--j);
+					for(j = 0; j < 0x10; j++) race_ima_write(D(___1f2488h+0x120*n)-8, D(___1f2488h+0x120*n+4)-8+j, ___1f2488h+0x20+0x120*n+0x10*j, 0x10);
 
 					switch(D(___1f2488h+0x120*n+8)-1){
 					case 0:

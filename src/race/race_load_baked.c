@@ -41,10 +41,20 @@ static void baked_inf(void){
 	race_inf_apply(race_baked->inf);
 }
 
+// how many of the track image's tiles a race can draw into on the GBA, 64
+// bytes each: skid marks, mines and the rest stop showing past them
+#if !defined(RACE_IMA_TILES)
+#define RACE_IMA_TILES 		2048
+#endif
+
 // race_alloc()'s buffers the logic uses; the rest are only drawn from
 static void baked_alloc(void){
 
+#if defined(DR_IMA_TILES)
+	race_ima_tiles(race_baked->tiles, (TRX_WIDTH+7) >> 3, (TRX_HEIGHT+7) >> 3, RACE_IMA_TILES);
+#else
 	TRX_IMA = race_baked->ima;
+#endif
 	TRX_MAS = (__POINTER__)race_baked->mas;
 	TRX_VAI = (__POINTER__)race_baked->vai;
 	TRX_LR1 = (__POINTER__)race_baked->lr1;

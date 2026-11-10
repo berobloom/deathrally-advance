@@ -1,5 +1,6 @@
 #include "drally.h"
 #include "drmath.h"
+#include "drally_race.h"
 
 	extern __POINTER__ RACE_OBSTACLE_BPK;
 	extern __BYTE__ ___196dd0h[];
@@ -19,13 +20,9 @@ int rand_watcom106(void);
 static void helper00(__DWORD__ o){
 
 	__BYTE__ * 	src = RACE_OBSTACLE_BPK+0x100*D(___1f2488h+o+8)-0x100;
-	__BYTE__ * 	dst = TRX_IMA+TRX_WIDTH*(D(___1f2488h+o+4)-8)+D(___1f2488h+o)-8;
-	int 		w = TRX_WIDTH, x, y;
+	int 		x = D(___1f2488h+o)-8, y = D(___1f2488h+o+4)-8, j;
 
-	for(y = 0; y < 0x10; y++, src += 0x10, dst += w){
-
-		for(x = 0; x < 0x10; x++) if(src[x] != 0) dst[x] = src[x];
-	}
+	for(j = 0; j < 0x10; j++) race_ima_draw(x, y+j, src+0x10*j, 0x10);
 }
 
 // 1 if t is in one of the 24 windows top-9 to top-1, top-29 to top-21 and
@@ -226,13 +223,7 @@ DR_HOT void race___5209ch(void){
 
 								while(1){
 
-									eax = D(esp+0x28);
-									eax = D(eax+___1f2488h+4);
-									eax = eax+edx;
-									ecx = TRX_WIDTH;
-									eax = eax-0x8;
-									eax = eax*ecx;
-									memcpy(ebxp, TRX_IMA+D(D(esp+0x28)+___1f2488h)-0x8+eax, 0x10);
+									race_ima_read(D(D(esp+0x28)+___1f2488h)-0x8, D(D(esp+0x28)+___1f2488h+4)+edx-0x8, ebxp, 0x10);
 									ebxp += 0x10;
 									edx++;
 									if((int)edx >= 0x10) break;
@@ -275,7 +266,7 @@ DR_HOT void race___5209ch(void){
 			ebx = 0;
 			while(1){
 
-				memcpy(TRX_IMA+TRX_WIDTH*(D(___1f2488h+D(esp+0x24)+4)+ebx-0x8)+D(___1f2488h+D(esp+0x24))-0x8, edxp, 0x10);
+				race_ima_write(D(___1f2488h+D(esp+0x24))-0x8, D(___1f2488h+D(esp+0x24)+4)+ebx-0x8, edxp, 0x10);
 				edxp += 0x10;
 				ebx++;
 				if((int)ebx >= 0x10) break;
@@ -290,10 +281,7 @@ DR_HOT void race___5209ch(void){
 			ebx = 0;
 			while(1){
 
-				memcpy(
-					TRX_IMA+D(___1f2488h+D(esp+0x2c))+TRX_WIDTH*(D(___1f2488h+D(esp+0x2c)+4)+edx-0x8)-0x8,
-					___1f2488h+D(esp+0x1c)+0x20+ebx,
-					0x10);
+				race_ima_write(D(___1f2488h+D(esp+0x2c))-0x8, D(___1f2488h+D(esp+0x2c)+4)+edx-0x8, ___1f2488h+D(esp+0x1c)+0x20+ebx, 0x10);
 
 				ebx += 0x10;
 				edx++;

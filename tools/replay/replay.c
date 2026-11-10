@@ -22,6 +22,13 @@
 // The same for a quick race (race_quick()) with gba/race's cars, to
 // compare with the hash gba/race logs. VAR_HASHES=1 also prints a hash of
 // each global, as gba/race does built with RACE_CFLAGS=-DVAR_HASHES.
+//
+//   replay --race TRACK BAKEDIR SEED
+//
+// And runs it to its end as gba/race's benchmark does (RACE_CFLAGS=
+// "-DRACE_BENCH -DRACE_SEED=n"): the AI drives every car, a tick at a time.
+// Prints the hash of the globals and of the track image at the end, which
+// gba/race logs too.
 
 #include "drally.h"
 #include "drally_structs_free.h"
@@ -33,6 +40,20 @@
 	extern __BYTE__ ___1de7d0h[];
 
 void race_logic(void);
+void race___40164h(void);
+
+	extern __BYTE__ ___243ce0h[];
+	extern __BYTE__ ___2438c8h[];
+	extern int CURRENT_VIEWPORT_W;
+	extern int CURRENT_VIEWPORT_X;
+	extern int CURRENT_VIEWPORT_CENTER_X;
+	extern int TRX_WIDTH;
+	extern int TRX_HEIGHT;
+
+// what the game's keyboard and timer give race_render() and the timer
+// interrupt, as in gba/race: no keys, the AI drives
+__BYTE__ kmap[256];
+__DWORD__ __GET_FRAME_COUNTER(void){ return 0; }
 
 // sound isn't replayed
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2){}
@@ -118,6 +139,67 @@ static int quick(char * argv[]){
 	return 0;
 }
 
+// a hash of the track image as the race code sees it
+static __DWORD__ ima_hash(void){
+
+	__DWORD__ 	h = 0x811c9dc5;
+	__BYTE__ 	row[0x800];
+	int 		x, y;
+
+	for(y = 0; y < TRX_HEIGHT; y++){
+
+		race_ima_read(0, y, row, TRX_WIDTH);
+		for(x = 0; x < TRX_WIDTH; x++) h = (h^row[x])*0x01000193;
+	}
+
+	return h;
+}
+
+// gba/race's benchmark race: see its main.c
+static int race(char * argv[]){
+
+	static const int 	models[4] = { 3, 5, 4, 2 };
+	static const __BYTE__ 	colors[4][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
+	__BYTE__ * 		flat = malloc(race_replay_size());
+	struct_35e_t * 		cars = (struct_35e_t *)___1e6ed0h;
+	unsigned 		ticks = 0, n;
+
+	race_quick(atoi(argv[2]), models, colors, strtoul(argv[4], 0, 0));
+	race_baked = race_baked_read(argv[3]);
+	race_setup(0, 4, &race_loaders_baked);
+	race_replay_gather(flat);
+	printf("set up: globals hash %08x\n", race_replay_hash(flat));
+
+	D(___243ce0h) = 1;
+	CURRENT_VIEWPORT_W = 0x140;
+	CURRENT_VIEWPORT_X = 0;
+	CURRENT_VIEWPORT_CENTER_X = CURRENT_VIEWPORT_W/2;
+	race_render();
+
+	while((int)D(___2438c8h) <= 0x12c){
+
+		race___40164h();
+		race_logic();
+		race_render();
+		race_render_after();
+		ticks++;
+	}
+
+	race_replay_gather(flat);
+	printf("%u ticks; globals hash %08x, track image %08x\n", ticks, race_replay_hash(flat), ima_hash());
+	for(n = 0; n < 4; n++) printf("car %u: lap %d pos %d fin %u\n", n, cars[n].Lap, cars[n].Position, cars[n].Finished);
+#if defined(DR_IMA_TILES)
+	{
+		unsigned 	used, max, dropped;
+
+		race_ima_stats(&used, &max, &dropped);
+		printf("track image: %u of %u tiles drawn into, %u writes dropped\n", used, max, dropped);
+	}
+#endif
+
+	return 0;
+}
+
 int main(int argc, char * argv[]){
 
 	FILE * 		fd;
@@ -133,6 +215,7 @@ int main(int argc, char * argv[]){
 
 	if((argc >= 4)&&!strcmp(argv[1], "--setup")) return setup(argc, argv);
 	if((argc == 5)&&!strcmp(argv[1], "--quick")) return quick(argv);
+	if((argc == 5)&&!strcmp(argv[1], "--race")) return race(argv);
 	if((argc != 2)&&(argc != 3)){ fprintf(stderr, "usage: replay TICKLOG.BIN [OUT.BIN]\n"); return 1; }
 
 	if(!(fd = fopen(argv[1], "rb"))){ perror(argv[1]); return 1; }

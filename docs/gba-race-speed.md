@@ -70,6 +70,20 @@ The race hash stayed the same on TR0, TR1, TR3, TR5, TR8 and TR9.
 
 With the AI driving, whole races on all ten tracks run at 60.0 frames per second. At most two seconds a race show 59.
 
+## Drawing Into the Track
+
+Skid marks, mines, craters, power-ups and obstacles go into the track image through `src/race/race_ima.c`. On the GBA that's tiles copied to EWRAM as they're drawn into (`DR_IMA_TILES`). On TR8:
+
+| | Cycles a tick (average) | Slowest tick |
+|---|---:|---:|
+| Drawing nowhere, as before | 143,100 | 249,700 |
+| Through the tiles, a span at a time in Thumb | 159,500 | 281,400 |
+| A tile at a time, as ARM in IWRAM, nothing copied or reloaded where no pixel changes | 152,300 | 255,300 |
+
+Obstacles cost the most. While they blink, they're drawn and put back 16 rows at a time on every tick. Writes that change nothing now cost a comparison and no more. That also leaves about 30 tiles a race out of the pool.
+
+To keep the stack's margin with the new IWRAM code, newlib's malloc state, `_impure_data` and locale (`gba/game.mk`) and the 768-byte palette `___1a51d0h` (`DR_COLD`) moved to EWRAM. A race leaves about 1.6 KB of the stack untouched.
+
 ## Next Steps, Most Promising First
 
 Items 1-4 below are done, and the race runs at full speed. The rest would make room for what the race doesn't do yet (skid marks, explosions, sound).
@@ -82,7 +96,7 @@ Items 1-4 below are done, and the race runs at full speed. The rest would make r
 2. **(Done) The `D()`/`F32()` macros** (`include/drally.h`) read through a packed `may_alias` struct, which means byte loads on the GBA. For globals known to be 4-aligned (most of the `___xxxxxxh` arrays), a word-access variant would be much cheaper. Do the hottest files first.
 3. **(Done for `4dcach`) The double divisions that are left** (`__divdf3`, about 3% of the logic): `race___4dcach` divides by 1.15 and 1.2 three times per car, and there are others. Each costs hundreds of cycles. Replacing them with float, or with multiplying by the reciprocal, is a new-math step.
 4. **(Done) `sqrtf`** (newlib, Thumb in ROM, about 2%). Copy `libm`'s `ef_sqrt` object into IWRAM the way `gba/replay/Makefile` does for libgcc.
-5. **More `DR_HOT`:** IWRAM ends at about 29 KB of 32 KB, and the stack, which the vblank interrupt now adds to, has about 1.1 KB that a race never touches. Moving cold data to EWRAM would make room: newlib's `__malloc_av_`, `_impure_data`, `__global_locale` and `__sf` take about 2.5 KB, and the game's `___1a51d0h` 768 bytes. Candidates are `race___55ae0h`, the skid-mark helpers in `race___54668h`, and `race___4b62ch`'s inner loops. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
+5. **More `DR_HOT`:** the stack, which the vblank interrupt adds to, has about 1.6 KB that a race never touches. Moving more cold data to EWRAM would make room, for example newlib's `__sf` (360 bytes) and the race's `TRX_OHI_DAT` (1 KB). Candidates are `race___55ae0h`, the skid-mark helpers in `race___54668h`, and `race___4b62ch`'s inner loops. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
 6. The rest of the AI and physics float math into fixed point, if the steps above don't reach the target.
 
 ## How to Measure

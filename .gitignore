@@ -24,5 +24,7 @@ z_regex*
 TICKLOG.BIN
 /tools/replay/build/
 /tools/replay/replay
+/tools/replay/build-tiles/
+/tools/replay/replay-tiles
 /gba/race/build/
 *.sav

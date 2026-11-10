@@ -259,7 +259,19 @@ const race_baked_t * race_baked_read(const char * dir){
 	baked->obstacle = read_baked(dir, "obstacle.bin", 0x800);
 	baked->cars = read_baked(dir, "cars.img", RACE_CAR_VARIANTS*sizeof(car_spins_t));
 	baked->shapes = (const race_car_shapes_t *)read_baked(dir, "cars.shp", RACE_CAR_VARIANTS*sizeof(race_car_shapes_t));
-	baked->ima = calloc(1, w*h);
+	baked->tiles = read_baked(dir, "track.tiles", ((w+7) >> 3)*((h+7) >> 3)*64);
+	// the track image the race draws into, from its tiles
+	{
+		unsigned 	x, y;
+
+		baked->ima = malloc(w*h);
+		for(y = 0; y < h; y++){
+			for(x = 0; x < w; x++){
+
+				baked->ima[w*y+x] = baked->tiles[64*((y >> 3)*((w+7) >> 3)+(x >> 3))+8*(y&7)+(x&7)];
+			}
+		}
+	}
 	baked->obstacles = malloc(0x800);
 
 	return baked;

@@ -43,6 +43,26 @@ void race_car_shapes(const __BYTE__ * spins, race_car_shapes_t * out);
 // car n's, which race_walls_build() builds where the loader set none
 extern const race_car_shapes_t * race_car_shape[4];
 
+// the track image, TRX_IMA, which the race code draws skid marks, mines,
+// craters, power-ups and obstacles into: n pixels from (x, y) read, written,
+// or the non-zero ones of src drawn, and a w x h block's pixels p turned
+// into tab[p]. Pixel (x, y) is TRX_IMA[TRX_WIDTH*y+x], so a row runs on into
+// the next one. Built with DR_IMA_TILES (the GBA), where the image doesn't
+// fit in memory, it is the track's tiles with the ones drawn into copied
+// to a pool of max_tiles, see race_ima.c
+void race_ima_read(int x, int y, __BYTE__ * dst, int n);
+void race_ima_write(int x, int y, const __BYTE__ * src, int n);
+void race_ima_draw(int x, int y, const __BYTE__ * src, int n);
+void race_ima_lookup(int x, int y, int w, int h, const __BYTE__ * tab);
+#if defined(DR_IMA_TILES)
+void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles);
+const __BYTE__ * race_ima_tile(int tx, int ty);
+// the next tile drawn into since the last call, ty << 8 | tx, -1 if there
+// is none, or -2 for all of them
+int race_ima_dirty(void);
+void race_ima_stats(unsigned * used, unsigned * max, unsigned * dropped);
+#endif
+
 // car n's 96 rotation frames, 40x40 each, start at race_car_slot[n]. The
 // desktop has the 4 one after the other at ___243d74h; the GBA points
 // each into its ROM. A car's ImgOffset is 0x25800*n+0x640*frame
@@ -119,6 +139,7 @@ typedef struct race_baked_s {
 	const __BYTE__ *	obstacle;	// OBSTACLE.BPK decoded, copied to obstacles
 	const __BYTE__ *	cars;		// RACE_CAR_VARIANTS car_spins_t, not recolored
 	const race_car_shapes_t * shapes;	// and their shapes
+	const __BYTE__ *	tiles;		// track.tiles: the track image as 8x8 tiles, row by row
 	__POINTER__ 		ima;		// TRX_IMA, which the logic draws skid marks into
 	__BYTE__ *		obstacles;	// 0x800 bytes, the logic changes them
 } race_baked_t;

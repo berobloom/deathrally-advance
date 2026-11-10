@@ -55,6 +55,8 @@ void race___40164h(void);
 	extern __BYTE__ ___2438c8h[];
 	extern __DWORD__ MY_CAR_IDX;
 	extern int NUM_OF_CARS;
+	extern int TRX_WIDTH;
+	extern int TRX_HEIGHT;
 	extern int X___243c8ch;
 	extern int Y___243c90h;
 	extern int CURRENT_VIEWPORT_W;
@@ -95,9 +97,6 @@ void race___40164h(void);
 // at most two ticks behind: after a longer hold-up the game slows down
 // instead of racing to catch up
 #define MAX_DUE			(3*VBLANKS_PER_SEC-1)
-// unmapped on the GBA: writes go nowhere, also on real hardware, where a
-// write to ROM could reach a flash cartridge's command registers
-#define NOWHERE			((__POINTER__)0x00010000)
 #define RACE_OVER		0x12c		// ___2438c8h counts up past this once the race is over
 
 // the track background: a ring of 32x22 tiles in charblocks 0-2, map in screenblock 31
@@ -140,9 +139,8 @@ static const race_baked_t baked = {
 	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
 	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
-	.cars = cars_img, .shapes = cars_shp,
-	// the logic draws skid marks into the track image, which isn't kept
-	.ima = NOWHERE, .obstacles = obstacles
+	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles,
+	.obstacles = obstacles
 };
 
 static int track_w, track_h;		// in tiles
@@ -206,7 +204,8 @@ static void load_tile(int tx, int ty){
 
 	int slot = (tx & (RING_W-1)) + ring_row[ty]*RING_W;
 
-	copy32(TRACK_CHARS + 64*slot, track_tiles + 64*(ty*track_w + tx), 64);
+	// as the race has drawn into it
+	copy32(TRACK_CHARS + 64*slot, race_ima_tile(tx, ty), 64);
 	TRACK_MAP[(ty & 31)*32 + (tx & 31)] = slot;
 }
 
@@ -527,6 +526,18 @@ static void draw_view(void){
 	v = &views[view_ready];
 	view_ready = -1;
 	update_track(v->cam_x, v->cam_y);
+	// the tiles on screen that the race drew into
+	while((n = race_ima_dirty()) != -1){
+
+		int 	tx = n&0xff, ty = n >> 8;
+
+		if(n == -2){
+
+			vis_x0 = -1;
+			update_track(v->cam_x, v->cam_y);
+		}
+		else if((tx >= vis_x0)&&(tx <= vis_x1)&&(ty >= vis_y0)&&(ty <= vis_y1)) load_tile(tx, ty);
+	}
 	for(n = 0; n < NUM_CARS; n++) upload_car(n, v);
 	place_cars(v);
 	hud_race(v);
@@ -684,6 +695,20 @@ int main(void){
 				say("BENCH end: %lu ticks, logic %llu cycles a tick, at most %lu; over 190k %lu, 200k %lu, 225k %lu; globals hash %08lx",
 					bench_ticks, bench_logic/bench_ticks, bench_max, bench_over190, bench_over200, bench_over225, race_replay_hash(flat));
 				for(n = 0; n < NUM_OF_CARS; n++) say("BENCH car %d: lap %d pos %d fin %lu", n, car(n)->Lap, car(n)->Position, car(n)->Finished);
+				{
+					// what the race drew into the track, as tools/replay --race prints it
+					unsigned 	used, max, dropped;
+					__DWORD__ 	h = 0x811c9dc5;
+					int 		x, y;
+
+					for(y = 0; y < TRX_HEIGHT; y++){
+
+						race_ima_read(0, y, flat, TRX_WIDTH);
+						for(x = 0; x < TRX_WIDTH; x++) h = (h^flat[x])*0x01000193;
+					}
+					race_ima_stats(&used, &max, &dropped);
+					say("BENCH track image %08lx: %u of %u tiles drawn into, %u writes dropped", h, used, max, dropped);
+				}
 #endif
 			}
 		}

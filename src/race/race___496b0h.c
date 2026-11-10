@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "drally_structs_free.h"
 
 #pragma pack(1)
@@ -39,24 +40,8 @@ static void helper00(struct_120_t * p120, int t){
 
 		p120->type = t;
 
-		n = -1;
-		while(++n < 0x10){
-			
-			memcpy(p120->__20[n], TRX_IMA+TRX_WIDTH*(p120->y+n-8)+(p120->x-8), 0x10);
-		}
-
-		j = -1;
-		while(++j < 0x10){
-
-			i = -1;
-			while(++i < 0x10){
-
-				if((px = read_b(RACE_OBSTACLE_BPK+0x10*(j+0x10*(p120->type-1))+i)) != 0){
-					
-					write_b(TRX_IMA+TRX_WIDTH*(j+p120->y-8)+i+(p120->x-8), px);
-				}
-			}
-		}
+		for(n = 0; n < 0x10; n++) race_ima_read(p120->x-8, p120->y+n-8, p120->__20[n], 0x10);
+		for(j = 0; j < 0x10; j++) race_ima_draw(p120->x-8, p120->y+j-8, RACE_OBSTACLE_BPK+0x10*(j+0x10*(p120->type-1)), 0x10);
 	}
 }
 

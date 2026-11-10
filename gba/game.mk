@@ -44,8 +44,12 @@ LIBM_IWRAM := libm_a-e_sqrt libm_a-ef_sqrt libm_a-w_sqrt libm_a-wf_sqrt
 # newlib's 4 KB table of file handles, which stdio pulls in, is better off
 # in EWRAM than taking up an eighth of IWRAM
 LIBSYSBASE := $(shell $(CC) $(ARCH) -print-file-name=libsysbase.a)
+# and so are newlib's malloc state, reentrancy data and locale, about 2.5 KB
+# that IWRAM, where the stack is, has better use for
+LIBC := $(shell $(CC) $(ARCH) -print-file-name=libc.a)
+LIBC_EWRAM := libc_a-mallocr libc_a-impure libc_a-locale
 LIBGCC_OBJS := $(LIBGCC_IWRAM:%=$(BUILD)/libgcc/%.o) $(LIBM_IWRAM:%=$(BUILD)/libm/%.o) \
-	$(BUILD)/libsysbase/libsysbase_libsysbase_a-handle_manager.o
+	$(BUILD)/libsysbase/libsysbase_libsysbase_a-handle_manager.o $(LIBC_EWRAM:%=$(BUILD)/libc/%.o)
 
 $(BUILD)/libgcc/%.o: $(LIBGCC)
 	@mkdir -p $(@D)
@@ -61,6 +65,11 @@ $(BUILD)/libsysbase/%.o: $(LIBSYSBASE)
 	@mkdir -p $(@D)
 	@cd $(@D) && $(AR) x $(LIBSYSBASE) $*.o
 	@$(OBJCOPY) --rename-section .data.handles=.ewram.handles $@
+
+$(BUILD)/libc/%.o: $(LIBC)
+	@mkdir -p $(@D)
+	@cd $(@D) && $(AR) x $(LIBC) $*.o
+	@$(OBJCOPY) $$($(OBJDUMP) -h $@ | awk '$$2 ~ /^\.data\./ { print "--rename-section " $$2 "=.ewram" substr($$2, 6) } $$2 ~ /^\.bss\./ { print "--rename-section " $$2 "=.sbss" substr($$2, 5) }') $@
 
 $(GAME_LIB): $(GAME_OBJS)
 	@rm -f $@

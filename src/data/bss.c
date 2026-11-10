@@ -225,7 +225,7 @@ __BYTE__ ___1a3fc0h[0x300];
 __BYTE__ ___1a42c0h[0xc00];
 __BYTE__ ___1a4ec0h[0x300];
 __BYTE__ ___1a51c0h[0x10];
-__BYTE__ ___1a51d0h[0x300];
+DR_COLD __BYTE__ ___1a51d0h[0x300];
 __BYTE__ ___1a54d0h[0x4b000];
 
 __BYTE__ ___1c9ec0h[0x10];

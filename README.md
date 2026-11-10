@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. There are no menus, sound, skid marks or explosions yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track. There are no menus, sound or explosions yet. See [Status](#status).
 
 ## Game Data
 
@@ -70,6 +70,8 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 * `race_render()` keeps the camera, animations, lap times and other state that the desktop updates while drawing. Built with `DR_RACE_NODRAW`, it skips the drawing itself. A desktop check (`DR_CHECK_NODRAW=1` in a `make ticklog` build) runs every frame of a race both ways and finds no difference in the race.
 * The cars' sprites come from their positions and rotation frames in the game's car structs, and the camera from the game's own look-ahead.
 
+The race code draws skid marks, mines, craters, power-ups and obstacles into the track image, and reads back the pixels under them. The whole image doesn't fit in the GBA's RAM: TR0's alone is 720 KB. So the race code goes through a small API, `race_ima_read()`, `_write()`, `_draw()` and `_lookup()` in `src/race/race_ima.c`. On the desktop it works on `TRX_IMA` directly. Built with `DR_IMA_TILES`, as `gba/race` is, the image is the track's 8x8 tiles in ROM, with each tile the race draws into copied to a pool of 2,048 in EWRAM (128 KB). A whole race draws into at most about 1,800. The vblank interrupt loads the changed tiles that are on screen. `make -C tools/replay IMA_TILES=n` builds `replay-tiles`, the desktop with the GBA's tiles, for checking the two against each other.
+
 That's one tick for each `race_logic()` call, as the original did on its 70 Hz VGA screen. The GBA shows 60 frames a second, so every sixth frame has two ticks to run. The vblank interrupt draws the state after the last finished tick, so a tick can run on into the next frame without holding the screen up.
 
 The race is set up by the game's own setup code, `race_setup()` in `src/race/race_setup.c`, as on the desktop. Instead of reading and decoding the game's files, it uses the track and the car images that `tools/gbabake` decoded and baked into the ROM (`src/race/race_load_baked.c`). The track's maps stay in ROM. The menus' part, `race_quick()` in `src/race/race_quick.c`, sets up a quick race: you in a Camaro against three of the game's drivers, four laps, with a new random seed for every race.
@@ -78,6 +80,8 @@ Setting up takes about 30 frames. Checks that it's the same setup as the desktop
 
 * A `make ticklog` build run with `DR_CHECK_SETUP=DIR` sets each race up twice in child processes: from the game's files and from the bakes in `DIR/TRn`. It compares everything the race logic uses: its globals, the track maps, which pixels of the cars are solid, and the obstacles. They're the same on every track tried.
 * `tools/replay --quick TRACK BAKEDIR SEED` does the GBA's setup on the desktop. Its hash matches the one `gba/race` logs for the same seed, on every track tried. `tools/replay --setup TICKPRE.BIN BAKEDIR TICKLOG.BIN` sets up from the state the desktop menus left, and finds only the AI flag and two timer counters different from the recorded race's first frame.
+
+* `tools/replay --race TRACK BAKEDIR SEED` runs the whole quick race on the desktop the way `gba/race`'s benchmark build does. It prints a hash of the globals and of the track image at the end. Both match the GBA's on all ten tracks, so the desktop and the GBA run the same race from start to finish.
 
 Comparing the two found a bug in the decompiled code: two calls to the random number generator in one statement, whose order C leaves open. The desktop and the GBA compilers placed the race's power-ups differently. They're now called in the desktop's order.
 
@@ -134,8 +138,7 @@ Not done yet:
 
 * Reversed tracks, and the track's buildings, which the baked setup leaves out.
 * Choosing the track, the cars and the opponents. One ROM has one track and a fixed quick race.
-* Skid marks, wrecks and the track under obstacles, which the race code draws into the track image. The port needs a writable overlay for the tiles they touch.
-* Explosions, spectators, mines, shots and the rest of the race's pictures, and the race's own HUD.
+* Explosions, wrecks, spectators, shots and the rest of the race's pictures that are drawn over the track, and the race's own HUD.
 * Menus, shops and the underground market, which are drawn at 640x480.
 * Music and sound (the S3M and XM songs, through Maxmod).
 * Saving in SRAM.

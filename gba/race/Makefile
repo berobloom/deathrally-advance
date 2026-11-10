@@ -23,7 +23,9 @@ BAKETOOL := ../../tools/gbabake/gbabake
 
 include ../game.mk
 
-CFLAGS += -DDR_RACE_NODRAW -DTRACK=$(TRACK) $(RACE_CFLAGS)
+# DR_IMA_TILES: the track image the race draws into is the track's tiles
+# in ROM, with the ones drawn into in EWRAM, see src/race/race_ima.c
+CFLAGS += -DDR_RACE_NODRAW -DDR_IMA_TILES -DTRACK=$(TRACK) $(RACE_CFLAGS)
 ifdef TICKS
 CFLAGS += -DTICKS_PER_SEC=$(TICKS)
 endif
