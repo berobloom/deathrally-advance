@@ -52,6 +52,7 @@ void race___42218h(void){
 			D(___243320h) -= D(___243334h);
 		}
 
+		race_sprite(GEN_LAM_BPK, 0x50, 0x3c, 0x150+D(___243320h), 0);
 		if(race_draw){
 
 			__BYTE__* s = GEN_LAM_BPK;
@@ -97,6 +98,7 @@ void race___42218h(void){
 			D(___243320h) += 2*D(___243334h);
 		}
 
+		race_sprite(GEN_LAM_BPK+0x2580, 0x50, 0x3c, 0x150+D(___243320h), 0);
 		if(race_draw){
 
 			__BYTE__* s = GEN_LAM_BPK + 0x2580;
@@ -135,6 +137,7 @@ void race___42218h(void){
 
 		D(___196de0h) = 1;
 
+		race_sprite(GEN_LAM_BPK+0x12c0, 0x50, 0x3c, 0x150+D(___243320h), 0);
 		if(race_draw){
 
 			__BYTE__* s = GEN_LAM_BPK + 0x12c0;

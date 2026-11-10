@@ -15,6 +15,9 @@ static __DWORD__ solid4(__DWORD__ px){
 	return (px|(px >> 1)) & 0x01010101;
 }
 
+// race_car_shapes() and race_sprite_files[]: what tools/gbabake bakes
+// for the race, besides the game's files as they are
+
 // the shapes of a car's 96 images of 40x40 (spins, word-aligned). Also
 // built by tools/gbabake, so that the GBA needn't read the images at the
 // start of every race
@@ -78,3 +81,10 @@ void race_car_shapes(const __BYTE__ * spins, race_car_shapes_t * out){
 		out->box[n][0] = x0; out->box[n][1] = x1; out->box[n][2] = y0; out->box[n][3] = y1;
 	}
 }
+
+const race_sprite_file_t race_sprite_files[RACE_SPRITE_FILES] = {
+	{ "SMOKE.BPK", 0xc0 }, { "PEDESTR.BPK", 0x2400 }, { "SPLAT3.BPK", 0x800 }, { "SPLAT4.BPK", 0x800 },
+	{ "ROCKET1.BPK", 0x1800 }, { "ROCKET2.BPK", 0x1800 }, { "BURN1A.BPK", 0x800 }, { "SHOTS.BPK", 0x480 },
+	{ "FLAME1.BPK", 0xc00 }, { "FLAME2.BPK", 0xc00 }, { "FLAME3.BPK", 0xc00 }, { "FLAME4.BPK", 0xc00 },
+	{ "FLAME5.BPK", 0xc00 }, { "FLAME6.BPK", 0xc00 }, { "GEN-LAM.BPK", 0x3840 }
+};

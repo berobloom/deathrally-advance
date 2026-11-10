@@ -34,6 +34,7 @@ void race___50ba4h(void){
 					
 				if((m+0x8) < 0xc8){
 					
+					race_sprite(RACE_SHOTS_BPK+0x40*(s_35e[D(___243c60h)].__1b2-1), 8, 8, n+0x60, m);
 					if(race_draw){
 
 						__BYTE__* s = RACE_SHOTS_BPK + 0x40 * (s_35e[D(___243c60h)].__1b2 - 1);
@@ -68,6 +69,7 @@ void race___50ba4h(void){
 
 				if((m+0x8) < 0xc8){
 
+					race_sprite(RACE_SHOTS_BPK+0x40*(s_35e[D(___243c60h)].__1ae-1), 8, 8, n+0x60, m);
 					if(race_draw){
 
 						__BYTE__* s = RACE_SHOTS_BPK + 0x40 * (s_35e[D(___243c60h)].__1ae - 1);
@@ -103,6 +105,7 @@ void race___50ba4h(void){
 
 				if((m+0x8) < 0xc8){
 
+					race_sprite(RACE_SHOTS_BPK+0x40*(s_35e[D(___243c60h)].__1aa-1), 8, 8, n+0x60, m);
 					if(race_draw){
 
 						__BYTE__* s = RACE_SHOTS_BPK + 0x40 * (s_35e[D(___243c60h)].__1aa - 1);

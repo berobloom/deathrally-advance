@@ -260,6 +260,12 @@ const race_baked_t * race_baked_read(const char * dir){
 	baked->cars = read_baked(dir, "cars.img", RACE_CAR_VARIANTS*sizeof(car_spins_t));
 	baked->shapes = (const race_car_shapes_t *)read_baked(dir, "cars.shp", RACE_CAR_VARIANTS*sizeof(race_car_shapes_t));
 	baked->tiles = read_baked(dir, "track.tiles", ((w+7) >> 3)*((h+7) >> 3)*64);
+	{
+		unsigned 	i, size = 0;
+
+		for(i = 0; i < RACE_SPRITE_FILES; i++) size += race_sprite_files[i].size;
+		baked->sprites = read_baked(dir, "sprites.bin", size);
+	}
 	// the track image the race draws into, from its tiles
 	{
 		unsigned 	x, y;

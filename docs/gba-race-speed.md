@@ -68,7 +68,7 @@ The race hash stayed the same on TR0, TR1, TR3, TR5, TR8 and TR9.
 - **The car shapes are baked.** `race_car_shapes()` (`src/race/race_car_shapes.c`) builds the boxes and the row spans of a car's 96 images. `tools/gbabake` writes them for every car image to `cars.shp`, and the desktop builds them at setup. Setting a race up takes about 30 frames instead of 60-80, because the GBA no longer reads all of the car images to build them.
 - **Ticks, not frames.** At 70 ticks a second, every sixth frame has two. When `race_logic()` ran both in one call, that frame took about 330,000 cycles and the screen dropped to 50 frames per second. `gba/race` now calls `race_logic()` and `race_render()` once for each tick, as the original did on its 70 Hz VGA screen. The vblank interrupt draws the last finished tick: a snapshot of the camera, the cars' places and frames, and the HUD. So a tick that runs into the next frame still gets drawn, as long as some tick finishes in every frame. On average 7 ticks take about 1,230,000 of a 6-frame 1,685,000 cycles.
 
-With the AI driving, whole races on all ten tracks run at 60.0 frames per second. At most two seconds a race show 59.
+With the AI driving, whole races on all ten tracks run at 60.0 frames per second. At most two seconds a race show 59. With the over-track pictures as sprites, all ten tracks still show 60.0 over 140 seconds of racing.
 
 ## Drawing Into the Track
 
@@ -83,6 +83,12 @@ Skid marks, mines, craters, power-ups and obstacles go into the track image thro
 Obstacles cost the most. While they blink, they're drawn and put back 16 rows at a time on every tick. Writes that change nothing now cost a comparison and no more. That also leaves about 30 tiles a race out of the pool.
 
 To keep the stack's margin with the new IWRAM code, newlib's malloc state, `_impure_data` and locale (`gba/game.mk`) and the 768-byte palette `___1a51d0h` (`DR_COLD`) moved to EWRAM. A race leaves about 1.6 KB of the stack untouched.
+
+## Pictures Over the Track
+
+The spectators, wrecks, explosions, shots and start lights are hardware sprites, collected through `race_sprite()` while `race_render()` runs. Their tiles are copied to the sprite memory only when a picture changes. The list of sprites and the vblank snapshot moved to EWRAM, which leaves 1.4 KB of the stack untouched on all ten tracks.
+
+With the frame counter now counting ticks, the races come out differently, so the logic's cost isn't comparable to the table above. With seed 1, races on the ten tracks average 137,800 to 148,200 cycles a tick, 147,400 on TR8. The desktop, `replay-tiles` and the GBA give the same globals and track-image hashes on all ten.
 
 ## Next Steps, Most Promising First
 

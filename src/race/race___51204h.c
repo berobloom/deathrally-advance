@@ -52,6 +52,7 @@ void race___51204h(void){
 
 				val = (int)s_35e[D(___243c60h)].ImgIndex/4;
 
+				race_sprite(RACE_ROCKETX_BPK[D(___196efch)]+0x100*val, 0x10, 0x10, x+0x60, y);
 				if(race_draw){
 
 					__BYTE__* s = RACE_ROCKETX_BPK[D(___196efch)] + 0x100 * val;

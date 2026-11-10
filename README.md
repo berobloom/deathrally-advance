@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track. There are no menus, sound or explosions yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots and the start lights over it. There are no menus or sound yet. See [Status](#status).
 
 ## Game Data
 
@@ -72,6 +72,10 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 
 The race code draws skid marks, mines, craters, power-ups and obstacles into the track image, and reads back the pixels under them. The whole image doesn't fit in the GBA's RAM: TR0's alone is 720 KB. So the race code goes through a small API, `race_ima_read()`, `_write()`, `_draw()` and `_lookup()` in `src/race/race_ima.c`. On the desktop it works on `TRX_IMA` directly. Built with `DR_IMA_TILES`, as `gba/race` is, the image is the track's 8x8 tiles in ROM, with each tile the race draws into copied to a pool of 2,048 in EWRAM (128 KB). A whole race draws into at most about 1,800. The vblank interrupt loads the changed tiles that are on screen. `make -C tools/replay IMA_TILES=n` builds `replay-tiles`, the desktop with the GBA's tiles, for checking the two against each other.
 
+What the race draws over the track, the spectators and their splats, wrecks, explosions, smoke, gun flashes, shots, rockets and the start lights, goes through `race_sprite()` in `src/race/race_render.c` as well as into the desktop's back buffer. On the GBA a callback turns each picture into a hardware sprite, in front of the cars or behind them in the order the game draws them, with up to 40 a frame. The start lights are an 80x60 picture in two sprites. `tools/gbabake` bakes the 15 picture files into `sprites.bin` (60 KB).
+
+The game's frame counter, which times the rocket flames' and other animations, now counts the 70 Hz timer's ticks in `gba/race` and `tools/replay --race`. That changes how a race comes out, so the replay hashes from before don't apply to those two.
+
 That's one tick for each `race_logic()` call, as the original did on its 70 Hz VGA screen. The GBA shows 60 frames a second, so every sixth frame has two ticks to run. The vblank interrupt draws the state after the last finished tick, so a tick can run on into the next frame without holding the screen up.
 
 The race is set up by the game's own setup code, `race_setup()` in `src/race/race_setup.c`, as on the desktop. Instead of reading and decoding the game's files, it uses the track and the car images that `tools/gbabake` decoded and baked into the ROM (`src/race/race_load_baked.c`). The track's maps stay in ROM. The menus' part, `race_quick()` in `src/race/race_quick.c`, sets up a quick race: you in a Camaro against three of the game's drivers, four laps, with a new random seed for every race.
@@ -138,7 +142,7 @@ Not done yet:
 
 * Reversed tracks, and the track's buildings, which the baked setup leaves out.
 * Choosing the track, the cars and the opponents. One ROM has one track and a fixed quick race.
-* Explosions, wrecks, spectators, shots and the rest of the race's pictures that are drawn over the track, and the race's own HUD.
+* The headlights, the finish flag and the race's own HUD.
 * Menus, shops and the underground market, which are drawn at 640x480.
 * Music and sound (the S3M and XM songs, through Maxmod).
 * Saving in SRAM.

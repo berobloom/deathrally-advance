@@ -47,6 +47,13 @@ void race___4ee9ch(void);
 int race_draw = 1;
 #endif
 
+void (*race_sprite_cb)(const __BYTE__ * img, int w, int h, int x, int y);
+
+void race_sprite(const __BYTE__ * img, int w, int h, int bx, int by){
+
+	if(race_sprite_cb) race_sprite_cb(img, w, h, bx-0x60-CURRENT_VIEWPORT_X+TRX_VIEWPORT_TL_X, by+TRX_VIEWPORT_TL_Y);
+}
+
 // a frame's rendering, after race_logic()
 void race_render(void){
 

@@ -33,6 +33,7 @@ void race___50a48h(void){
 
 			img = RACE_FLAMEX_BPK[s_94[D(___243c60h)].__84[s_94[D(___243c60h)].__60]]+0x40*(s_35e[D(___243c60h)].ImgIndex/2);
 
+			race_sprite(img, 8, 8, i0+0x60, j0);
 			if(race_draw){
 
 				__BYTE__* s = img;

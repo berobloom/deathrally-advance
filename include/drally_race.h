@@ -26,6 +26,21 @@ extern int race_draw;
 #endif
 void race_render(void);
 void race_render_after(void);
+// the race's pictures drawn over the track, in the order race_render()
+// draws them: a w x h image's non-zero pixels with its top left at (bx, by)
+// in BACKBUFFER. race_sprite() hands them to race_sprite_cb, if set, at
+// (x, y) on the track, also in a build that doesn't draw (DR_RACE_NODRAW).
+// img 0 marks where the cars go
+extern void (*race_sprite_cb)(const __BYTE__ * img, int w, int h, int x, int y);
+void race_sprite(const __BYTE__ * img, int w, int h, int bx, int by);
+// the files of those images that the race reads with race___42824h(),
+// decoded one after the other into tools/gbabake's sprites.bin
+typedef struct {
+	const char * 	name;		// in ENGINE.BPA
+	unsigned 	size;
+} race_sprite_file_t;
+#define RACE_SPRITE_FILES	15
+extern const race_sprite_file_t race_sprite_files[RACE_SPRITE_FILES];
 void race_walls_build(void);
 void race_walls_free(void);
 int race_walls_near(int x, int y, int w, int h);
@@ -140,6 +155,7 @@ typedef struct race_baked_s {
 	const __BYTE__ *	cars;		// RACE_CAR_VARIANTS car_spins_t, not recolored
 	const race_car_shapes_t * shapes;	// and their shapes
 	const __BYTE__ *	tiles;		// track.tiles: the track image as 8x8 tiles, row by row
+	const __BYTE__ *	sprites;	// sprites.bin: race_sprite_files[] decoded
 	__POINTER__ 		ima;		// TRX_IMA, which the logic draws skid marks into
 	__BYTE__ *		obstacles;	// 0x800 bytes, the logic changes them
 } race_baked_t;

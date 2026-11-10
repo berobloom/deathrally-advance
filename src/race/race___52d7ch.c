@@ -80,20 +80,22 @@ void race___52d7ch(void){
 
 		if((SPECTATORS[n].x > (int)(TRX_VIEWPORT_TL_X-0x10))&&(SPECTATORS[n].x < (int)(TRX_VIEWPORT_TL_X+0x140))){
 			if((SPECTATORS[n].y > (int)(TRX_VIEWPORT_TL_Y-0x10))&&(SPECTATORS[n].y < (int)(TRX_VIEWPORT_TL_Y+0xc8))){
-				if(race_draw&&(SPECTATORS[n].x != 0)&&(SPECTATORS[n].y != 0)){
-
-					eax = SPECTATORS[n].y-TRX_VIEWPORT_TL_Y;
-					edx = 0;
-					if((int)eax < 0){
-						edx -= eax;
-						eax -= eax;
-					}
+				if((SPECTATORS[n].x != 0)&&(SPECTATORS[n].y != 0)){
 
 					if(SPECTATORS[n].dead != 0){
 						ebxp = RACE_SPLATX_BPK[SPECTATORS[n].x%2]+0x100*SPECTATORS[n].frame;
 					}
 					else {
 						ebxp = RACE_PEDESTR_BPK+0xc00*SPECTATORS[n].type+0x300*SPECTATORS[n].rot+0x100*SPECTATORS[n].frame;
+					}
+					race_sprite(ebxp, 0x10, 0x10, 0x60+SPECTATORS[n].x-TRX_VIEWPORT_TL_X+CURRENT_VIEWPORT_X, SPECTATORS[n].y-TRX_VIEWPORT_TL_Y);
+					if(!race_draw) continue;
+
+					eax = SPECTATORS[n].y-TRX_VIEWPORT_TL_Y;
+					edx = 0;
+					if((int)eax < 0){
+						edx -= eax;
+						eax -= eax;
 					}
 
 					if((int)eax <= 0xb7){

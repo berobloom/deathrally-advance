@@ -40,6 +40,7 @@ void race___51ce0h(void){
 
 						if(((int)edx < 0xc8)&&(D(___1df520h+0x10*D(esp)+8) != 5)){
 
+							race_sprite(RACE_BLOWI_BPK+0x100*D(___1df520h+0x10*D(esp)+8), 0x10, 0x10, edi+0x58, eax-8);
 							if(race_draw){
 
 								__BYTE__* s = RACE_BLOWI_BPK + 0x10 * (0x10 * D(___1df520h + 0x10 * D(esp) + 8));

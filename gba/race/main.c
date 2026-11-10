@@ -39,6 +39,7 @@ extern const u8 setup_ski[], setup_blo[], setup_lit[], setup_varjo[], setup_drv[
 extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
 extern const u8 cars_img[];
 extern const race_car_shapes_t cars_shp[];
+extern const u8 sprites_bin[];
 extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -60,6 +61,7 @@ void race___40164h(void);
 	extern int X___243c8ch;
 	extern int Y___243c90h;
 	extern int CURRENT_VIEWPORT_W;
+	extern int TRX_VIEWPORT_TL_X;
 	extern int CURRENT_VIEWPORT_X;
 	extern int CURRENT_VIEWPORT_CENTER_X;
 	extern kb_control_t ___1a1140h;
@@ -120,8 +122,10 @@ void race___40164h(void);
 // is kept for the stack, which the vblank interrupt now adds to
 EWRAM_BSS __BYTE__ kmap[256];
 
-// the game's timer interrupt counts these; nothing here waits on them
-__DWORD__ __GET_FRAME_COUNTER(void){ return 0; }
+// the game's 70 Hz timer, which the race's animations go by: spectators,
+// wrecks, explosions, turbo flames. Counted where race___40164h() runs
+static __DWORD__ timer_ticks;
+__DWORD__ __GET_FRAME_COUNTER(void){ return timer_ticks; }
 
 // no sound yet
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2){}
@@ -139,7 +143,7 @@ static const race_baked_t baked = {
 	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
 	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
-	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles,
+	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles, .sprites = sprites_bin,
 	.obstacles = obstacles
 };
 
@@ -318,15 +322,68 @@ static struct_35e_t * car(int n){
 
 // what the screen shows: the state after the last whole frame of the
 // logic, taken by take_view() and drawn by the vblank interrupt
+// the race's other pictures (race_sprite()), as OBJs of 8x8 or 16x16
+#define MAX_SPRITES		40
+#define SPRITE_TILE0		(NUM_CARS*CAR_OBJ_BYTES/32)	// their OBJ VRAM, after the cars'
+typedef struct {
+	const u8 * 	img;
+	s16 		x, y;		// top left on the screen
+	u8 		size;
+} sprite_t;
+
 typedef struct {
 	int 	cam_x, cam_y;
 	int 	x[NUM_CARS], y[NUM_CARS];	// the cars' centers on the screen
 	int 	frame[NUM_CARS];		// their rotation frames
 	int 	hidden[NUM_CARS];
 	int 	position, lap, over;
+	int 	nspr, cars_at;			// sprites, and how many of them are under the cars
+	sprite_t 	spr[MAX_SPRITES];		// in the order the race drew them
+	const u8 * 	lamp;			// the start lights, or 0
+	int 	lamp_x;				// on the screen
 } view_t;
 
-static view_t views[2];
+// what race_render() drew, in track coordinates
+EWRAM_BSS static sprite_t drawn[MAX_SPRITES];
+static int drawn_n, drawn_cars;
+// and the start lights: 80x60, sliding in from the right of the screen
+#define LAMP_W			0x50
+#define LAMP_H			0x3c
+#define LAMP_TILE0		(SPRITE_TILE0+8*MAX_SPRITES)	// a 64x64 OBJ and a 32x64 one
+static const u8 * drawn_lamp;
+static int drawn_lamp_x;
+
+static void on_sprite(const __BYTE__ * img, int w, int h, int x, int y){
+
+	if((w == LAMP_W)&&(h == LAMP_H)){
+
+		// on the game's 320 pixel wide screen, at its right edge on ours
+		drawn_lamp = img;
+		drawn_lamp_x = x-TRX_VIEWPORT_TL_X+CURRENT_VIEWPORT_X-(320-SCREEN_W);
+		return;
+	}
+	if(!img){
+
+		drawn_cars = drawn_n;
+		return;
+	}
+	if((drawn_n == MAX_SPRITES)||(w != h)||((w != 8)&&(w != 16))) return;
+	drawn[drawn_n].img = img;
+	drawn[drawn_n].x = x;
+	drawn[drawn_n].y = y;
+	drawn[drawn_n].size = w;
+	drawn_n++;
+}
+
+// race_render(), keeping what it draws for the next view
+static void render_race(void){
+
+	drawn_n = drawn_cars = 0;
+	drawn_lamp = 0;
+	race_render();
+}
+
+EWRAM_BSS static view_t views[2];
 static int view_next;			// the one take_view() fills
 static volatile int view_ready = -1;	// the one to draw at the next vblank
 static volatile int view_drawing;	// 0 while a race is set up
@@ -346,24 +403,89 @@ static void upload_car(int n, const view_t * v){
 	shown_frame[n] = frame;
 }
 
-static void place_cars(const view_t * v){
+// sprite k of the view into OAM entry o, its image into its OBJ VRAM if
+// that holds another
+static void place_sprite(int o, int k, const sprite_t * s){
 
-	int n;
+	static const u8 * 	shown[MAX_SPRITES];
+	int 			tile = SPRITE_TILE0+8*k;
 
-	for(n = 0; n < NUM_CARS; n++){
+	if(shown[k] != s->img){
+
+		// 8bpp tiles, in rows of tiles: 8 bytes a row of a tile
+		u32 * 		dst = (u32 *)((u8 *)SPRITE_GFX+32*tile);
+		const u32 * 	src = (const u32 *)s->img;
+		int 		tx, ty, r, n = s->size >> 3, w = s->size >> 2;
+
+		for(ty = 0; ty < n; ty++) for(tx = 0; tx < n; tx++) for(r = 0; r < 8; r++){
+
+			*dst++ = src[(8*ty+r)*w+2*tx];
+			*dst++ = src[(8*ty+r)*w+2*tx+1];
+		}
+		shown[k] = s->img;
+	}
+	OAM[o].attr0 = OBJ_Y(s->y) | OBJ_256_COLOR | OBJ_SQUARE;
+	OAM[o].attr1 = OBJ_X(s->x) | OBJ_SIZE((s->size == 16) ? 1 : 0);
+	OAM[o].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
+}
+
+// the start lights as a 64x64 OBJ and a 32x64 one, over everything
+static int place_lamp(const view_t * v){
+
+	static const u8 * 	shown;
+	int 			tx, ty, r, k;
+
+	if(!v->lamp||(v->lamp_x >= SCREEN_W)) return 0;
+	if(shown != v->lamp){
+
+		u32 * 	dst = (u32 *)((u8 *)SPRITE_GFX+32*LAMP_TILE0);
+
+		// the two OBJs' tiles one after the other: 8 columns of tiles, then 4
+		for(k = 0; k < 2; k++) for(ty = 0; ty < 8; ty++) for(tx = 0; tx < (k ? 4 : 8); tx++) for(r = 0; r < 8; r++){
+
+			int 	x = 8*(tx+8*k), y = 8*ty+r;
+			const u32 * 	src = (const u32 *)(v->lamp+LAMP_W*y+x);
+
+			*dst++ = ((y < LAMP_H)&&(x < LAMP_W)) ? src[0] : 0;
+			*dst++ = ((y < LAMP_H)&&(x < LAMP_W)) ? src[1] : 0;
+		}
+		shown = v->lamp;
+	}
+	OAM[0].attr0 = OBJ_Y(0) | OBJ_256_COLOR | OBJ_SQUARE;
+	OAM[0].attr1 = OBJ_X(v->lamp_x) | OBJ_SIZE(3);
+	OAM[0].attr2 = OBJ_CHAR(LAMP_TILE0) | OBJ_PRIORITY(0);
+	OAM[1].attr0 = OBJ_Y(0) | OBJ_256_COLOR | OBJ_TALL;
+	OAM[1].attr1 = OBJ_X(v->lamp_x+64) | OBJ_SIZE(3);
+	OAM[1].attr2 = OBJ_CHAR(LAMP_TILE0+128) | OBJ_PRIORITY(0);
+
+	return 2;
+}
+
+// the OAM: the start lights, the race's pictures drawn after the cars,
+// the last one on top, then the cars, then the pictures drawn before them
+static void place_objs(const view_t * v){
+
+	static int 	used;
+	int 		n, k, o = place_lamp(v);
+
+	for(k = v->nspr-1; k >= v->cars_at; k--) place_sprite(o++, k, &v->spr[k]);
+	for(n = 0; n < NUM_CARS; n++, o += 2){
 
 		int sx = v->x[n] - 20, sy = v->y[n] - 20;
 		int tile = n*CAR_OBJ_BYTES/32;
 		int hidden = v->hidden[n];
 
 		// the car, then its shadow as OBJ window 5 pixels down and to the right
-		OAM[2*n].attr0 = hidden ? OBJ_DISABLE : (OBJ_Y(sy) | OBJ_256_COLOR | OBJ_SQUARE);
-		OAM[2*n].attr1 = OBJ_X(sx) | OBJ_SIZE(3);
-		OAM[2*n].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
-		OAM[2*n+1].attr0 = hidden ? OBJ_DISABLE : (OBJ_Y(sy+5) | OBJ_256_COLOR | OBJ_SQUARE | OBJ_MODE(2));
-		OAM[2*n+1].attr1 = OBJ_X(sx+5) | OBJ_SIZE(3);
-		OAM[2*n+1].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
+		OAM[o].attr0 = hidden ? OBJ_DISABLE : (OBJ_Y(sy) | OBJ_256_COLOR | OBJ_SQUARE);
+		OAM[o].attr1 = OBJ_X(sx) | OBJ_SIZE(3);
+		OAM[o].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
+		OAM[o+1].attr0 = hidden ? OBJ_DISABLE : (OBJ_Y(sy+5) | OBJ_256_COLOR | OBJ_SQUARE | OBJ_MODE(2));
+		OAM[o+1].attr1 = OBJ_X(sx+5) | OBJ_SIZE(3);
+		OAM[o+1].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
 	}
+	for(k = v->cars_at-1; k >= 0; k--) place_sprite(o++, k, &v->spr[k]);
+	for(n = o; n < used; n++) OAM[n].attr0 = OBJ_DISABLE;
+	used = o;
 }
 
 // --- the race ------------------------------------------------------------------
@@ -386,6 +508,7 @@ static const char * start_race(void){
 
 	view_drawing = 0;
 	view_ready = -1;
+	timer_ticks = 0;
 	if(race_replay_size() > sizeof(flat)) return "flat[] too small";
 	race_replay_scatter(flat_boot);
 #if defined(RACE_PRE)
@@ -415,6 +538,7 @@ static const char * start_race(void){
 #endif
 
 	race_baked = &baked;
+	race_sprite_cb = on_sprite;
 	race_setup(my_index, num_cars, &race_loaders_baked);
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
@@ -458,7 +582,7 @@ static const char * start_race(void){
 
 	for(n = 0; n < NUM_CARS; n++) shown_frame[n] = -1;
 	vis_x0 = -1;
-	race_render();
+	render_race();
 	follow_camera();
 	take_view();
 	view_drawing = 1;
@@ -505,6 +629,20 @@ static void take_view(void){
 		v->frame[n] = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6)-n*CAR_FRAMES;	// ImgOffset/CAR_IMG_BYTES
 		v->hidden[n] = (n >= NUM_OF_CARS)||(v->x[n] <= -32)||(v->x[n] >= SCREEN_W+32)||(v->y[n] <= -32)||(v->y[n] >= SCREEN_H+32);
 	}
+	// the pictures on screen
+	v->nspr = v->cars_at = 0;
+	for(n = 0; n < drawn_n; n++){
+
+		sprite_t 	s = drawn[n];
+
+		s.x -= cam_x;
+		s.y -= cam_y;
+		if((s.x <= -s.size)||(s.x >= SCREEN_W)||(s.y <= -s.size)||(s.y >= SCREEN_H)) continue;
+		v->spr[v->nspr++] = s;
+		if(n < drawn_cars) v->cars_at++;
+	}
+	v->lamp = drawn_lamp;
+	v->lamp_x = drawn_lamp_x;
 	v->position = car(MY_CAR_IDX)->Position;
 	v->lap = car(MY_CAR_IDX)->Lap;
 	v->over = (int)D(___2438c8h) > 0;
@@ -539,7 +677,7 @@ static void draw_view(void){
 		else if((tx >= vis_x0)&&(tx <= vis_x1)&&(ty >= vis_y0)&&(ty <= vis_y1)) load_tile(tx, ty);
 	}
 	for(n = 0; n < NUM_CARS; n++) upload_car(n, v);
-	place_cars(v);
+	place_objs(v);
 	hud_race(v);
 	// the page bit has no effect in mode 0; toggling it lets ojgbarun's fps= count frames
 	REG_DISPCNT ^= BACKBUFFER;
@@ -656,6 +794,7 @@ int main(void){
 #if defined(RACE_BENCH)
 		k = 1;
 		race___40164h();
+		timer_ticks++;
 #else
 		ticks_due += (vblanks - last_vblank)*TICKS_PER_SEC;
 		last_vblank = vblanks;
@@ -663,6 +802,7 @@ int main(void){
 		ticks_due -= VBLANKS_PER_SEC;
 		k = 1;
 		race___40164h();
+		timer_ticks++;
 #endif
 
 		if(!over){
@@ -684,7 +824,7 @@ int main(void){
 
 			i = isr_cycles;
 			t = cycles();
-			race_render();
+			render_race();
 			race_render_after();
 			render += cycles()-t-(isr_cycles-i);
 			if((int)D(___2438c8h) > RACE_OVER){

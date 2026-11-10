@@ -51,9 +51,11 @@ void race___40164h(void);
 	extern int TRX_HEIGHT;
 
 // what the game's keyboard and timer give race_render() and the timer
-// interrupt, as in gba/race: no keys, the AI drives
+// interrupt, as in gba/race: no keys, the AI drives, and the 70 Hz
+// counter the animations go by counts the timer's ticks
 __BYTE__ kmap[256];
-__DWORD__ __GET_FRAME_COUNTER(void){ return 0; }
+static __DWORD__ timer_ticks;
+__DWORD__ __GET_FRAME_COUNTER(void){ return timer_ticks; }
 
 // sound isn't replayed
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2){}
@@ -179,6 +181,7 @@ static int race(char * argv[]){
 	while((int)D(___2438c8h) <= 0x12c){
 
 		race___40164h();
+		timer_ticks++;
 		race_logic();
 		race_render();
 		race_render_after();

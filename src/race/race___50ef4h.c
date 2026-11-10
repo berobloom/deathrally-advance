@@ -50,6 +50,7 @@ DR_HOT void race___50ef4h(void){
 
 			if((i0 >= 4 + CURRENT_VIEWPORT_X)&&((i0+4) < 0x140)&&(j0 >= 4)&&((j0+4) < 0xc8)){
 
+				race_sprite(RACE_SMOKE_BPK+0x40*((car->__1e2[n]-1)/4), 8, 8, i0+0x5c, j0-4);
 				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((car->__1e2[n]-1)/4));
 			}
 
@@ -65,6 +66,7 @@ DR_HOT void race___50ef4h(void){
 
 			if((i0 >= 4 + CURRENT_VIEWPORT_X)&&((i0+4) < 0x140)&&(j0 >= 4)&&((j0+4) < 0xc8)){
 
+				race_sprite(RACE_SMOKE_BPK+0x40*((car->__21e[n]-1)/4), 8, 8, i0+0x5c, j0-4);
 				if(race_draw) helper_copy(BACKBUFFER, i0+0x5c, j0-4, RACE_SMOKE_BPK+0x40*((car->__21e[n]-1)/4));
 			}
 

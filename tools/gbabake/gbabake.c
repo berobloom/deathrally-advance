@@ -24,6 +24,8 @@
 //   varjo.tab
 //   drv.dat      TRn-DRV.DAT and TRn-OHI.DAT
 //   ohi.dat
+//   sprites.bin  the race's pictures drawn over the track: race_sprite_files[]
+//                decoded, one after the other
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
 //   blowi.bin
 //   obstacle.bin
@@ -247,6 +249,22 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	bake_entry(bpa_name, entry, outdir, "drv.dat", 0x800);
 	snprintf(entry, sizeof(entry), "TR%d-OHI.DAT", track);
 	bake_entry(bpa_name, entry, outdir, "ohi.dat", 0x400);
+
+	// the race's pictures drawn over the track, one after the other
+	{
+		unsigned 	size = 0, o;
+
+		for(i = 0; i < RACE_SPRITE_FILES; i++) size += race_sprite_files[i].size;
+		buf = calloc(1, size);
+		for(i = o = 0; i < RACE_SPRITE_FILES; o += race_sprite_files[i++].size){
+
+			src = read_entry("ENGINE.BPA", race_sprite_files[i].name);
+			bpk_decode2(buf+o, src);
+			free(src);
+		}
+		write_file(outdir, "sprites.bin", buf, size);
+		free(buf);
+	}
 
 	bake_bpk2("MINES1A.BPK", outdir, "mines1a.bin", 0x140);
 	bake_bpk2("BLOWI.BPK", outdir, "blowi.bin", 0x600);

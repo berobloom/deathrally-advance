@@ -15,6 +15,14 @@
 	extern __POINTER__ RACE_OBSTACLE_BPK;
 	extern __POINTER__ RACE_MINES1A_BPK;
 	extern __POINTER__ RACE_BLOWI_BPK;
+	extern __POINTER__ RACE_SMOKE_BPK;
+	extern __POINTER__ RACE_PEDESTR_BPK;
+	extern __POINTER__ RACE_SPLATX_BPK[2];
+	extern __POINTER__ RACE_ROCKETX_BPK[2];
+	extern __POINTER__ RACE_BURN1A_BPK;
+	extern __POINTER__ RACE_SHOTS_BPK;
+	extern __POINTER__ RACE_FLAMEX_BPK[6];
+	extern __POINTER__ GEN_LAM_BPK;
 	extern __BYTE__ VARJO_TAB[0x100];
 	extern __BYTE__ TRX_LIT_TAB[0x100];
 	extern __BYTE__ TRX_BLO_TAB[0x100];
@@ -61,6 +69,20 @@ static void baked_alloc(void){
 	RACE_OBSTACLE_BPK = race_baked->obstacles;
 	RACE_MINES1A_BPK = (__POINTER__)race_baked->mines1a;
 	RACE_BLOWI_BPK = (__POINTER__)race_baked->blowi;
+
+	// the pictures drawn over the track, in race_sprite_files[]'s order
+	if(race_baked->sprites){
+
+		__POINTER__ * 	to[RACE_SPRITE_FILES] = {
+			&RACE_SMOKE_BPK, &RACE_PEDESTR_BPK, &RACE_SPLATX_BPK[0], &RACE_SPLATX_BPK[1],
+			&RACE_ROCKETX_BPK[0], &RACE_ROCKETX_BPK[1], &RACE_BURN1A_BPK, &RACE_SHOTS_BPK,
+			&RACE_FLAMEX_BPK[0], &RACE_FLAMEX_BPK[1], &RACE_FLAMEX_BPK[2], &RACE_FLAMEX_BPK[3],
+			&RACE_FLAMEX_BPK[4], &RACE_FLAMEX_BPK[5], &GEN_LAM_BPK
+		};
+		unsigned 	i, o;
+
+		for(i = o = 0; i < RACE_SPRITE_FILES; o += race_sprite_files[i++].size) *to[i] = (__POINTER__)race_baked->sprites+o;
+	}
 }
 
 // race___42824h() without what is only drawn. The cars aren't recolored:
