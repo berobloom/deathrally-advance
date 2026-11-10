@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware, mostly at 60 frames per second. There are no menus, sound, skid marks or explosions yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. There are no menus, sound, skid marks or explosions yet. See [Status](#status).
 
 ## Game Data
 
@@ -63,23 +63,25 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 
 ### A Race on the GBA
 
-`gba/race` puts the two together: the game's race code runs the race, and the GBA draws it the way `gba/proto` does. Each frame it does what the desktop game's race loop does:
+`gba/race` puts the two together: the game's race code runs the race, and the GBA draws it the way `gba/proto` does. For each tick of the game's 70 Hz timer it does what the desktop game's race loop does for a frame:
 
-* The GBA's buttons become the keyboard state that the game's 70 Hz timer interrupt (`race___40164h()`) turns into your car's controls.
-* `race_logic()` runs the ticks that are due, with the AI driving the other three cars.
+* The GBA's buttons become the keyboard state that the game's timer interrupt (`race___40164h()`) turns into your car's controls.
+* `race_logic()` runs the tick, with the AI driving the other three cars.
 * `race_render()` keeps the camera, animations, lap times and other state that the desktop updates while drawing. Built with `DR_RACE_NODRAW`, it skips the drawing itself. A desktop check (`DR_CHECK_NODRAW=1` in a `make ticklog` build) runs every frame of a race both ways and finds no difference in the race.
 * The cars' sprites come from their positions and rotation frames in the game's car structs, and the camera from the game's own look-ahead.
 
+That's one tick for each `race_logic()` call, as the original did on its 70 Hz VGA screen. The GBA shows 60 frames a second, so every sixth frame has two ticks to run. The vblank interrupt draws the state after the last finished tick, so a tick can run on into the next frame without holding the screen up.
+
 The race is set up by the game's own setup code, `race_setup()` in `src/race/race_setup.c`, as on the desktop. Instead of reading and decoding the game's files, it uses the track and the car images that `tools/gbabake` decoded and baked into the ROM (`src/race/race_load_baked.c`). The track's maps stay in ROM. The menus' part, `race_quick()` in `src/race/race_quick.c`, sets up a quick race: you in a Camaro against three of the game's drivers, four laps, with a new random seed for every race.
 
-Setting up takes 75 frames. Checks that it's the same setup as the desktop's:
+Setting up takes about 30 frames. Checks that it's the same setup as the desktop's:
 
 * A `make ticklog` build run with `DR_CHECK_SETUP=DIR` sets each race up twice in child processes: from the game's files and from the bakes in `DIR/TRn`. It compares everything the race logic uses: its globals, the track maps, which pixels of the cars are solid, and the obstacles. They're the same on every track tried.
 * `tools/replay --quick TRACK BAKEDIR SEED` does the GBA's setup on the desktop. Its hash matches the one `gba/race` logs for the same seed, on every track tried. `tools/replay --setup TICKPRE.BIN BAKEDIR TICKLOG.BIN` sets up from the state the desktop menus left, and finds only the AI flag and two timer counters different from the recorded race's first frame.
 
 Comparing the two found a bug in the decompiled code: two calls to the random number generator in one statement, whose order C leaves open. The desktop and the GBA compilers placed the race's power-ups differently. They're now called in the desktop's order.
 
-In mGBA a whole race runs at 59.5 frames per second on average. Most seconds run at a full 60, and none drops below 56. When a frame runs long the game slows down rather than skipping ticks. To keep the game at 60 frames per second it runs one tick a frame by default, so it plays at 6/7 of its real speed. `make TICKS=70` gives the real speed, but then it runs at 30 frames per second.
+In mGBA, with the AI driving all four cars, a whole race runs at 60.0 frames per second at the real 70 ticks a second, on all ten tracks. At most two seconds a race show 59, which is one frame shown twice. If the logic falls more than two ticks behind, the game slows down rather than catching up. `make TICKS=60` runs one tick a frame, at 6/7 of the game's speed. `RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=n"` builds a benchmark: one tick a frame however long it takes, with the AI driving your car. At the end it logs the cost of a tick and a hash of the race, which a change that is meant to keep the race the same must not move.
 
 ### Building
 
@@ -126,13 +128,12 @@ Its meter shows frames per second and the share of the CPU used. The HUD shows y
 
 ### Status
 
-Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it.
+Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed.
 
 Not done yet:
 
 * Reversed tracks, and the track's buildings, which the baked setup leaves out.
 * Choosing the track, the cars and the opponents. One ROM has one track and a fixed quick race.
-* A steady 60 frames per second at the game's real speed. In the busiest stretches a tick of the logic takes up to about 213,000 cycles. The game's real 70 ticks a second needs about 190,000.
 * Skid marks, wrecks and the track under obstacles, which the race code draws into the track image. The port needs a writable overlay for the tiles they touch.
 * Explosions, spectators, mines, shots and the rest of the race's pictures, and the race's own HUD.
 * Menus, shops and the underground market, which are drawn at 640x480.

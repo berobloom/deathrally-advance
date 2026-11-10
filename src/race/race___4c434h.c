@@ -31,6 +31,9 @@
 
 int rand_watcom106(void);
 
+// mask pixels read 4 at a time, which the GBA reads from ROM about as fast as one
+typedef __DWORD__ __attribute__((may_alias)) px4_t;
+
 static __DWORD__ helper00(int i){
 
 	__DWORD__	edx, rslt;
@@ -59,11 +62,13 @@ static __DWORD__ helper00(int i){
 // the first of the car's 40x40 pixels, row by row, that is solid in its
 // image (img) and a wall in the mask under it (mas, the pixel under the
 // image's first): the wall's mask value, with its column and row in
-// ___243cb0h and ___243cb4h, or 0xf if there is none. Only the pixels in
-// the 8x8 blocks of the wall map that have walls are searched
-DR_HOT static __DWORD__ helper02(__BYTE__ * img, __BYTE__ * mas, int x, int y){
+// ___243cb0h and ___243cb4h, or 0xf if there is none. Only the rows of
+// the 8x8 blocks of the wall map that have walls are searched, and in
+// them only the pixels between the row's first and last solid pixel
+// (rows, race_car_rows()) and the first and last block with walls
+DR_HOT static __DWORD__ helper02(__BYTE__ * img, const __BYTE__ * rows, __BYTE__ * mas, int x, int y){
 
-	int 		i, j, k, end, i0, i1, w = TRX_WIDTH;
+	int 		i, j, end, i0, i1, full, w = TRX_WIDTH;
 	unsigned 	cells;
 
 	for(j = 0; j < 0x28; j = end){
@@ -72,27 +77,71 @@ DR_HOT static __DWORD__ helper02(__BYTE__ * img, __BYTE__ * mas, int x, int y){
 		if(end > 0x28) end = 0x28;
 		if(!(cells = race_walls_cells(x, y+j, 0x28, end-j))) continue;
 
-		for(; j < end; j++){
+		// the blocks without walls have no wall pixels, so a row is
+		// searched from the first block with walls to the last. Past the
+		// track's edges cells has all of them, so all of the row is
+		{
+			int 	c0 = 0, c1 = 5;
 
-			// the block columns, at most 6 of them, from x's
-			for(k = 0; k < 6; k++){
+			while(!(cells&(1u << c0))) c0++;
+			while(!(cells&(1u << c1))) c1--;
+			c0 = ((x >> 3)+c0)*8-x;
+			c1 = ((x >> 3)+c1+1)*8-x;
 
-				if(!(cells&(1u << k))) continue;
+			for(; j < end; j++){
 
-				i0 = ((x >> 3)+k)*8-x;
-				i1 = i0+8;
-				if(i0 < 0) i0 = 0;
-				if(i1 > 0x28) i1 = 0x28;
+				const __BYTE__ * 	m = mas+w*j;
+				const px4_t * 		q;
+				unsigned long 		e;
+				__DWORD__ 		px;
 
-				for(i = i0; i < i1; i++){
+				i0 = rows[2*j]&0x7f;
+				i1 = rows[2*j+1]+1;
+				full = rows[2*j]&0x80;
+				if(i0 < c0) i0 = c0;
+				if(i1 > c1) i1 = c1;
+				if(i0 >= i1) continue;
 
-					if(((signed char)img[0x28*j+i] > 3)&&((mas[w*j+i]&0xf) < 4)){
+				// 4 pixels at a time where the words read are in the mask
+				if((w&3)||((unsigned long)TRX_MAS&3)||(m+i0 < TRX_MAS)||(m+i1 > TRX_MAS+w*TRX_HEIGHT)){
 
-						D(___243cb0h) = i;
-						D(___243cb4h) = j;
+					for(i = i0; i < i1; i++){
 
-						return mas[w*j+i]&0xf;
+						if((full||((signed char)img[0x28*j+i] > 3))&&((m[i]&0xf) < 4)){
+
+							D(___243cb0h) = i;
+							D(___243cb4h) = j;
+
+							return m[i]&0xf;
+						}
 					}
+					continue;
+				}
+
+				q = (const px4_t *)((unsigned long)(m+i0)&~3ul);
+				e = (unsigned long)(m+i1);
+				// bit 0 of each byte: a wall, mask value below 4
+				px = ~((*q >> 2)|(*q >> 3)) & (0x01010101u << (8*((unsigned long)(m+i0)&3)));
+
+				while(1){
+
+					if((unsigned long)(q+1) > e) px &= 0x01010101u >> (8*((unsigned long)(q+1)-e));
+					while(px){
+
+						i = (const __BYTE__ *)q-m;
+						if(px&0x0101) i += (px&1) ? 0 : 1;
+						else i += (px&0x10000) ? 2 : 3;
+						if(full||((signed char)img[0x28*j+i] > 3)){
+
+							D(___243cb0h) = i;
+							D(___243cb4h) = j;
+
+							return m[i]&0xf;
+						}
+						px &= px-1;
+					}
+					if((unsigned long)++q >= e) break;
+					px = ~((*q >> 2)|(*q >> 3)) & 0x01010101;
 				}
 			}
 		}
@@ -337,7 +386,7 @@ void race___4c434h(void){
 	ecx = (int)(car->__15e+car->YLocation-20.0f);
 	ebxp = race_car_img(car->ImgOffset);
 	edip = TRX_MAS+(int)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)car->__15a;
-	esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, ecx);
+	esi = helper02(ebxp, race_car_rows(car->ImgOffset), edip, (int)car->XLocation-0x14+(int)car->__15a, ecx);
 
 	car->__14 = esi;
 
@@ -398,7 +447,7 @@ void race___4c434h(void){
 				car->XLocation += car->__162;
 				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)car->__15a;
 				ebxp = race_car_img(car->ImgOffset);
-				esi = helper02(ebxp, edip, (int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c));
+				esi = helper02(ebxp, race_car_rows(car->ImgOffset), edip, (int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c));
 
 				car->__14 = esi;
 

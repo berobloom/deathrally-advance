@@ -29,6 +29,8 @@
 //   obstacle.bin
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
 //                96 frames of 40x40 each, not recolored
+//   cars.shp     the shapes the race code asks of them, race_car_shapes_t
+//                for each car image
 //   cars-all.obj the same as sprites, as in cars.obj, for each car image
 //                in each of the 4 places' colors: [image][place][frame]
 //
@@ -44,6 +46,7 @@
 
 #include "drally.h"
 #include "bpa.h"
+#include "drally_race.h"
 
 void bpk_decode2(__POINTER__ dst, __POINTER__ src);
 void bpk_decode4(__DWORD__ size, __DWORD__ offset, __POINTER__ dst, __POINTER__ src);
@@ -212,6 +215,7 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	char 		bpa_name[16], entry[32];
 	int 		wq = w >> 2, hq = h >> 2, v, n, i;
 	__POINTER__ 	src, buf, cars, car;
+	race_car_shapes_t * 	shapes;
 	FILE * 		fd;
 
 	snprintf(bpa_name, sizeof(bpa_name), "TR%d.BPA", track);
@@ -257,6 +261,10 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 		free(src);
 	}
 	write_file(outdir, "cars.img", cars, 13*CAR_FRAMES*CAR_W*CAR_W);
+	shapes = calloc(13, sizeof(race_car_shapes_t));
+	for(v = 0; v < 13; v++) race_car_shapes(cars+v*CAR_FRAMES*CAR_W*CAR_W, &shapes[v]);
+	write_file(outdir, "cars.shp", shapes, 13*sizeof(race_car_shapes_t));
+	free(shapes);
 
 	// recolored as race___42824h() does for the car in place n
 	fd = out(outdir, "cars-all.obj");

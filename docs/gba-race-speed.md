@@ -50,9 +50,29 @@ The busiest 1,000 frames (the start, with all cars close together) take 180,000 
 - **An exact shortcut can be checked exhaustively.** `dRMath_divdf()` replaces `(float)((double)f/1.15)` with a multiply, and divides only where that could round differently. It was compared with the division for every one of the 2^32 float bit patterns.
 - **Word loads need aligned addresses, and nothing says so.** On the ARM7 an unaligned `ldr` reads rotated bytes without an error. `DR_ALIGNED` applies only to the files listed in `src/race/aligned.mk`. Drawing code writes 4 pixels at any x, so it stays with byte loads. `make ALIGNED_CHECK=1` (desktop) and `ALIGNED_CHECK=1` (GBA builds) count every unaligned access in those files, and `race_replay_start()` refuses globals that aren't word-aligned.
 
+## The Real 70 Ticks a Second in `gba/race`
+
+`gba/race` now runs at the game's real speed at 60 frames per second. Measured with its benchmark build (`RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=1"`: the AI drives all four cars, one tick a frame, and a hash of the race at its end), on TR8:
+
+| Step | Cycles a tick (average) | Slowest tick | Ticks over 225,000 | Race hash |
+|---|---:|---:|---:|---|
+| Before | 181,700 | 343,700 | 246 | same |
+| ROM at 3/1 wait states instead of 3/2 (`WAITCNT` 0x4017) | 152,000 | 308,600 | 59 | same |
+| The car's wall test (`4c434h`'s `helper02`) only between each row's first and last solid pixel | 148,500 | 281,700 | 28 | same |
+| ...and 4 mask pixels at a time, from the first block with walls to the last | 146,100 | 250,100 | 11 | same |
+
+The race hash stayed the same on TR0, TR1, TR3, TR5, TR8 and TR9.
+
+- **Wait states.** Most commercial cartridges run ROM at 3/1. The race code is Thumb code read from ROM, mostly in sequence, so the sequential wait state counts for nearly everything. This is the one step here that depends on the cartridge, so it's the first thing to check on real hardware.
+- **The slowest ticks come from the cars getting unstuck from walls.** When a car hits a wall, `4c434h` moves it by random steps until its 40x40 pixels are clear, and it searches the pixels against the track's mask for every step. Each row of each car image now has its first and last solid column, and a flag for whether everything in between is solid. A full row isn't read from the image at all. Blocks of the wall map without walls have no wall pixels, so a row's mask is searched from the first block with walls to the last, 4 pixels to a word load. The first hit is still the same pixel.
+- **The car shapes are baked.** `race_car_shapes()` (`src/race/race_car_shapes.c`) builds the boxes and the row spans of a car's 96 images. `tools/gbabake` writes them for every car image to `cars.shp`, and the desktop builds them at setup. Setting a race up takes about 30 frames instead of 60-80, because the GBA no longer reads all of the car images to build them.
+- **Ticks, not frames.** At 70 ticks a second, every sixth frame has two. When `race_logic()` ran both in one call, that frame took about 330,000 cycles and the screen dropped to 50 frames per second. `gba/race` now calls `race_logic()` and `race_render()` once for each tick, as the original did on its 70 Hz VGA screen. The vblank interrupt draws the last finished tick: a snapshot of the camera, the cars' places and frames, and the HUD. So a tick that runs into the next frame still gets drawn, as long as some tick finishes in every frame. On average 7 ticks take about 1,230,000 of a 6-frame 1,685,000 cycles.
+
+With the AI driving, whole races on all ten tracks run at 60.0 frames per second. At most two seconds a race show 59.
+
 ## Next Steps, Most Promising First
 
-Items 1-4 below are done. The logic now runs in a playable race, `gba/race`, so its budget there is what counts. A frame is 280,896 cycles. Drawing takes about 28,000 of them, and `race_render()` without its drawing takes about 25,000. That leaves about 225,000 for the logic at one tick a frame, and about 190,000 a tick at the game's real 70 ticks a second. In the busiest stretches of a race a tick now takes up to 213,000 (it was 240,000), and a whole race runs at 59.5 frames per second, no second below 56. The real 70 ticks a second still needs about 10% more.
+Items 1-4 below are done, and the race runs at full speed. The rest would make room for what the race doesn't do yet (skid marks, explosions, sound).
 
 1. **(Done) Byte-wise struct access.** `struct_35e_t` (the cars) is `#pragma pack(push,1)` in `include/drally_structs_free.h`. Several race files also put `#pragma pack(1)` before their own structs, for example `spectator_t` in `race___52ac4h.c`, and without a pop it applies to the rest of the file. GCC therefore reads every 32-bit car field as 4 byte loads plus 3 shifts and 3 ORs. Checked with the ARM compiler:
    - `pack(2)` gives exactly the same layout as `pack(1)` for all five structs in that header.
@@ -62,7 +82,7 @@ Items 1-4 below are done. The logic now runs in a playable race, `gba/race`, so 
 2. **(Done) The `D()`/`F32()` macros** (`include/drally.h`) read through a packed `may_alias` struct, which means byte loads on the GBA. For globals known to be 4-aligned (most of the `___xxxxxxh` arrays), a word-access variant would be much cheaper. Do the hottest files first.
 3. **(Done for `4dcach`) The double divisions that are left** (`__divdf3`, about 3% of the logic): `race___4dcach` divides by 1.15 and 1.2 three times per car, and there are others. Each costs hundreds of cycles. Replacing them with float, or with multiplying by the reciprocal, is a new-math step.
 4. **(Done) `sqrtf`** (newlib, Thumb in ROM, about 2%). Copy `libm`'s `ef_sqrt` object into IWRAM the way `gba/replay/Makefile` does for libgcc.
-5. **More `DR_HOT`:** IWRAM ends at about 27.5 KB of 32 KB, so little is left after the stack. Moving `car_boxes` (1.5 KB) and other cold data to EWRAM would make room. Candidates are `helper_machine_gun`, `race___52ac4h`'s spectator loop, the obstacle and skid-mark draw helpers, and `race___55ae0h`. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
+5. **More `DR_HOT`:** IWRAM ends at about 29 KB of 32 KB, and the stack, which the vblank interrupt now adds to, has about 1.1 KB that a race never touches. Moving cold data to EWRAM would make room: newlib's `__malloc_av_`, `_impure_data`, `__global_locale` and `__sf` take about 2.5 KB, and the game's `___1a51d0h` 768 bytes. Candidates are `race___55ae0h`, the skid-mark helpers in `race___54668h`, and `race___4b62ch`'s inner loops. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
 6. The rest of the AI and physics float math into fixed point, if the steps above don't reach the target.
 
 ## How to Measure

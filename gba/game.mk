@@ -72,6 +72,9 @@ $(RACE_ALIGNED_SRCS:%.c=$(BUILD)/game/%.o): CFLAGS += $(ALIGNED_FLAGS)
 # counters.c holds the check's counts
 $(BUILD)/game/core/counters.o: CFLAGS += $(if $(ALIGNED_CHECK),-DDR_ALIGNED_CHECK)
 
+# -MMD: a changed header rebuilds the files that include it
 $(BUILD)/game/%.o: ../../src/%.c
 	@mkdir -p $(@D)
-	@$(CC) $(CFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
+
+-include $(GAME_OBJS:.o=.d)

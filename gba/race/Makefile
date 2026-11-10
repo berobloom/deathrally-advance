@@ -9,6 +9,11 @@
 # PRE=game/TICKPRE.BIN starts instead from the state the desktop game's
 # menus left for a race on that track (make ticklog in the top directory,
 # then race once), to check the GBA's setup against the desktop's.
+#
+# TICKS=60 runs a tick a frame, at 6/7 of the game's speed.
+# RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=n" times a whole race with the AI
+# driving every car, a tick a frame so that the race doesn't depend on the
+# code's speed, and logs a hash of the race at its end.
 
 GAME ?= ../../game
 TRACK ?= 8
@@ -55,7 +60,7 @@ $(BAKE)/.done: $(BAKETOOL)
 	$(BAKETOOL) $(GAME) $(TRACK) $(BAKE)
 	touch $@
 
-$(BAKETOOL): ../../tools/gbabake/gbabake.c ../../src/data/bpa.c ../../src/data/bpk.c
+$(BAKETOOL): ../../tools/gbabake/gbabake.c ../../src/data/bpa.c ../../src/data/bpk.c ../../src/race/race_car_shapes.c
 	$(MAKE) -C ../../tools/gbabake
 
 .PHONY: all clean FORCE

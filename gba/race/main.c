@@ -38,6 +38,7 @@ extern const u8 track_mas[], setup_inf[], setup_vai[], setup_lr1[];
 extern const u8 setup_ski[], setup_blo[], setup_lit[], setup_varjo[], setup_drv[], setup_ohi[];
 extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
 extern const u8 cars_img[];
+extern const race_car_shapes_t cars_shp[];
 extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -81,18 +82,19 @@ void race___40164h(void);
 #define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
 #define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars_obj
 #define NUM_CARS		4
-// the game's timer runs at 70 Hz. A tick of the logic takes up to about
-// 210,000 cycles (gba/replay), so 70 of them leave too little of the
-// GBA's 60 frames for the rest: by default the race runs a tick a frame,
-// at 6/7 of its speed. make TICKS=70 gives the real speed and drops frames
+// the game's timer runs at 70 Hz, 7 ticks every 6 frames. Each tick runs
+// race_logic() and race_render() once, as the game did on its 70 Hz VGA
+// screen, and the vblank interrupt draws the last finished one, so a tick
+// that runs into the next frame doesn't hold the screen up. make TICKS=60
+// runs a tick a frame, at 6/7 of the game's speed
 #if !defined(TICKS_PER_SEC)
-#define TICKS_PER_SEC		60
+#define TICKS_PER_SEC		70
 #endif
 #define VBLANKS_PER_SEC		60
 #define FRAME_CYCLES		280896		// one 59.73 Hz frame of the 16.78 MHz CPU
-// at most what one frame is due, so that a slow frame isn't made up for
-// with more ticks, which would make the next one slower still
-#define MAX_TICKS		((TICKS_PER_SEC+VBLANKS_PER_SEC-1)/VBLANKS_PER_SEC)
+// at most two ticks behind: after a longer hold-up the game slows down
+// instead of racing to catch up
+#define MAX_DUE			(3*VBLANKS_PER_SEC-1)
 // unmapped on the GBA: writes go nowhere, also on real hardware, where a
 // write to ROM could reach a flash cartridge's command registers
 #define NOWHERE			((__POINTER__)0x00010000)
@@ -115,7 +117,9 @@ void race___40164h(void);
 #define KEY_SCAN_MINE		DR_SCAN_SPACE
 #define KEY_SCAN_HORN		DR_SCAN_H
 
-__BYTE__ kmap[256];
+// in EWRAM, like the other tables here that aren't read often: IWRAM
+// is kept for the stack, which the vblank interrupt now adds to
+EWRAM_BSS __BYTE__ kmap[256];
 
 // the game's timer interrupt counts these; nothing here waits on them
 __DWORD__ __GET_FRAME_COUNTER(void){ return 0; }
@@ -136,7 +140,7 @@ static const race_baked_t baked = {
 	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
 	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
-	.cars = cars_img,
+	.cars = cars_img, .shapes = cars_shp,
 	// the logic draws skid marks into the track image, which isn't kept
 	.ima = NOWHERE, .obstacles = obstacles
 };
@@ -148,8 +152,12 @@ static int vis_x0 = -1, vis_y0, vis_x1, vis_y1;
 static int shown_frame[NUM_CARS];	// rotation frame in each car's OBJ VRAM
 static const u8 * car_frames[NUM_CARS];	// each car's frames in cars_obj
 static volatile u32 vblanks;
-static u8 ring_row[256];		// ty % RING_H, without dividing
+EWRAM_BSS static u8 ring_row[256];		// ty % RING_H, without dividing
 static int debug_log;
+#if defined(RACE_BENCH)
+static u32 bench_ticks, bench_max, bench_over190, bench_over200, bench_over225;
+static unsigned long long bench_logic;
+#endif
 
 static void copy32(void * dst, const void * src, u32 bytes){
 
@@ -183,9 +191,13 @@ static u32 cycles(void){
 	return ((u32)hi << 16) | lo;
 }
 
+static void draw_view(void);
+static void take_view(void);
+
 static void vblank_handler(void){
 
 	vblanks++;
+	draw_view();
 }
 
 // --- track background ----------------------------------------------------
@@ -199,7 +211,7 @@ static void load_tile(int tx, int ty){
 }
 
 // load the tiles that came into view since the last call, then scroll
-static void update_track(void){
+static void update_track(int cam_x, int cam_y){
 
 	int x0 = cam_x >> 3, y0 = cam_y >> 3;
 	int x1 = (cam_x + SCREEN_W - 1) >> 3, y1 = (cam_y + SCREEN_H - 1) >> 3;
@@ -237,7 +249,7 @@ static const u8 hud_font[][7] = {
 	{1,1,2,4,8,16,16}, {0,0,0,0,0,0,0}
 };
 
-static u8 hud_glyph[128];		// glyph number of each character
+EWRAM_BSS static u8 hud_glyph[128];		// glyph number of each character
 
 static int closest_color(int r, int g, int b){
 
@@ -305,20 +317,28 @@ static struct_35e_t * car(int n){
 	return &((struct_35e_t *)___1e6ed0h)[n];
 }
 
-static int car_on_screen(int n){
+// what the screen shows: the state after the last whole frame of the
+// logic, taken by take_view() and drawn by the vblank interrupt
+typedef struct {
+	int 	cam_x, cam_y;
+	int 	x[NUM_CARS], y[NUM_CARS];	// the cars' centers on the screen
+	int 	frame[NUM_CARS];		// their rotation frames
+	int 	hidden[NUM_CARS];
+	int 	position, lap, over;
+} view_t;
 
-	int sx = (int)car(n)->XLocation - cam_x, sy = (int)car(n)->YLocation - cam_y;
+static view_t views[2];
+static int view_next;			// the one take_view() fills
+static volatile int view_ready = -1;	// the one to draw at the next vblank
+static volatile int view_drawing;	// 0 while a race is set up
+static volatile u32 views_drawn, isr_cycles;
 
-	return (sx > -32)&&(sx < SCREEN_W+32)&&(sy > -32)&&(sy < SCREEN_H+32);
-}
+// copy a car's rotation frame into its OBJ VRAM if it changed and is in view
+static void upload_car(int n, const view_t * v){
 
-// copy a car's rotation frame into its OBJ VRAM if it changed and is in
-// view. Car n's ImgOffset points into the n-th of 4 car images
-static void upload_car(int n){
+	int 	r, frame = v->frame[n];
 
-	int frame = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6)-n*CAR_FRAMES, r;	// ImgOffset/CAR_IMG_BYTES
-
-	if((frame == shown_frame[n])||!car_on_screen(n)) return;
+	if((frame == shown_frame[n])||v->hidden[n]) return;
 	// a row of tiles at a time: the sprite's rows are 8 tiles wide
 	for(r = 0; r < CAR_TILES; r++){
 
@@ -327,15 +347,15 @@ static void upload_car(int n){
 	shown_frame[n] = frame;
 }
 
-static void place_cars(void){
+static void place_cars(const view_t * v){
 
 	int n;
 
 	for(n = 0; n < NUM_CARS; n++){
 
-		int sx = (int)car(n)->XLocation - cam_x - 20, sy = (int)car(n)->YLocation - cam_y - 20;
+		int sx = v->x[n] - 20, sy = v->y[n] - 20;
 		int tile = n*CAR_OBJ_BYTES/32;
-		int hidden = (n >= NUM_OF_CARS)||!car_on_screen(n);
+		int hidden = v->hidden[n];
 
 		// the car, then its shadow as OBJ window 5 pixels down and to the right
 		OAM[2*n].attr0 = hidden ? OBJ_DISABLE : (OBJ_Y(sy) | OBJ_256_COLOR | OBJ_SQUARE);
@@ -365,6 +385,8 @@ static const char * start_race(void){
 
 	int 		n, my_index, num_cars;
 
+	view_drawing = 0;
+	view_ready = -1;
 	if(race_replay_size() > sizeof(flat)) return "flat[] too small";
 	race_replay_scatter(flat_boot);
 #if defined(RACE_PRE)
@@ -415,7 +437,11 @@ static const char * start_race(void){
 		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n)*NUM_CARS+n : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
 	}
 
+#if defined(RACE_BENCH)
+	D(___243ce0h) = 1;	// the AI drives your car too
+#else
 	D(___243ce0h) = 0;	// you drive, not the AI
+#endif
 	// the wide view, which the HUD part of race_render() assumes
 	CURRENT_VIEWPORT_W = 0x140;
 	CURRENT_VIEWPORT_X = 0;
@@ -433,6 +459,10 @@ static const char * start_race(void){
 
 	for(n = 0; n < NUM_CARS; n++) shown_frame[n] = -1;
 	vis_x0 = -1;
+	race_render();
+	follow_camera();
+	take_view();
+	view_drawing = 1;
 
 	return 0;
 }
@@ -450,23 +480,71 @@ static void read_keys(u16 keys, u16 down){
 	if(down & KEY_SELECT) kmap[KEY_SCAN_MINE] = 1;
 }
 
-static void hud_race(void){
+static void hud_race(const view_t * v){
 
 	char 	line[16], * p = line;
 
-	*p++ = 'P'; p = put_num(p, car(MY_CAR_IDX)->Position, 1);
-	*p++ = ' '; *p++ = 'L'; p = put_num(p, car(MY_CAR_IDX)->Lap, 2);
+	*p++ = 'P'; p = put_num(p, v->position, 1);
+	*p++ = ' '; *p++ = 'L'; p = put_num(p, v->lap, 2);
 	*p = 0;
 	hud_print(0, 19, line);
-	hud_print(10, 9, ((int)D(___2438c8h) > 0) ? "RACE OVER" : "         ");
+	hud_print(10, 9, v->over ? "RACE OVER" : "         ");
+}
+
+// the state the logic left, for the next vblank to draw
+static void take_view(void){
+
+	view_t * 	v = &views[view_next];
+	int 		n;
+
+	v->cam_x = cam_x;
+	v->cam_y = cam_y;
+	for(n = 0; n < NUM_CARS; n++){
+
+		v->x[n] = (int)car(n)->XLocation - cam_x;
+		v->y[n] = (int)car(n)->YLocation - cam_y;
+		v->frame[n] = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6)-n*CAR_FRAMES;	// ImgOffset/CAR_IMG_BYTES
+		v->hidden[n] = (n >= NUM_OF_CARS)||(v->x[n] <= -32)||(v->x[n] >= SCREEN_W+32)||(v->y[n] <= -32)||(v->y[n] >= SCREEN_H+32);
+	}
+	v->position = car(MY_CAR_IDX)->Position;
+	v->lap = car(MY_CAR_IDX)->Lap;
+	v->over = (int)D(___2438c8h) > 0;
+	// the interrupt only reads views, so this needs no lock: it draws
+	// either the one before or this one
+	view_ready = view_next;
+	view_next ^= 1;
+}
+
+// in the vblank interrupt: VRAM work while the screen isn't being drawn
+static void draw_view(void){
+
+	const view_t * 	v;
+	u32 		t;
+	int 		n;
+
+	if(!view_drawing||(view_ready < 0)) return;
+	t = cycles();
+	v = &views[view_ready];
+	view_ready = -1;
+	update_track(v->cam_x, v->cam_y);
+	for(n = 0; n < NUM_CARS; n++) upload_car(n, v);
+	place_cars(v);
+	hud_race(v);
+	// the page bit has no effect in mode 0; toggling it lets ojgbarun's fps= count frames
+	REG_DISPCNT ^= BACKBUFFER;
+	views_drawn++;
+	isr_cycles += cycles()-t;
 }
 
 int main(void){
 
 	const char * 	err;
 	int 		n, frames = 0, over = 0;
-	u32 		last_vblank, last_report = 0, ticks_due = 0, t, frame_start;
-	u32 		busy = 0, logic = 0, render = 0, ticks = 0, logic_max = 0;
+	u32 		last_report = 0, last_drawn = 0, last_isr, t;
+#if !defined(RACE_BENCH)
+	u32 		last_vblank, ticks_due = 0;
+#endif
+	u32 		idle = 0, logic = 0, render = 0, ticks = 0, logic_max = 0;
 	char 		line[32];
 
 	// the IWRAM below the stack, marked so that ojgbarun's stackfree= can
@@ -478,7 +556,7 @@ int main(void){
 		for(; p < sp-64; p++) *p = 0x57AC57AC;
 	}
 
-	REG_WAITCNT = 0x4007;		// ROM at 3/2 wait states with prefetch, works on flash carts
+	REG_WAITCNT = 0x4017;		// ROM at 3/1 wait states with prefetch, works on flash carts
 	REG_DEBUG_ENABLE = 0xC0DE;
 	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
 
@@ -518,30 +596,35 @@ int main(void){
 	}
 	say("race set up in %lu frames", vblanks-t);
 
-	race_render();
-	follow_camera();
-	update_track();
-	for(n = 0; n < NUM_CARS; n++) upload_car(n);
-	place_cars();
-	VBlankIntrWait();
+	VBlankIntrWait();	// which draws it
 	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
+#if !defined(RACE_BENCH)
 	last_vblank = vblanks;
+#endif
+	last_isr = isr_cycles;
 
 	while(1){
 
 		u16 	keys, down;
 		int 	k;
+		u32 	i;
 
+#if defined(RACE_BENCH)
+		// a tick a frame, however long frames take, so that the race is
+		// the same whatever the code's speed
+		t = cycles();
 		VBlankIntrWait();
-		frame_start = cycles();
+		idle += cycles()-t;
+#else
+		// wait only while no tick is due: a frame of the logic that took
+		// too long goes on with the next straight away
+		while(ticks_due+(vblanks - last_vblank)*TICKS_PER_SEC < VBLANKS_PER_SEC){
 
-		// VRAM work first, while the screen isn't being drawn
-		update_track();
-		for(n = 0; n < NUM_CARS; n++) upload_car(n);
-		place_cars();
-		hud_race();
-		// the page bit has no effect in mode 0; toggling it lets ojgbarun's fps= count frames
-		REG_DISPCNT ^= BACKBUFFER;
+			t = cycles();
+			VBlankIntrWait();
+			idle += cycles()-t;
+		}
+#endif
 
 		scanKeys();
 		keys = keysHeld();
@@ -559,32 +642,53 @@ int main(void){
 
 		// the game's 70 Hz timer, for the vblanks since the last frame:
 		// input into your car's controls, and the ticks race_logic() runs
+#if defined(RACE_BENCH)
+		k = 1;
+		race___40164h();
+#else
 		ticks_due += (vblanks - last_vblank)*TICKS_PER_SEC;
 		last_vblank = vblanks;
-		for(k = 0; (ticks_due >= VBLANKS_PER_SEC)&&(k < MAX_TICKS); k++){
-
-			ticks_due -= VBLANKS_PER_SEC;
-			race___40164h();
-		}
-		if(ticks_due >= VBLANKS_PER_SEC) ticks_due = VBLANKS_PER_SEC-1;	// fell behind: slow down instead of catching up
+		if(ticks_due > MAX_DUE) ticks_due = MAX_DUE;
+		ticks_due -= VBLANKS_PER_SEC;
+		k = 1;
+		race___40164h();
+#endif
 
 		if(!over){
 
+			// the interrupt's drawing left out
+			i = isr_cycles;
 			t = cycles();
 			race_logic();
-			t = cycles()-t;
+			t = cycles()-t-(isr_cycles-i);
 			logic += t; ticks += k;
 			if(t > logic_max) logic_max = t;
+#if defined(RACE_BENCH)
+			bench_ticks++; bench_logic += t;
+			if(t > bench_max) bench_max = t;
+			if(t > 190000) bench_over190++;
+			if(t > 200000) bench_over200++;
+			if(t > 225000){ bench_over225++; say("BENCH slow tick %lu: %lu", bench_ticks, t); }
+#endif
 
+			i = isr_cycles;
 			t = cycles();
 			race_render();
 			race_render_after();
-			render += cycles()-t;
-			if((int)D(___2438c8h) > RACE_OVER) over = 1;
+			render += cycles()-t-(isr_cycles-i);
+			if((int)D(___2438c8h) > RACE_OVER){
+
+				over = 1;
+#if defined(RACE_BENCH)
+				race_replay_gather(flat);
+				say("BENCH end: %lu ticks, logic %llu cycles a tick, at most %lu; over 190k %lu, 200k %lu, 225k %lu; globals hash %08lx",
+					bench_ticks, bench_logic/bench_ticks, bench_max, bench_over190, bench_over200, bench_over225, race_replay_hash(flat));
+				for(n = 0; n < NUM_OF_CARS; n++) say("BENCH car %d: lap %d pos %d fin %lu", n, car(n)->Lap, car(n)->Position, car(n)->Finished);
+#endif
+			}
 		}
 		follow_camera();
-
-		busy += cycles()-frame_start;
+		take_view();
 		frames++;
 
 		if(vblanks - last_report >= VBLANKS_PER_SEC){
@@ -592,12 +696,16 @@ int main(void){
 			char * 	p = line;
 
 			// frames a second, and the CPU they took of the time there was
-			memcpy(p, "FPS", 3); p = put_num(p + 3, frames*VBLANKS_PER_SEC/(vblanks - last_report), 3);
-			memcpy(p, " CPU", 4); p = put_num(p + 4, (unsigned long long)busy*100/((vblanks - last_report)*FRAME_CYCLES), 3);
+			// the frames shown, and the CPU used of the time there was
+			u32 	shown = views_drawn - last_drawn, spent = (vblanks - last_report)*FRAME_CYCLES;
+
+			memcpy(p, "FPS", 3); p = put_num(p + 3, shown*VBLANKS_PER_SEC/(vblanks - last_report), 3);
+			memcpy(p, " CPU", 4); p = put_num(p + 4, idle < spent ? (unsigned long long)(spent-idle)*100/spent : 0, 3);
 			*p++ = '%'; *p = 0;
 			hud_print(0, 0, line);
-			say("%s: logic %lu cycles a tick, at most %lu a frame; render %lu a frame",
-				line, ticks ? logic/ticks : 0, logic_max, render/frames);
+			say("%s: %lu ticks, logic %lu cycles a tick, at most %lu a frame; render %lu, drawing %lu a frame",
+				line, ticks, ticks ? logic/ticks : 0, logic_max, frames ? render/frames : 0,
+				shown ? (isr_cycles-last_isr)/shown : 0);
 #if defined(RACE_TRACE)
 			say("me %lu ai %lu", MY_CAR_IDX, D(___243ce0h));
 			for(n = 0; n < NUM_OF_CARS; n++){
@@ -608,7 +716,9 @@ int main(void){
 #endif
 			if(&dr_misaligned&&dr_misaligned) say("ALIGNED_CHECK: %u unaligned, the first at %s:%u", dr_misaligned, dr_misaligned_file, dr_misaligned_line);
 			last_report = vblanks;
-			frames = 0; busy = logic = render = ticks = logic_max = 0;
+			last_drawn = views_drawn;
+			last_isr = isr_cycles;
+			frames = 0; idle = logic = render = ticks = logic_max = 0;
 		}
 	}
 }

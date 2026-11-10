@@ -258,6 +258,7 @@ const race_baked_t * race_baked_read(const char * dir){
 	baked->blowi = read_baked(dir, "blowi.bin", 0x600);
 	baked->obstacle = read_baked(dir, "obstacle.bin", 0x800);
 	baked->cars = read_baked(dir, "cars.img", RACE_CAR_VARIANTS*sizeof(car_spins_t));
+	baked->shapes = (const race_car_shapes_t *)read_baked(dir, "cars.shp", RACE_CAR_VARIANTS*sizeof(race_car_shapes_t));
 	baked->ima = calloc(1, w*h);
 	baked->obstacles = malloc(0x800);
 

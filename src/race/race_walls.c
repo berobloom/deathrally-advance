@@ -17,67 +17,12 @@
 static __BYTE__ * 	walls;
 static int 		walls_w, walls_h;
 
-// and the box around each car image's solid pixels (above 3), 96 images
-// of 40x40 for each of the 4 cars: first and last column, first and last
-// row, or a first column of 40 if there are none
-DR_COLD static __BYTE__ 	car_boxes[4*96][4];
-
 // pixels read 4 at a time, which the GBA reads from ROM about as fast as one
 typedef __DWORD__ __attribute__((may_alias)) px4_t;
 
-// bit 0 of each byte of the result: whether that pixel is solid, above 3
-static __DWORD__ solid4(__DWORD__ px){
-
-	px &= 0xfcfcfcfc;
-	px |= px >> 4;
-	px |= px >> 2;
-
-	return (px|(px >> 1)) & 0x01010101;
-}
-
-static void car_boxes_build(void){
-
-	int 		n, x, y, x0, x1, y0, y1;
-	const px4_t * 	img;
-	__DWORD__ 	cols[10], row;
-
-	for(n = 0; n < 4*96; n++){
-
-		// the rows with solid pixels, and the columns, as bits
-		img = (const px4_t *)race_car_img(0x640*n);
-		y0 = 0x28; y1 = 0;
-		memset(cols, 0, sizeof(cols));
-
-		for(y = 0; y < 0x28; y++){
-
-			row = 0;
-			for(x = 0; x < 10; x++){
-
-				__DWORD__ 	s = solid4(img[10*y+x]);
-
-				cols[x] |= s;
-				row |= s;
-			}
-			if(row){
-
-				if(y < y0) y0 = y;
-				y1 = y;
-			}
-		}
-
-		x0 = 0x28; x1 = 0;
-		for(x = 0; x < 0x28; x++){
-
-			if((cols[x >> 2] >> (8*(x&3)))&1){
-
-				if(x < x0) x0 = x;
-				x1 = x;
-			}
-		}
-
-		car_boxes[n][0] = x0; car_boxes[n][1] = x1; car_boxes[n][2] = y0; car_boxes[n][3] = y1;
-	}
-}
+// each car's shapes: baked ones, or built here into car_shapes
+const race_car_shapes_t * 	race_car_shape[4];
+static race_car_shapes_t * 	car_shapes;
 
 __BYTE__ * race_car_slot[4];
 
@@ -85,13 +30,11 @@ void race_car_slots_contiguous(void){
 
 	int 	n;
 
-	for(n = 0; n < 4; n++) race_car_slot[n] = ___243d74h+0x25800*n;
-}
+	for(n = 0; n < 4; n++){
 
-const __BYTE__ * race_car_box(__DWORD__ img_offset){
-
-	// img_offset/0x640, the images being below 2^21 bytes
-	return car_boxes[dRMath_div15(img_offset >> 6, 25)];
+		race_car_slot[n] = ___243d74h+0x25800*n;
+		race_car_shape[n] = 0;
+	}
 }
 
 // after the track and the car images are loaded: race___42824h() decodes
@@ -102,7 +45,14 @@ void race_walls_build(void){
 	int 		x, y, w, h, ww;
 	__BYTE__ * 	mas, * row;
 
-	car_boxes_build();
+	// the cars' shapes, where the loader has none baked
+	for(x = 0; x < 4; x++){
+
+		if(race_car_shape[x]) continue;
+		if(!car_shapes) car_shapes = malloc(4*sizeof(race_car_shapes_t));
+		race_car_shapes(race_car_slot[x], &car_shapes[x]);
+		race_car_shape[x] = &car_shapes[x];
+	}
 
 	w = TRX_WIDTH;
 	h = TRX_HEIGHT;

@@ -65,7 +65,10 @@ static void baked_load(void){
 	// race_walls_build() looks at all 4, racing or not
 	for(n = 0; n < 4; n++){
 
-		race_car_slot[n] = (__BYTE__ *)race_baked->cars+((n < NUM_OF_CARS) ? race_car_variant(n) : 0)*sizeof(car_spins_t);
+		int 	v = (n < NUM_OF_CARS) ? race_car_variant(n) : 0;
+
+		race_car_slot[n] = (__BYTE__ *)race_baked->cars+v*sizeof(car_spins_t);
+		race_car_shape[n] = race_baked->shapes+v;
 	}
 
 	memcpy(race_baked->obstacles, race_baked->obstacle, 0x800);

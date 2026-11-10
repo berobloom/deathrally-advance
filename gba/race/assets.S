@@ -27,6 +27,7 @@
 	asset	setup_blowi, blowi.bin
 	asset	setup_obstacle, obstacle.bin
 	asset	cars_img, cars.img
+	asset	cars_shp, cars.shp
 	asset	cars_obj, cars-all.obj
 #if defined(RACE_PRE)
 	asset	race_pre, pre.bin

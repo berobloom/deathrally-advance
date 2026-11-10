@@ -1,6 +1,8 @@
 #ifndef __DRALLY_RACE_H
 #define __DRALLY_RACE_H
 
+#include "drmath.h"
+
 #define RACE_NOTWIDE    1
 #define RACE_MSX        2
 #define RACE_SFX        3
@@ -28,7 +30,18 @@ void race_walls_build(void);
 void race_walls_free(void);
 int race_walls_near(int x, int y, int w, int h);
 unsigned race_walls_cells(int x, int y, int w, int h);
-const __BYTE__ * race_car_box(__DWORD__ img_offset);
+// the box around each of a car's 96 images' solid pixels (above 3): first
+// and last column, first and last row, or a first column of 40 if there
+// are none. And each of their rows' solid pixels: the first and the last
+// column, with bit 7 of the first set when all of them in between are
+// solid too, or a first column of 40 if there are none
+typedef struct {
+	__BYTE__ 	box[96][4];
+	__BYTE__ 	rows[96][0x28][2];
+} race_car_shapes_t;
+void race_car_shapes(const __BYTE__ * spins, race_car_shapes_t * out);
+// car n's, which race_walls_build() builds where the loader set none
+extern const race_car_shapes_t * race_car_shape[4];
 
 // car n's 96 rotation frames, 40x40 each, start at race_car_slot[n]. The
 // desktop has the 4 one after the other at ___243d74h; the GBA points
@@ -40,6 +53,33 @@ static inline __BYTE__ * race_car_img(__DWORD__ img_offset){
 	int 	n = (img_offset >= 0x25800)+(img_offset >= 2*0x25800)+(img_offset >= 3*0x25800);
 
 	return race_car_slot[n]+(img_offset-0x25800*n);
+}
+
+// the shapes of the image at img_offset, as race_car_img() finds it
+static inline const race_car_shapes_t * race_car_shape_of(__DWORD__ img_offset, int * frame){
+
+	int 	n = (img_offset >= 0x25800)+(img_offset >= 2*0x25800)+(img_offset >= 3*0x25800);
+
+	// (img_offset-0x25800*n)/0x640, the images being below 2^21 bytes
+	*frame = dRMath_div15((img_offset-0x25800*n) >> 6, 25);
+
+	return race_car_shape[n];
+}
+
+static inline const __BYTE__ * race_car_box(__DWORD__ img_offset){
+
+	int 	frame;
+	const race_car_shapes_t * 	s = race_car_shape_of(img_offset, &frame);
+
+	return s->box[frame];
+}
+
+static inline const __BYTE__ * race_car_rows(__DWORD__ img_offset){
+
+	int 	frame;
+	const race_car_shapes_t * 	s = race_car_shape_of(img_offset, &frame);
+
+	return s->rows[frame][0];
 }
 
 // what race_main() does to the race's state before its first frame, with
@@ -78,6 +118,7 @@ typedef struct race_baked_s {
 	const __BYTE__ *	blowi;
 	const __BYTE__ *	obstacle;	// OBSTACLE.BPK decoded, copied to obstacles
 	const __BYTE__ *	cars;		// RACE_CAR_VARIANTS car_spins_t, not recolored
+	const race_car_shapes_t * shapes;	// and their shapes
 	__POINTER__ 		ima;		// TRX_IMA, which the logic draws skid marks into
 	__BYTE__ *		obstacles;	// 0x800 bytes, the logic changes them
 } race_baked_t;
