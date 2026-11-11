@@ -55,7 +55,7 @@ static unsigned 		pool_n, pool_max, pool_full;
 static volatile unsigned short * 	slots;
 
 #define DIRTY_N 	512
-static unsigned short 		dirty[DIRTY_N];	// ty << 8 | tx
+DR_COLD static unsigned short 	dirty[DIRTY_N];	// ty << 8 | tx
 static volatile unsigned 	dirty_head, dirty_tail;
 static volatile int 		dirty_lost;
 

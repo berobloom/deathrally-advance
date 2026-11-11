@@ -21,6 +21,8 @@
 	asset	hud_bin, hud.bin
 	asset	lamps_obj, lamps.obj
 	asset	cars_obj, cars-all.obj
+	asset	sfx_bin, sfx.bin
+	asset	soundbank_bin, soundbank.bin
 #if defined(RACE_PRE)
 	asset	race_pre, pre.bin
 #endif

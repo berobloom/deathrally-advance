@@ -28,6 +28,8 @@
 #include "drally_structs_free.h"
 #include "drally_race.h"
 #include "drmath.h"
+#include <maxmod.h>
+#include "sound.h"
 #include "race_replay.h"
 
 // baked by tools/gbabake, see assets.S
@@ -150,18 +152,13 @@ EWRAM_BSS __BYTE__ kmap[256];
 static __DWORD__ timer_ticks;
 __DWORD__ __GET_FRAME_COUNTER(void){ return timer_ticks; }
 
-// no sound yet
-void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2){}
-void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){}
-void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance){}
-
 EWRAM_BSS static __BYTE__ flat[0x4000] __attribute__((aligned(4)));
 // the globals as they are at start-up: race_setup() leaves some of what a
 // race changed, so every race starts from these, like the desktop's first
 EWRAM_BSS static __BYTE__ flat_boot[0x4000] __attribute__((aligned(4)));
 EWRAM_BSS static __BYTE__ obstacles[0x800] __attribute__((aligned(4)));
 
-static race_baked_t baked = {
+EWRAM_DATA static race_baked_t baked = {
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
 	.cars = cars_img, .shapes = cars_shp, .sprites = sprites_bin, .hud = hud_bin,
 	.obstacles = obstacles
@@ -218,8 +215,10 @@ static void take_view(void);
 
 static void vblank_handler(void){
 
+	mmVBlank();		// first: it swaps the sound's buffers
 	vblanks++;
 	draw_view();
+	mmFrame();		// the sound for the next frame
 }
 
 // --- track background ----------------------------------------------------
@@ -645,6 +644,7 @@ static void choose_race(void){
 	return;			// the first track, with nobody to choose
 #endif
 	view_drawing = 0;
+	sound_music(-1);
 	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | OBJ_ON | OBJ_1D_MAP;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
 	// your car, turning in the middle of the screen in car 0's sprite
@@ -763,6 +763,10 @@ static const char * start_race(void){
 
 		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n)*NUM_CARS+n : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
 	}
+
+	// the track's music, and your engine, as race_main() starts them
+	sound_music(trk-race_tracks);
+	dRally_Sound_pushEffect(1, (D(___1de580h+0x94*MY_CAR_IDX)&0xff)+25, 0, 0x10000, 0x28000, 0x8000);
 
 #if defined(RACE_BENCH)
 	D(___243ce0h) = 1;	// the AI drives your car too
@@ -914,6 +918,7 @@ int main(void){
 	REG_DEBUG_ENABLE = 0xC0DE;
 	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
 
+	sound_init();			// before the vblank handler, which mixes
 	irqInit();
 	irqSet(IRQ_VBLANK, vblank_handler);
 	irqEnable(IRQ_VBLANK);

@@ -260,7 +260,7 @@ int ___1e8848h[100][100];
 DR_COLD __BYTE__ ___1f2488h[0x1680];
 __BYTE__ ___1f3b08h[0x4cf40];
 __BYTE__ ___240b48h[100*0x2c];
-int TRX_OHI_DAT[0x100];
+DR_COLD int TRX_OHI_DAT[0x100];
 float TRX_DRV_DAT[0x200];
 int ___243178h[4];
 __POINTER__ RACE_SPLATX_BPK[2];

@@ -30,6 +30,10 @@
 //                the tiles of a 64x64 and a 32x64 sprite, 6 KB a frame
 //   hud.bin      the HUD box's pictures from IBFILES.BPA, RACE_HUD_* in
 //                drally_race.h
+//   trN.s3m      the track's music, TRn-MUS.CMF decoded, for mmutil
+//   efeNN.wav    the race's sound effects, GEN-EFE.CMF's instruments 1, 2, ...:
+//                each one's first sample, 8-bit, at its base rate, with its loop
+//   sfx.bin      their base volumes, 0-64, one byte each, for effect 1 on
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
 //   blowi.bin
 //   obstacle.bin
@@ -53,6 +57,10 @@
 #include "drally.h"
 #include "bpa.h"
 #include "drally_race.h"
+
+void dREncryption_decodeCMF(__POINTER__ p, size_t size);
+__DWORD__ ___71b70h_cdecl(__DWORD__ period);
+__DWORD__ XM_getPeriod(int Note, int FineTune);
 
 void bpk_decode2(__POINTER__ dst, __POINTER__ src);
 void bpk_decode4(__DWORD__ size, __DWORD__ offset, __POINTER__ dst, __POINTER__ src);
@@ -346,6 +354,140 @@ static void put32(FILE * fd, __DWORD__ v){
 	fputc(v, fd); fputc(v >> 8, fd); fputc(v >> 16, fd); fputc(v >> 24, fd);
 }
 
+static unsigned get16(const __BYTE__ * p){ return p[0]|(p[1] << 8); }
+static unsigned get32(const __BYTE__ * p){ return p[0]|(p[1] << 8)|(p[2] << 16)|((unsigned)p[3] << 24); }
+static void put16f(FILE * fd, unsigned v){ fputc(v&0xff, fd); fputc(v >> 8, fd); }
+static void put32f(FILE * fd, unsigned v){ put16f(fd, v&0xffff); put16f(fd, v >> 16); }
+
+// an 8-bit mono WAV, with a forward loop from loop to end if loop < end
+static void write_wav(const char * dir, const char * name, const __BYTE__ * pcm, unsigned n, unsigned rate, unsigned loop){
+
+	FILE * 	fd = out(dir, name);
+	int 	looped = loop < n;
+
+	fwrite("RIFF", 1, 4, fd); put32f(fd, 4+24+8+n+(n&1)+(looped ? 8+60 : 0)); fwrite("WAVE", 1, 4, fd);
+	fwrite("fmt ", 1, 4, fd); put32f(fd, 16); put16f(fd, 1); put16f(fd, 1); put32f(fd, rate); put32f(fd, rate); put16f(fd, 1); put16f(fd, 8);
+	fwrite("data", 1, 4, fd); put32f(fd, n); fwrite(pcm, 1, n, fd); if(n&1) fputc(0, fd);
+	if(looped){
+
+		// the sampler chunk: one loop, its end the last sample in it
+		fwrite("smpl", 1, 4, fd); put32f(fd, 60);
+		put32f(fd, 0); put32f(fd, 0); put32f(fd, 1000000000u/rate); put32f(fd, 60); put32f(fd, 0);
+		put32f(fd, 0); put32f(fd, 0); put32f(fd, 1); put32f(fd, 0);
+		put32f(fd, 0); put32f(fd, 0); put32f(fd, loop); put32f(fd, n-1); put32f(fd, 0); put32f(fd, 0);
+	}
+	fclose(fd);
+}
+
+// a CMF from MUSICS.BPA, decoded; its size in *size
+static __POINTER__ read_cmf(const char * entry, unsigned * size){
+
+	__POINTER__ 	p = read_entry_size("MUSICS.BPA", entry, size);
+
+	dREncryption_decodeCMF(p, *size);
+
+	return p;
+}
+
+// the music, and the effects as the desktop's mixer plays them (see
+// sound2.c): each instrument's first sample, delta-coded, at
+// samples_frequency*22050/0x10000 Hz
+// an S3M's effects are 1-26 (A-Z); Maxmod jumps through a table with the
+// number and goes astray past it. TR0-MUS.CMF has one stray 89, on a
+// channel the song doesn't use, that the desktop's player passes over
+static void s3m_clean(__POINTER__ p, unsigned size){
+
+	unsigned 	n_ord = get16(p+0x20), n_ins = get16(p+0x22), n_pat = get16(p+0x24), i, o, row;
+
+	for(i = 0; i < n_pat; i++){
+
+		o = get16(p+0x60+n_ord+2*n_ins+2*i)*16;
+		if(!o||(o+2 > size)) continue;
+		o += 2;
+		for(row = 0; (row < 64)&&(o < size); ){
+
+			__BYTE__ 	b = p[o++];
+
+			if(!b){ row++; continue; }
+			if(b&0x20) o += 2;
+			if(b&0x40) o += 1;
+			if(b&0x80){
+
+				if((o+1 < size)&&(p[o] > 26)) p[o] = p[o+1] = 0;
+				o += 2;
+			}
+		}
+	}
+}
+
+static void bake_sound(int track, const char * outdir){
+
+	char 		entry[32];
+	unsigned 	size, o, i, k, n_ins, n_pat;
+	__POINTER__ 	p;
+	__BYTE__ 	vols[256];
+	FILE * 		fd;
+
+	snprintf(entry, sizeof(entry), "TR%d-MUS.CMF", track);
+	p = read_cmf(entry, &size);
+	if(memcmp(p+0x2c, "SCRM", 4)){ fprintf(stderr, "%s isn't an S3M\n", entry); exit(1); }
+	s3m_clean(p, size);
+	snprintf(entry, sizeof(entry), "tr%d.s3m", track);
+	write_file(outdir, entry, p, size);
+	free(p);
+
+	p = read_cmf("GEN-EFE.CMF", &size);
+	if(memcmp(p, "Extended Module: ", 17)){ fprintf(stderr, "GEN-EFE.CMF isn't an XM\n"); exit(1); }
+	n_pat = get16(p+70);
+	n_ins = get16(p+72);
+	o = 60+get32(p+60);
+	for(i = 0; i < n_pat; i++) o += get32(p+o)+get16(p+o+7);
+	for(i = 0; i < n_ins; i++){
+
+		const __BYTE__ * 	ins = p+o;
+		unsigned 		n_smp = get16(ins+27), hsize = n_smp ? get32(ins+29) : 0, len = 0, loop = ~0u, rate = 8000;
+		__BYTE__ * 		pcm = 0;
+		char 			name[16];
+
+		o += get32(ins);
+		vols[i] = 0;
+		if(n_smp){
+
+			const __BYTE__ * 	h = p+o;
+			const __BYTE__ * 	d = p+o+n_smp*hsize;
+			unsigned 		bytes = get32(h), ls = get32(h+4), ll = get32(h+8), type = h[14], wide = (type&0x10) ? 2 : 1;
+			int 			old = 0;
+
+			len = bytes/wide;
+			pcm = malloc(len ? len : 1);
+			for(k = 0; k < len; k++){
+
+				if(wide == 2){ old = (short)(old+(short)get16(d+2*k)); pcm[k] = ((old >> 8)&0xff)^0x80; }
+				else { old = (signed char)(old+(signed char)d[k]); pcm[k] = (old&0xff)^0x80; }
+			}
+			if((type&3)&&ll){
+
+				loop = ls/wide;
+				if((ls+ll)/wide < len) len = (ls+ll)/wide;
+			}
+			vols[i] = h[12];
+			rate = (unsigned)((unsigned long long)___71b70h_cdecl(XM_getPeriod((signed char)h[16]+0x31, (signed char)h[13]))*22050/0x10000);
+			// past all the sample headers, then all their data
+			for(k = 0, size = n_smp*hsize; k < n_smp; k++) size += get32(p+o+k*hsize);
+			o += size;
+		}
+		if(!len){ free(pcm); pcm = calloc(1, 2); len = 2; }
+		snprintf(name, sizeof(name), "efe%02u.wav", i+1);
+		write_wav(outdir, name, pcm, len, rate, loop);
+		free(pcm);
+	}
+	fd = out(outdir, "sfx.bin");
+	fwrite(vols, 1, n_ins, fd);
+	fclose(fd);
+	free(p);
+	printf("%u sound effects\n", n_ins);
+}
+
 int main(int argc, char * argv[]){
 
 	char		bpa_name[16], entry[32], outdir[PATH_MAX];
@@ -420,6 +562,7 @@ int main(int argc, char * argv[]){
 	fclose(fd);
 
 	bake_setup(track, w, h, outdir);
+	bake_sound(track, outdir);
 	if(argc == 5) race_spins = read_race(argv[4], w, h, outdir);
 
 	fd = out(outdir, "cars.obj");

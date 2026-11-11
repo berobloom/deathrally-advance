@@ -44,10 +44,11 @@ LIBM_IWRAM := libm_a-e_sqrt libm_a-ef_sqrt libm_a-w_sqrt libm_a-wf_sqrt
 # newlib's 4 KB table of file handles, which stdio pulls in, is better off
 # in EWRAM than taking up an eighth of IWRAM
 LIBSYSBASE := $(shell $(CC) $(ARCH) -print-file-name=libsysbase.a)
-# and so are newlib's malloc state, reentrancy data and locale, about 2.5 KB
+# and so are newlib's malloc state, reentrancy data, locale and stdio
+# table (__sf), about 2.9 KB
 # that IWRAM, where the stack is, has better use for
 LIBC := $(shell $(CC) $(ARCH) -print-file-name=libc.a)
-LIBC_EWRAM := libc_a-mallocr libc_a-impure libc_a-locale
+LIBC_EWRAM := libc_a-mallocr libc_a-impure libc_a-locale libc_a-findfp
 LIBGCC_OBJS := $(LIBGCC_IWRAM:%=$(BUILD)/libgcc/%.o) $(LIBM_IWRAM:%=$(BUILD)/libm/%.o) \
 	$(BUILD)/libsysbase/libsysbase_libsysbase_a-handle_manager.o $(LIBC_EWRAM:%=$(BUILD)/libc/%.o)
 

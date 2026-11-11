@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, in any of the seven cars, chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. There are no menus or sound yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, in any of the seven cars, chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
 
 ## Game Data
 
@@ -74,6 +74,8 @@ The race code draws skid marks, mines, craters, power-ups and obstacles into the
 
 What the race draws over the track, the spectators and their splats, wrecks, explosions, smoke, gun flashes, shots, rockets, the start lights and the finish flag, goes through `race_sprite()` in `src/race/race_render.c` as well as into the desktop's back buffer. On the GBA a callback turns each picture into a hardware sprite, in front of the cars or behind them in the order the game draws them, with up to 40 a frame. The start lights and the finish flag, which waves on the leader's last lap, are 80x60 pictures in two sprites. `tools/gbabake` bakes the 16 picture files into `sprites.bin` (360 KB). It also bakes the lights' 3 frames and the flag's 64 into `lamps.obj`, already laid out as the sprites' tiles, so that a new frame is a single 6 KB DMA copy.
 
+The sound goes through [Maxmod](https://maxmod.org/). `tools/gbabake` decodes each track's song, `TRn-MUS.CMF` in MUSICS.BPA (an S3M), and the race's sound effects, the instruments of `GEN-EFE.CMF` (an XM), into files that devkitPro's `mmutil` packs into a soundbank. The race code asks for effects through the same `dRally_Sound_pushEffect()` and `_adjustEffect()` calls as on the desktop, and `gba/race/sound.c` plays each one on a Maxmod effect with the game's rate, volume and balance. The engine's pitch follows its speed on every tick. Maxmod mixes 24 channels at 16 kHz in the vblank interrupt, which takes about 17% of the GBA's time.
+
 The HUD box at the top left, with the turbo bar, the damage, and the ammo bar and mines (or the lap time in a race without weapons), is drawn by the game's own `race___40864h()`. The time it keeps the last lap's time up and the damage warnings, which it also did, are now in `race___40864h_state()`, which runs whether anything is drawn or not. On the GBA the box is drawn into a buffer that stands in for the back buffer, copied to 32 tiles of the HUD's background layer, with a black layer under it for the box's colour 0. It's drawn again only when a number or bar in it changes, at most 30 times a second, and not while the logic is behind. `tools/gbabake` bakes its pictures from IBFILES.BPA into `hud.bin`.
 
 The game's frame counter, which times the rocket flames' and other animations, now counts the 70 Hz timer's ticks in `gba/race` and `tools/replay --race`. That changes how a race comes out, so the replay hashes from before don't apply to those two.
@@ -108,7 +110,7 @@ make -C gba/race             # builds gba/race/drrace.gba: a quick race on any t
 make -C gba/race TRACK=8     # drrace-tr8.gba, track 8 only, which starts straight away
 ```
 
-Each prototype ROM holds one track and is about 2 MB. The race ROM is about 24 MB: 11 MB that all tracks share, most of it every car's 96 rotation frames in each of the four cars' colors, and about 1.4 MB for each track.
+Each prototype ROM holds one track and is about 2 MB. The race ROM is about 26 MB: 11 MB that all tracks share, most of it every car's 96 rotation frames in each of the four cars' colors, about 1.4 MB for each track, and the 3.5 MB soundbank with the ten songs and 44 sound effects.
 
 ### Controls
 
@@ -141,7 +143,7 @@ Its meter, at the bottom right, shows frames per second and the share of the CPU
 
 ### Status
 
-Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed.
+Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed, with the track's music and the sound effects.
 
 Not done yet:
 
@@ -151,7 +153,7 @@ Not done yet:
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * Menus, shops and the underground market, which are drawn at 640x480.
-* Music and sound (the S3M and XM songs, through Maxmod).
+* The menus' music, and the sound effects starting partway through, which Maxmod can't do.
 * Saving in SRAM.
 * Testing on real hardware.
 

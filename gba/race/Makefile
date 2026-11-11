@@ -60,15 +60,34 @@ $(ROM): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 	$(GBAFIX) $@ -tDRRACE -cDRRC -m01
 
-$(ELF): $(BUILD)/main.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(GAME_LIB)
-	$(CC) $(LDFLAGS) -Wl,-Map,$(BUILD)/drrace.map -o $@ $^ -lgba -lm
+# Maxmod's module player runs once a tick of the song: from ROM, with its
+# state in EWRAM, it leaves IWRAM to the mixer, which runs for every sample
+LIBMM := $(DEVKITPRO)/libgba/lib/libmm.a
+LIBMM_ROM := mm_mas mm_mas_arm mm_effect
+$(BUILD)/libmm/%.o: $(LIBMM)
+	@mkdir -p $(@D)
+	@cd $(@D) && $(AR) x $(LIBMM) $*.o
+	@$(OBJCOPY) --rename-section .iwram=.text --rename-section .bss=.sbss $@
+
+$(ELF): $(BUILD)/main.o $(BUILD)/sound.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(LIBMM_ROM:%=$(BUILD)/libmm/%.o) $(GAME_LIB)
+	$(CC) $(LDFLAGS) -Wl,-Map,$(BUILD)/drrace.map -o $@ $^ -lmm -lgba -lm
 
 # rebuilt every time: PRE and RACE_CFLAGS change what goes in
 $(BUILD)/main.o: main.c FORCE
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -Wall -c -o $@ $<
 
-$(BUILD)/assets-$(NAME).o: assets.S $(BAKES:%=%/.done) FORCE
+# the music of each track and the effects, for Maxmod: the effects first,
+# so that their ids are 0 on, then the tracks' modules in TRACKS' order
+MMUTIL := $(DEVKITPRO)/tools/bin/mmutil
+$(BUILD)/soundbank-$(NAME).bin: $(BAKES:%=%/.done)
+	$(MMUTIL) -o$@ -h$(BUILD)/soundbank-$(NAME).h $(sort $(wildcard $(BAKE)/efe*.wav)) $(foreach t,$(TRACKS),$(BUILD)/bake-tr$(t)/tr$(t).s3m) > /dev/null
+	cp $@ $(BUILD)/soundbank.bin
+
+$(BUILD)/sound.o: sound.c $(BUILD)/soundbank-$(NAME).bin
+	$(CC) $(CFLAGS) -I$(BUILD) -Wall -c -o $@ $<
+
+$(BUILD)/assets-$(NAME).o: assets.S $(BAKES:%=%/.done) $(BUILD)/soundbank-$(NAME).bin FORCE
 ifdef PRE
 	cp $(PRE) $(BAKE)/pre.bin
 endif
