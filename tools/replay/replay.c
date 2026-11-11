@@ -33,6 +33,7 @@
 // TRACK with an r after it (3r) is the track reversed. BAKEDIR files:GAMEDIR
 // sets the race up from the game's files in GAMEDIR instead, as the
 // desktop game does (not in replay-tiles), to check the baked data against.
+// WEAPONS=0 races without guns or mines.
 
 #include <unistd.h>
 #include "drally.h"
@@ -132,6 +133,13 @@ static const race_loaders_t * quick_setup(const char * track, const char * bakes
 
 	race_quick(atoi(track), models, colors, seed);
 	if(track[strlen(track)-1] == 'r') D(___1de7d0h+0x48) = 1;
+	// WEAPONS=0: a race without guns or mines, as gba/race can choose
+	if(getenv("WEAPONS")&&!atoi(getenv("WEAPONS"))){
+
+		int 	n;
+
+		for(n = 0; n < 4; n++) D(___1de7d0h+0x54*n+0x2c) = 0;
+	}
 	if(!strncmp(bakes, "files:", 6)){
 
 #if defined(DR_IMA_TILES)

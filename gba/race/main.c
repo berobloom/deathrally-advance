@@ -665,6 +665,13 @@ static void use_track(const race_track_t * t){
 // the laps, the others' difficulty (0-2, SPEED MAKES ME DIZZY to PETROL IN
 // MY VEINS) and your car's upgrades. The defaults are race_quick()'s
 #define NUM_MODELS		6
+// and whether there are weapons: guns and mines, for everyone or no one.
+// RACE_CFLAGS=-DRACE_NO_WEAPONS: none from the start, for the benchmark
+#if defined(RACE_NO_WEAPONS)
+static int weapons = 0;
+#else
+static int weapons = 1;
+#endif
 static int my_model = 3, laps = 4, rivals = 1, upgrades = 0;
 static const char * const model_names[NUM_MODELS] = { "VAGABOND", "DERVISH", "SENTINEL", "SHRIEKER", "WRAITH", "DELIVERATOR" };
 
@@ -683,6 +690,7 @@ static void apply_choices(void){
 	NUM_OF_LAPS = laps;
 	D(___1de7d0h+0x48) = reversed;
 	for(n = 1; n < NUM_CARS; n++) D(___1de7d0h+0x54*n+0x44) = rivals;
+	for(n = 0; n < NUM_CARS; n++) D(___1de7d0h+0x54*n+0x2c) = weapons;
 	r = ___1de7d0h;
 	D(r+0x14) = (upgrades < max_engine[my_model]) ? upgrades : max_engine[my_model];
 	D(r+0x18) = (upgrades < max_tires[my_model]) ? upgrades : max_tires[my_model];
@@ -708,7 +716,7 @@ static void choice_row(int row, int chosen, const char * label, const char * val
 
 // before a race: up and down pick a row, left and right change it (the
 // track pans by, your car turns in the middle), and A or Start races
-#define CHOICES 		5
+#define CHOICES 		6
 static void choose_race(void){
 
 	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, row = 0, n;
@@ -753,6 +761,7 @@ static void choose_race(void){
 			choice_row(3, row, "RIVALS", num);
 			*put_num(num, upgrades, 1) = 0;
 			choice_row(4, row, "UPGRADES", num);
+			choice_row(5, row, "WEAPONS", weapons ? "ON" : "OFF");
 			hud_print((SCREEN_W/8-7)/2, 19, "PRESS A");
 
 			// the track going by slowly
@@ -793,6 +802,7 @@ static void choose_race(void){
 			if(row == 2) laps = (laps+n+8)%9+1;		// 1-9
 			if(row == 3) rivals = (rivals+n+3)%3;
 			if(row == 4) upgrades = (upgrades+n+5)%5;
+			if(row == 5) weapons = !weapons;
 		}
 	}
 }
@@ -828,7 +838,7 @@ static const char * start_race(void){
 
 		race_quick(trk->track, models, colors, seed);
 		apply_choices();
-		say("quick race on TR%lu, seed %lu, %d laps, rivals %d, upgrades %d", trk->track, seed, laps, rivals, upgrades);
+		say("quick race on TR%lu%s, seed %lu, %d laps, rivals %d, upgrades %d, weapons %d", trk->track, reversed ? " reversed" : "", seed, laps, rivals, upgrades, weapons);
 		my_index = 0;
 		num_cars = NUM_CARS;
 	}
