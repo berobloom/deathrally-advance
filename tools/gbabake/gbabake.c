@@ -26,6 +26,8 @@
 //   ohi.dat
 //   sprites.bin  the race's pictures drawn over the track: race_sprite_files[]
 //                decoded, one after the other
+//   lamps.obj    the start lights' 3 frames and the finish flag's 64 in it, as
+//                the tiles of a 64x64 and a 32x64 sprite, 6 KB a frame
 //   hud.bin      the HUD box's pictures from IBFILES.BPA, RACE_HUD_* in
 //                drally_race.h
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
@@ -265,6 +267,25 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 			free(src);
 		}
 		write_file(outdir, "sprites.bin", buf, size);
+
+		// the start lights' 3 frames and the finish flag's 64, the last two
+		// files, as the tiles of the GBA's 64x64 OBJ and 32x64 one that
+		// show them
+		{
+			const __BYTE__ * 	lamps = buf+size-0x4b000-0x3840;
+			unsigned 		f, k, tx, ty, r;
+
+			fd = out(outdir, "lamps.obj");
+			for(f = 0; f < 67; f++) for(k = 0; k < 2; k++) for(ty = 0; ty < 8; ty++) for(tx = 0; tx < (k ? 4u : 8u); tx++) for(r = 0; r < 8; r++){
+
+				unsigned 	x = 8*(tx+8*k), y = 8*ty+r;
+				__BYTE__ 	row[8] = { 0 };
+
+				if((y < 0x3c)&&(x < 0x50)) memcpy(row, lamps+0x12c0*f+0x50*y+x, 8);
+				fwrite(row, 1, 8, fd);
+			}
+			fclose(fd);
+		}
 		free(buf);
 	}
 

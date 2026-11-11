@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots and the start lights over it. The game's own HUD box shows turbo, ammo, mines and damage. There are no menus or sound yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. There are no menus or sound yet. See [Status](#status).
 
 ## Game Data
 
@@ -72,7 +72,7 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 
 The race code draws skid marks, mines, craters, power-ups and obstacles into the track image, and reads back the pixels under them. The whole image doesn't fit in the GBA's RAM: TR0's alone is 720 KB. So the race code goes through a small API, `race_ima_read()`, `_write()`, `_draw()` and `_lookup()` in `src/race/race_ima.c`. On the desktop it works on `TRX_IMA` directly. Built with `DR_IMA_TILES`, as `gba/race` is, the image is the track's 8x8 tiles in ROM, with each tile the race draws into copied to a pool of 2,048 in EWRAM (128 KB). A whole race draws into at most about 1,800. The vblank interrupt loads the changed tiles that are on screen. `make -C tools/replay IMA_TILES=n` builds `replay-tiles`, the desktop with the GBA's tiles, for checking the two against each other.
 
-What the race draws over the track, the spectators and their splats, wrecks, explosions, smoke, gun flashes, shots, rockets and the start lights, goes through `race_sprite()` in `src/race/race_render.c` as well as into the desktop's back buffer. On the GBA a callback turns each picture into a hardware sprite, in front of the cars or behind them in the order the game draws them, with up to 40 a frame. The start lights are an 80x60 picture in two sprites. `tools/gbabake` bakes the 15 picture files into `sprites.bin` (60 KB).
+What the race draws over the track, the spectators and their splats, wrecks, explosions, smoke, gun flashes, shots, rockets, the start lights and the finish flag, goes through `race_sprite()` in `src/race/race_render.c` as well as into the desktop's back buffer. On the GBA a callback turns each picture into a hardware sprite, in front of the cars or behind them in the order the game draws them, with up to 40 a frame. The start lights and the finish flag, which waves on the leader's last lap, are 80x60 pictures in two sprites. `tools/gbabake` bakes the 16 picture files into `sprites.bin` (360 KB). It also bakes the lights' 3 frames and the flag's 64 into `lamps.obj`, already laid out as the sprites' tiles, so that a new frame is a single 6 KB DMA copy.
 
 The HUD box at the top left, with the turbo bar, the damage, and the ammo bar and mines (or the lap time in a race without weapons), is drawn by the game's own `race___40864h()`. The time it keeps the last lap's time up and the damage warnings, which it also did, are now in `race___40864h_state()`, which runs whether anything is drawn or not. On the GBA the box is drawn into a buffer that stands in for the back buffer, copied to 32 tiles of the HUD's background layer, with a black layer under it for the box's colour 0. It's drawn again only when a number or bar in it changes, at most 30 times a second, and not while the logic is behind. `tools/gbabake` bakes its pictures from IBFILES.BPA into `hud.bin`.
 
@@ -144,7 +144,7 @@ Not done yet:
 
 * Reversed tracks, and the track's buildings, which the baked setup leaves out.
 * Choosing the track, the cars and the opponents. One ROM has one track and a fixed quick race.
-* The headlights, the finish flag, and the narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
+* The headlights, and the narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * Menus, shops and the underground market, which are drawn at 640x480.
 * Music and sound (the S3M and XM songs, through Maxmod).
 * Saving in SRAM.

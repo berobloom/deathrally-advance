@@ -96,6 +96,10 @@ Drawing the game's 64x32 HUD box and copying it to tiles cost about 35,000 cycle
 
 With the same race (seed 1, accelerating all the way), the box adds about 1,000 to 1,600 cycles a frame and one second at 59 frames per second. The other slow seconds come from single ticks of the logic over 250,000 cycles, with the car pressed into a wall. Without weapons the lap time changes on every tick, so the box is drawn 30 times a second, about 16,000 cycles a frame. Its pictures (4.5 KB) are in EWRAM. Drawing it reaches deeper into the stack, which leaves about 1.2 KB of it untouched.
 
+## The Finish Flag
+
+The flag's frame changes 35 times a second. Copying it from the 80x60 picture into the two sprites' tiles took about 28,000 cycles a frame in the vblank interrupt. Baked in the tiles' layout (`lamps.obj`), each new frame is one DMA copy, and the flag takes about 6,000 cycles a frame.
+
 ## Next Steps, Most Promising First
 
 Items 1-4 below are done, and the race runs at full speed. The rest would make room for what the race doesn't do yet (skid marks, explosions, sound).

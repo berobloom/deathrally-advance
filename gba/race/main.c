@@ -41,6 +41,7 @@ extern const u8 cars_img[];
 extern const race_car_shapes_t cars_shp[];
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
+extern const u8 lamps_obj[];		// 6 KB a frame, see gbabake
 extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -357,7 +358,7 @@ typedef struct {
 	int 	position, lap, over;
 	int 	nspr, cars_at;			// sprites, and how many of them are under the cars
 	sprite_t 	spr[MAX_SPRITES];		// in the order the race drew them
-	const u8 * 	lamp;			// the start lights, or 0
+	const u8 * 	lamp;			// the start lights or the finish flag, or 0
 	int 	lamp_x;				// on the screen
 	u32 	box_seq;			// the HUD box, in boxes[box_seq&1]
 } view_t;
@@ -365,10 +366,12 @@ typedef struct {
 // what race_render() drew, in track coordinates
 EWRAM_BSS static sprite_t drawn[MAX_SPRITES];
 static int drawn_n, drawn_cars;
-// and the start lights: 80x60, sliding in from the right of the screen
+// and the start lights or the finish flag: 80x60, sliding in from the right
+// of the screen
 #define LAMP_W			0x50
 #define LAMP_H			0x3c
 #define LAMP_TILE0		(SPRITE_TILE0+8*MAX_SPRITES)	// a 64x64 OBJ and a 32x64 one
+#define LAMP_OBJ_BYTES		(64*64+32*64)	// a frame of them in lamps_obj
 static const u8 * drawn_lamp;
 static int drawn_lamp_x;
 
@@ -376,8 +379,12 @@ static void on_sprite(const __BYTE__ * img, int w, int h, int x, int y){
 
 	if((w == LAMP_W)&&(h == LAMP_H)){
 
+		extern __POINTER__ GEN_LAM_BPK;
+		extern __POINTER__ GEN_FLA_BPK;
+		int 	f = ((img >= GEN_LAM_BPK)&&(img < GEN_LAM_BPK+3*0x12c0)) ? (img-GEN_LAM_BPK)/0x12c0 : 3+(img-GEN_FLA_BPK)/0x12c0;
+
 		// on the game's 320 pixel wide screen, at its right edge on ours
-		drawn_lamp = img;
+		drawn_lamp = lamps_obj+LAMP_OBJ_BYTES*f;
 		drawn_lamp_x = x-TRX_VIEWPORT_TL_X+CURRENT_VIEWPORT_X-(320-SCREEN_W);
 		return;
 	}
@@ -530,22 +537,11 @@ static void place_sprite(int o, int k, const sprite_t * s){
 static int place_lamp(const view_t * v){
 
 	static const u8 * 	shown;
-	int 			tx, ty, r, k;
 
 	if(!v->lamp||(v->lamp_x >= SCREEN_W)) return 0;
 	if(shown != v->lamp){
 
-		u32 * 	dst = (u32 *)((u8 *)SPRITE_GFX+32*LAMP_TILE0);
-
-		// the two OBJs' tiles one after the other: 8 columns of tiles, then 4
-		for(k = 0; k < 2; k++) for(ty = 0; ty < 8; ty++) for(tx = 0; tx < (k ? 4 : 8); tx++) for(r = 0; r < 8; r++){
-
-			int 	x = 8*(tx+8*k), y = 8*ty+r;
-			const u32 * 	src = (const u32 *)(v->lamp+LAMP_W*y+x);
-
-			*dst++ = ((y < LAMP_H)&&(x < LAMP_W)) ? src[0] : 0;
-			*dst++ = ((y < LAMP_H)&&(x < LAMP_W)) ? src[1] : 0;
-		}
+		copy32((u8 *)SPRITE_GFX+32*LAMP_TILE0, v->lamp, LAMP_OBJ_BYTES);
 		shown = v->lamp;
 	}
 	OAM[0].attr0 = OBJ_Y(0) | OBJ_256_COLOR | OBJ_SQUARE;

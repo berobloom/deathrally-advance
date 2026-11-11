@@ -39,7 +39,7 @@ typedef struct {
 	const char * 	name;		// in ENGINE.BPA
 	unsigned 	size;
 } race_sprite_file_t;
-#define RACE_SPRITE_FILES	15
+#define RACE_SPRITE_FILES	16
 extern const race_sprite_file_t race_sprite_files[RACE_SPRITE_FILES];
 // tools/gbabake's hud.bin: the IBFILES.BPA pictures the wide view's HUD box
 // (race___40864h()) draws with, decoded

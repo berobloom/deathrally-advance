@@ -86,5 +86,6 @@ const race_sprite_file_t race_sprite_files[RACE_SPRITE_FILES] = {
 	{ "SMOKE.BPK", 0xc0 }, { "PEDESTR.BPK", 0x2400 }, { "SPLAT3.BPK", 0x800 }, { "SPLAT4.BPK", 0x800 },
 	{ "ROCKET1.BPK", 0x1800 }, { "ROCKET2.BPK", 0x1800 }, { "BURN1A.BPK", 0x800 }, { "SHOTS.BPK", 0x480 },
 	{ "FLAME1.BPK", 0xc00 }, { "FLAME2.BPK", 0xc00 }, { "FLAME3.BPK", 0xc00 }, { "FLAME4.BPK", 0xc00 },
-	{ "FLAME5.BPK", 0xc00 }, { "FLAME6.BPK", 0xc00 }, { "GEN-LAM.BPK", 0x3840 }
+	{ "FLAME5.BPK", 0xc00 }, { "FLAME6.BPK", 0xc00 }, { "GEN-LAM.BPK", 0x3840 },
+	{ "GEN-FLA.BPK", 0x4b000 }
 };

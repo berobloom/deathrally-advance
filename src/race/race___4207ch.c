@@ -26,6 +26,7 @@ void race___4207ch(void){
 
 	edx = (int)(D(___243324h)+0x8000)>>0x10;
 
+	race_sprite(GEN_FLA_BPK+0x12c0*edx, 0x50, 0x3c, 0x150+D(___243328h), 0);
 	if(race_draw){
 
 		__BYTE__* s = GEN_FLA_BPK + 0x12c0 * edx;

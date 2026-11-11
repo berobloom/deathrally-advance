@@ -30,6 +30,7 @@
 	asset	cars_shp, cars.shp
 	asset	sprites_bin, sprites.bin
 	asset	hud_bin, hud.bin
+	asset	lamps_obj, lamps.obj
 	asset	cars_obj, cars-all.obj
 #if defined(RACE_PRE)
 	asset	race_pre, pre.bin
