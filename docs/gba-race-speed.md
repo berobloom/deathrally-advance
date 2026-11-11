@@ -90,6 +90,12 @@ The spectators, wrecks, explosions, shots and start lights are hardware sprites,
 
 With the frame counter now counting ticks, the races come out differently, so the logic's cost isn't comparable to the table above. With seed 1, races on the ten tracks average 137,800 to 148,200 cycles a tick, 147,400 on TR8. The desktop, `replay-tiles` and the GBA give the same globals and track-image hashes on all ten.
 
+## The HUD Box
+
+Drawing the game's 64x32 HUD box and copying it to tiles cost about 35,000 cycles each time. Drawn on every tick, that took a third of the frame. Now it's drawn only when one of the values it shows changes, worked out as `race___40864h()` does: the turbo bar's length, the damage percentage, the ammo bar's length and the mines, or the lap time. That's at most 30 times a second, and not when the next tick is already due. Keying on the raw values instead redrew it on almost every tick while a car scraped a wall, since the damage counter goes up on each one but its percentage seldom changes.
+
+With the same race (seed 1, accelerating all the way), the box adds about 1,000 to 1,600 cycles a frame and one second at 59 frames per second. The other slow seconds come from single ticks of the logic over 250,000 cycles, with the car pressed into a wall. Without weapons the lap time changes on every tick, so the box is drawn 30 times a second, about 16,000 cycles a frame. Its pictures (4.5 KB) are in EWRAM. Drawing it reaches deeper into the stack, which leaves about 1.2 KB of it untouched.
+
 ## Next Steps, Most Promising First
 
 Items 1-4 below are done, and the race runs at full speed. The rest would make room for what the race doesn't do yet (skid marks, explosions, sound).

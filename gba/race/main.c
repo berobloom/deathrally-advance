@@ -40,6 +40,7 @@ extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
 extern const u8 cars_img[];
 extern const race_car_shapes_t cars_shp[];
 extern const u8 sprites_bin[];
+extern const u8 hud_bin[];
 extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -55,6 +56,10 @@ void race___40164h(void);
 	extern __BYTE__ ___243ce0h[];
 	extern __BYTE__ ___2438c8h[];
 	extern __DWORD__ MY_CAR_IDX;
+	extern __BYTE__ ___1de580h[];
+	extern __BYTE__ ___243cdch[];
+	extern __BYTE__ ___243cb8h[];
+	extern __BYTE__ ___243ca0h[];
 	extern int NUM_OF_CARS;
 	extern int TRX_WIDTH;
 	extern int TRX_HEIGHT;
@@ -70,6 +75,7 @@ void race___40164h(void);
 // WININ/WINOUT layer bits and BLDCNT fields, which libgba leaves out
 #define WIN_BG0			(1 << 0)
 #define WIN_BG1			(1 << 1)
+#define WIN_BG2			(1 << 2)
 #define WIN_OBJ			(1 << 4)
 #define WIN_BLD			(1 << 5)
 #define BLEND_BG0		(1 << 0)
@@ -109,6 +115,13 @@ void race___40164h(void);
 // the HUD: 8bpp glyphs in charblock 3, map in screenblock 30
 #define HUD_MAP			((u16 *)SCREEN_BASE_BLOCK(30))
 #define HUD_CHARS		((u8 *)CHAR_BASE_BLOCK(3))
+// and the game's own box at the top left, 64x32: 8x4 of its tiles
+#define BOX_TILE0		32
+#define BOX_W			64
+#define BOX_H			32
+// under it on BG2, its map in screenblock 29: a black tile, as BG1 shows its colour 0 as see-through
+#define BOX_BACK_MAP		((u16 *)SCREEN_BASE_BLOCK(29))
+#define BOX_BACK_TILE		(BOX_TILE0+(BOX_W/8)*(BOX_H/8))
 
 // the keys race___40164h() reads, set in ___1a1140h
 #define KEY_SCAN_ACCELERATE	DR_SCAN_A
@@ -143,7 +156,7 @@ static const race_baked_t baked = {
 	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
 	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
-	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles, .sprites = sprites_bin,
+	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles, .sprites = sprites_bin, .hud = hud_bin,
 	.obstacles = obstacles
 };
 
@@ -298,6 +311,11 @@ static void init_hud(void){
 	for(g = 0; g < 128; g++) hud_glyph[g] = sizeof(hud_chars)-2;	// space
 	for(g = 0; g < (int)sizeof(hud_chars)-1; g++) hud_glyph[(int)hud_chars[g]] = g;
 	for(x = 0; x < 32*32; x++) HUD_MAP[x] = sizeof(hud_chars)-2;
+	for(y = 0; y < BOX_H/8; y++) for(x = 0; x < BOX_W/8; x++) HUD_MAP[32*y+x] = BOX_TILE0+(BOX_W/8)*y+x;
+	for(x = 0; x < BOX_W*BOX_H; x += 2) ((u16 *)(HUD_CHARS+64*BOX_TILE0))[x/2] = 0;
+	for(x = 0; x < 64; x += 2) ((u16 *)(HUD_CHARS+64*BOX_BACK_TILE))[x/2] = black | (black << 8);
+	for(x = 0; x < 32*32; x++) BOX_BACK_MAP[x] = sizeof(hud_chars)-2;
+	for(y = 0; y < BOX_H/8; y++) for(x = 0; x < BOX_W/8; x++) BOX_BACK_MAP[32*y+x] = BOX_BACK_TILE;
 }
 
 static void hud_print(int col, int row, const char * s){
@@ -341,6 +359,7 @@ typedef struct {
 	sprite_t 	spr[MAX_SPRITES];		// in the order the race drew them
 	const u8 * 	lamp;			// the start lights, or 0
 	int 	lamp_x;				// on the screen
+	u32 	box_seq;			// the HUD box, in boxes[box_seq&1]
 } view_t;
 
 // what race_render() drew, in track coordinates
@@ -375,12 +394,15 @@ static void on_sprite(const __BYTE__ * img, int w, int h, int x, int y){
 	drawn_n++;
 }
 
+static void draw_box(void);
+
 // race_render(), keeping what it draws for the next view
 static void render_race(void){
 
 	drawn_n = drawn_cars = 0;
 	drawn_lamp = 0;
 	race_render();
+	draw_box();
 }
 
 EWRAM_BSS static view_t views[2];
@@ -388,6 +410,81 @@ static int view_next;			// the one take_view() fills
 static volatile int view_ready = -1;	// the one to draw at the next vblank
 static volatile int view_drawing;	// 0 while a race is set up
 static volatile u32 views_drawn, isr_cycles;
+
+// the box the wide view's HUD has at the top left (race___40864h()): the
+// game draws it into BACKBUFFER, here flat[], which nothing needs while the
+// race runs. Its rows are 0x200 apart and start at column 0x60
+extern __POINTER__ game_backbuffer __asm__("BACKBUFFER");
+void race___40864h(void);
+static u32 box_seq;
+static int box_wait;		// set: not now, the logic is behind
+// as 8x8 tiles: the newest, and the one before, which a view not yet drawn may show
+EWRAM_BSS static u8 boxes[2][BOX_W*BOX_H] __attribute__((aligned(4)));
+
+static void draw_box(void){
+
+	static u32 	drawn_key[8], drawn_at = -1;
+	const __BYTE__ * 	c = ___1de580h+0x94*MY_CAR_IDX;
+	u32 	key[8], * dst;
+	int 	tx, ty, y;
+
+	// only when what it shows changes, 30 times a second at most, and not
+	// while the logic is behind:
+	// the turbo bar, the damage, and the lap time, or the ammo bar and the
+	// mines, as race___40864h() works them out
+	key[0] = (int)((57.0/1024.0/100.0)*(double)(int)D(c+0x34));
+	if((int)key[0] < 0) key[0] = 0;
+	key[1] = (int)(100.0-dRMath_ceil((1.0/1024.0)*(double)(int)D(c+0x18)));
+	key[2] = D(c+0x2c);
+	if(key[2] == 0){
+
+		key[3] = (int)D(___243cdch) > 0;
+		key[4] = key[3] ? D(___243cb8h) : D(___243ca0h);
+		key[5] = key[6] = 0;
+	}
+	else {
+
+		key[3] = key[4] = 0;
+		key[5] = (int)((11.0/2048.0/10.0)*(double)(int)D(c+0x30));
+		if((int)key[5] < 0) key[5] = 0;
+		key[6] = D(c+0x28);
+	}
+	key[7] = MY_CAR_IDX;		// whose box: another race's may have another car
+	if(box_wait||(vblanks-drawn_at < 2)||!memcmp(key, drawn_key, sizeof(key))){
+
+		views[view_next].box_seq = box_seq;
+		return;
+	}
+	memcpy(drawn_key, key, sizeof(key));
+	drawn_at = vblanks;
+
+	game_backbuffer = (__POINTER__)((u32)flat-0x60);
+	race___40864h();
+	dst = (u32 *)boxes[(box_seq+1)&1];
+	for(ty = 0; ty < BOX_H/8; ty++){
+		for(tx = 0; tx < BOX_W/8; tx++){
+			for(y = 0; y < 8; y++){
+
+				const u32 * 	src = (const u32 *)(flat+0x200*(8*ty+y)+8*tx);
+
+				dst[0] = src[0];
+				dst[1] = src[1];
+				dst += 2;
+			}
+		}
+	}
+	views[view_next].box_seq = ++box_seq;
+}
+
+// in the vblank interrupt
+static void place_box(const view_t * v){
+
+	static u32 	shown;
+
+	if(v->box_seq == shown) return;
+	copy32(HUD_CHARS+64*BOX_TILE0, boxes[v->box_seq&1], sizeof(boxes[0]));
+	shown = v->box_seq;
+}
 
 // copy a car's rotation frame into its OBJ VRAM if it changed and is in view
 static void upload_car(int n, const view_t * v){
@@ -678,6 +775,7 @@ static void draw_view(void){
 	}
 	for(n = 0; n < NUM_CARS; n++) upload_car(n, v);
 	place_objs(v);
+	place_box(v);
 	hud_race(v);
 	// the page bit has no effect in mode 0; toggling it lets ojgbarun's fps= count frames
 	REG_DISPCNT ^= BACKBUFFER;
@@ -729,8 +827,9 @@ int main(void){
 
 	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
 	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
+	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
 	// shadows: inside the OBJ window the track (BG0) is darkened
-	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_OBJ | WIN_BLD) << 8);
+	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ | WIN_BLD) << 8);
 	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN;
 	REG_BLDY = 9;
 
@@ -746,7 +845,7 @@ int main(void){
 	say("race set up in %lu frames", vblanks-t);
 
 	VBlankIntrWait();	// which draws it
-	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
+	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | BG2_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
 #if !defined(RACE_BENCH)
 	last_vblank = vblanks;
 #endif
@@ -820,6 +919,9 @@ int main(void){
 			if(t > 190000) bench_over190++;
 			if(t > 200000) bench_over200++;
 			if(t > 225000){ bench_over225++; say("BENCH slow tick %lu: %lu", bench_ticks, t); }
+#else
+			// the next tick is due already: the box can wait
+			box_wait = ticks_due+(vblanks - last_vblank)*TICKS_PER_SEC >= VBLANKS_PER_SEC;
 #endif
 
 			i = isr_cycles;
@@ -867,7 +969,7 @@ int main(void){
 			memcpy(p, "FPS", 3); p = put_num(p + 3, shown*VBLANKS_PER_SEC/(vblanks - last_report), 3);
 			memcpy(p, " CPU", 4); p = put_num(p + 4, idle < spent ? (unsigned long long)(spent-idle)*100/spent : 0, 3);
 			*p++ = '%'; *p = 0;
-			hud_print(0, 0, line);
+			hud_print(SCREEN_W/8-14, 19, line);
 			say("%s: %lu ticks, logic %lu cycles a tick, at most %lu a frame; render %lu, drawing %lu a frame",
 				line, ticks, ticks ? logic/ticks : 0, logic_max, frames ? render/frames : 0,
 				shown ? (isr_cycles-last_isr)/shown : 0);

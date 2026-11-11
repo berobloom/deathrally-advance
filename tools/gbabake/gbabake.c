@@ -26,6 +26,8 @@
 //   ohi.dat
 //   sprites.bin  the race's pictures drawn over the track: race_sprite_files[]
 //                decoded, one after the other
+//   hud.bin      the HUD box's pictures from IBFILES.BPA, RACE_HUD_* in
+//                drally_race.h
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
 //   blowi.bin
 //   obstacle.bin
@@ -263,6 +265,24 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 			free(src);
 		}
 		write_file(outdir, "sprites.bin", buf, size);
+		free(buf);
+	}
+
+	// the HUD box's pictures
+	{
+		static const struct { const char * name; unsigned o; } hud[] = {
+			{ "BIGNUM6.BPK", RACE_HUD_BIGNUM }, { "SMALFO4A.BPK", RACE_HUD_SMALFO },
+			{ "SIDEBOM1.BPK", RACE_HUD_SIDEBOM }, { "SMALLBAR.BPK", RACE_HUD_SMALLBAR }
+		};
+
+		buf = calloc(1, RACE_HUD_SIZE);
+		for(i = 0; i < 4; i++){
+
+			src = read_entry("IBFILES.BPA", hud[i].name);
+			bpk_decode4((i < 3 ? hud[i+1].o : RACE_HUD_SIZE)-hud[i].o, 0, buf+hud[i].o, src);
+			free(src);
+		}
+		write_file(outdir, "hud.bin", buf, RACE_HUD_SIZE);
 		free(buf);
 	}
 

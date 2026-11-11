@@ -266,6 +266,7 @@ const race_baked_t * race_baked_read(const char * dir){
 		for(i = 0; i < RACE_SPRITE_FILES; i++) size += race_sprite_files[i].size;
 		baked->sprites = read_baked(dir, "sprites.bin", size);
 	}
+	baked->hud = read_baked(dir, "hud.bin", RACE_HUD_SIZE);
 	// the track image the race draws into, from its tiles
 	{
 		unsigned 	x, y;

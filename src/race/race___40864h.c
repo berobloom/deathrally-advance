@@ -56,7 +56,7 @@ void DamageWarning(void){
 	}
 }
 
-// WIDESCREEN TOPLEFT CORNER BOX
+// WIDESCREEN TOPLEFT CORNER BOX: drawn into BACKBUFFER's rows 0-31, columns 0x60-0x9f
 void race___40864h(void){
 
 	__DWORD__ 		eax, ebx, ecx, edx, edi, esi, ebp, p5, p6, p7, p8;
@@ -70,17 +70,9 @@ void race___40864h(void){
 
 	__BYTE__* s = ___1d8110h;
 	__BYTE__* d = BACKBUFFER + 0x60;
-	j = 32;
-	do {
-		i = 64;
-		do {
-			//if ((px = *s++) != 0) *d = px;
-			//d++;
-			// no transparency
-			*d++ = *s++;
-		} while (--i);
-		d += 0x200 - 64;
-	} while (--j);
+	// no transparency: a word at a time, as ___1d8110h and BACKBUFFER's
+	// rows are word-aligned
+	for(j = 0; j < 32; j++) for(i = 0; i < 16; i++) ((__DWORD__ *)(d+0x200*j))[i] = ((const __DWORD__ *)(s+64*j))[i];
 
 	D(esp+0x8) = (int)((57.0/1024.0/100.0)*(double)(int)D(___1de580h+0x94*D(MY_CAR_IDX)+0x34));
 	
@@ -130,8 +122,7 @@ void race___40864h(void){
 			___4256ch_cdecl(___1d7810h, 0x6, 0x6, edx, 0x10, 0x2089, 6, 0);
 			edx = A0 % 70;
 			___4256ch_cdecl(___1d7810h, 0x6, 0x6, (int)(1.42*(double)(int)edx), 0x10, 0x2097, 6, 0);
-			D(___243cdch) -= D(___243334h);
-			if((int)D(___243cdch) < 0) D(___243cdch) = 0;
+			// race___40db4h() counts ___243cdch down
 		}
 	}
 	else {
@@ -187,6 +178,17 @@ void race___40864h(void){
 		} while (--i);
 		d += 0x200 - 8;
 	} while (--j);
+}
 
+// what the box keeps besides drawing, which race___40db4h() does whether
+// it's drawn or not: the last lap's time stays up for a while, and the
+// damage warnings
+void race___40864h_state(void){
+
+	if((D(___1de580h+0x94*D(MY_CAR_IDX)+0x2c) == 0)&&((int)D(___243cdch) > 0)){
+
+		D(___243cdch) -= D(___243334h);
+		if((int)D(___243cdch) < 0) D(___243cdch) = 0;
+	}
 	DamageWarning();
 }

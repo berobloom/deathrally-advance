@@ -23,6 +23,12 @@
 	extern __POINTER__ RACE_SHOTS_BPK;
 	extern __POINTER__ RACE_FLAMEX_BPK[6];
 	extern __POINTER__ GEN_LAM_BPK;
+	extern __POINTER__ SIDEBOM1_BPK;
+	extern __BYTE__ MY_CAR_IDX[];
+	extern __BYTE__ ___1de210h[];
+	extern __BYTE__ ___1de530h[];
+	extern __BYTE__ ___1d7810h[];
+	extern __BYTE__ ___1d8110h[];
 	extern __BYTE__ VARJO_TAB[0x100];
 	extern __BYTE__ TRX_LIT_TAB[0x100];
 	extern __BYTE__ TRX_BLO_TAB[0x100];
@@ -110,6 +116,19 @@ static void baked_load(void){
 	memcpy(VARJO_TAB, race_baked->varjo_tab, 0x100);
 	memcpy(TRX_DRV_DAT, race_baked->drv_dat, 0x800);
 	memcpy(TRX_OHI_DAT, race_baked->ohi_dat, 0x400);
+
+	// the HUD box's pictures, which are only drawn: the box with a lap
+	// time, or with the weapons, for your car
+	if(race_baked->hud){
+
+		const __BYTE__ * 	hud = race_baked->hud;
+
+		memcpy(___1de210h, hud+RACE_HUD_BIGNUM, 0x320);
+		memcpy(___1de530h, hud+RACE_HUD_BIGNUM+0x320, 0x50);
+		memcpy(___1d7810h, hud+RACE_HUD_SMALFO, 0x900);
+		SIDEBOM1_BPK = (__POINTER__)hud+RACE_HUD_SIDEBOM;
+		memcpy(___1d8110h, hud+RACE_HUD_SMALLBAR+0x800*D(MY_CAR_IDX)+((D(0x94*D(MY_CAR_IDX)+___1de580h+0x2c) == 0) ? 0x2000 : 0), 0x800);
+	}
 
 	// the track's buildings, which are only drawn
 	NUM_OF_OBJECTS = 0;

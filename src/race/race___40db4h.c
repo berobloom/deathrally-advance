@@ -18,6 +18,7 @@
 	extern __BYTE__ ___243cdch[];
 
 void race___40864h(void);
+void race___40864h_state(void);
 
 // TAB SWITCH
 void race___40db4h(void){
@@ -53,4 +54,5 @@ void race___40db4h(void){
 	}
 
 	if(race_draw) race___40864h();
+	race___40864h_state();
 }

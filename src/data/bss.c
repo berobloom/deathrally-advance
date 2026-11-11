@@ -238,12 +238,12 @@ __BYTE__ ___1c9f10h[0x3200];
 
 __BYTE__ ___1d2710h[0x3180];
 __BYTE__ ___1d5890h[0x1f80];
-__BYTE__ ___1d7810h[0x900];
-__BYTE__ ___1d8110h[0x800];
+DR_COLD __BYTE__ ___1d7810h[0x900];
+DR_COLD __BYTE__ ___1d8110h[0x800] __attribute__((aligned(4)));
 __BYTE__ ___1d8910h[0x100];
 __BYTE__ ___1d8a10h[0x5800];
-__BYTE__ ___1de210h[0x320];
-__BYTE__ ___1de530h[0x50];
+DR_COLD __BYTE__ ___1de210h[0x320];
+DR_COLD __BYTE__ ___1de530h[0x50];
 __BYTE__ ___1de580h[4*0x94];
 __BYTE__ ___1de7d0h[4*0x54];
 int X___1de920h[0x100];

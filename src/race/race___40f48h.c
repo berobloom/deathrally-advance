@@ -49,6 +49,7 @@
 
 
 void race___40864h(void);
+void race___40864h_state(void);
 __DWORD__ ___4256ch_cdecl(__POINTER__ A1, __DWORD__ A2, __DWORD__ A3, __DWORD__ A4, __DWORD__ A5, __DWORD__ A6, __DWORD__ A7, __DWORD__ A8);
 void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWORD__ a0, __DWORD__ a1, __DWORD__ a2);
 void ___424c8h_v2(const char *, int x, int y);
@@ -116,7 +117,11 @@ void race___40f48h(void){
         }
     }
 
-	if(CURRENT_VIEWPORT_X < 0x40) race___40864h();
+	if(CURRENT_VIEWPORT_X < 0x40){
+
+		race___40864h();
+		race___40864h_state();
+	}
 		
     __BYTE__* s = ___1c9f10h;
     __BYTE__* d = BACKBUFFER + 0x20 + CURRENT_VIEWPORT_X;

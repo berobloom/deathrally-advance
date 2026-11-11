@@ -41,6 +41,13 @@ typedef struct {
 } race_sprite_file_t;
 #define RACE_SPRITE_FILES	15
 extern const race_sprite_file_t race_sprite_files[RACE_SPRITE_FILES];
+// tools/gbabake's hud.bin: the IBFILES.BPA pictures the wide view's HUD box
+// (race___40864h()) draws with, decoded
+#define RACE_HUD_BIGNUM 	0x0000	// BIGNUM6.BPK: 10 digits of 8x10, then the % sign
+#define RACE_HUD_SMALFO 	0x0370	// SMALFO4A.BPK, the small font
+#define RACE_HUD_SIDEBOM 	0x0c70	// SIDEBOM1.BPK, a mine
+#define RACE_HUD_SMALLBAR 	0x0ca0	// SMALLBAR.BPK: the box for each car, 64x32
+#define RACE_HUD_SIZE 		0x4ca0
 void race_walls_build(void);
 void race_walls_free(void);
 int race_walls_near(int x, int y, int w, int h);
@@ -156,6 +163,7 @@ typedef struct race_baked_s {
 	const race_car_shapes_t * shapes;	// and their shapes
 	const __BYTE__ *	tiles;		// track.tiles: the track image as 8x8 tiles, row by row
 	const __BYTE__ *	sprites;	// sprites.bin: race_sprite_files[] decoded
+	const __BYTE__ *	hud;		// hud.bin, RACE_HUD_SIZE bytes
 	__POINTER__ 		ima;		// TRX_IMA, which the logic draws skid marks into
 	__BYTE__ *		obstacles;	// 0x800 bytes, the logic changes them
 } race_baked_t;
