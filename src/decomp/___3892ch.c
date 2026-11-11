@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 #include "sfx.h"
 
 #pragma pack(1)
@@ -237,46 +238,8 @@ void ___3892ch_cdecl(__DWORD__ A1){
 
 		if(esi == 0){
 
-			edx = D(___1a1ef8h);
-			D(esp+0x68) = esi;
-			eax ^= eax;
-
-			while(1){
-
-				ebp = s_6c[eax/0x6c].points;
-				
-				if((int)esi < (int)ebp){
-				
-					if(edx != D(esp+0x68)) esi = ebp;
-				}
-
-				ebx = D(esp+0x68);
-				ebx++;
-				eax += 0x6c;
-				D(esp+0x68) = ebx;
-				if((int)ebx >= 0x14) break;
-			}
-
-			edi = D(___1a1ef8h);
-			eax = 8*edi;
-			eax -= edi;
-			eax <<= 0x2;
-			eax -= edi;
-			
-			if((int)esi < (int)s_6c[eax/27].points){
-			
-				if(D(___196ab4h) == 0) B(___1a2147h) = 1;
-			}
-
-			edi = D(___1a1ef8h);
-			eax = 8*edi;
-			eax -= edi;
-			eax <<= 0x2;
-			eax -= edi;
-			L(eax) = !!((int)esi < (int)s_6c[eax/27].points);
+			career_leader_check();
 			ecx = 0x46b6e;
-			eax &= 0xff;
-			D(___196ab4h) = eax;
 			___38708h();
 			___12e78h_cdecl(___1a1108h, (font_props_t *)___185c0bh, "Please wait while loading...", ecx);
 			___12cb8h__VESA101_PRESENTSCREEN();

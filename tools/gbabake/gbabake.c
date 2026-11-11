@@ -37,6 +37,8 @@
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
 //   blowi.bin
 //   obstacle.bin
+//   carcol.pal   MENU.BPA's CARCOL.PAL and COPPER.PAL, the racers' car colors
+//   copper.pal   as the career's ___33010h_cdecl() picks them, see career.c
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
 //                96 frames of 40x40 each, not recolored
 //   cars.shp     the shapes the race code asks of them, race_car_shapes_t
@@ -365,6 +367,8 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	bake_bpk2("BLOWI.BPK", outdir, "blowi.bin", 0x600);
 	bake_bpk2("OBSTACLE.BPK", outdir, "obstacle.bin", 0x800);
 	bake_bpk2("OBST_REV.BPK", outdir, "obst-rev.bin", 0x800);
+	bake_entry("MENU.BPA", "CARCOL.PAL", outdir, "carcol.pal", 0x300);
+	bake_entry("MENU.BPA", "COPPER.PAL", outdir, "copper.pal", 0x300);
 
 	cars = calloc(13, CAR_FRAMES*CAR_W*CAR_W);
 	for(v = 0; v < 13; v++){

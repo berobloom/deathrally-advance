@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1a1f64h[];
 	extern __BYTE__ ___1a1ef8h[];
@@ -88,8 +89,11 @@ void ___3079ch_cdecl(__DWORD__ A1){
 			strcpy(esp, "");
 			if(strlen(esp+0x50) < 2)strcat(esp, " ");
 			strcat(strcat(strcat(esp, esp+0x50), "."), s_6c[r].name);
-			___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, esp, 0x280*(0x12*B(___1a1f64h+ebp+3)+0x100)+0xa0*ebp+0x22);
-			___12cb8h__VESA101_PRESENTSCREEN();
+			if(CAREER_DRAW){
+
+				___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, esp, 0x280*(0x12*B(___1a1f64h+ebp+3)+0x100)+0xa0*ebp+0x22);
+				___12cb8h__VESA101_PRESENTSCREEN();
+			}
 		}
 	}
 }

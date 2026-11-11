@@ -30,6 +30,16 @@
 // Prints the hash of the globals and of the track image at the end, which
 // gba/race logs too.
 //
+//   replay --career BAKES SEED ROUNDS
+//
+// Plays ROUNDS rounds of a career as gba/race's career benchmark does
+// (RACE_CFLAGS="-DRACE_BENCH -DCAREER_BENCH=ROUNDS -DRACE_SEED=SEED"):
+// always the easy race, or the Adversary once you lead, the AI driving
+// your car. CAREER_LEAD=1 gives you the lead from the start. Each race's
+// track comes from BAKES/bake-trN, as gba/race's
+// build directory has them. Prints the hash of the globals after each
+// race and of the racers after each round, which gba/race logs too.
+//
 // TRACK with an r after it (3r) is the track reversed. BAKEDIR files:GAMEDIR
 // sets the race up from the game's files in GAMEDIR instead, as the
 // desktop game does (not in replay-tiles), to check the baked data against.
@@ -40,6 +50,8 @@
 #include "drally_structs_free.h"
 #include "race_replay.h"
 #include "drally_race.h"
+#include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1e6ed0h[];
 	extern __BYTE__ ___1de580h[];
@@ -238,6 +250,157 @@ static int race(char * argv[]){
 	return 0;
 }
 
+// --- the career ------------------------------------------------------------------
+
+	extern __BYTE__ ___1a01e0h[];
+	extern __BYTE__ ___1a1ef8h[];
+	extern __BYTE__ ___1a103ch[];
+	extern char ___19bd64h[16];
+	extern int NUM_OF_LAPS;
+	extern int NUM_OF_CARS;
+	extern __POINTER__ ___1a0fe0h;
+	extern __POINTER__ ___1a0fb8h;
+void srand_watcom106(unsigned int seed);
+void ___3079ch_cdecl(__DWORD__);
+void race___400ech(void);
+
+static const char * career_bakes;
+static int career_round;
+
+// the career's race, as gba/race's start_race() and run_race() run it in
+// its benchmark
+static void career_race_run(int my_index, int num_cars){
+
+	static race_baked_t * 	baked[10];
+	__BYTE__ * 		flat = malloc(race_replay_size());
+	struct_35e_t * 		cars = (struct_35e_t *)___1e6ed0h;
+	int 			track = ___19bd64h[2]-'0', n;
+
+	if(!baked[track]){
+
+		char 	dir[1024];
+
+		snprintf(dir, sizeof(dir), "%s/bake-tr%d", career_bakes, track);
+		baked[track] = (race_baked_t *)race_baked_read(dir);
+		baked[track]->variants = 7;	// gba/race's: no spiked cars
+	}
+	race_baked = baked[track];
+	timer_ticks = 0;
+	race_setup(my_index, num_cars, &race_loaders_baked);
+	race_replay_gather(flat);
+	printf("career race on %s%s, %d laps, you in place %d of %d; set up: globals hash %08x\n", ___19bd64h,
+		D(___1de7d0h+0x48) ? " reversed" : "", NUM_OF_LAPS, my_index, num_cars, race_replay_hash(flat));
+	D(___243ce0h) = 1;
+	CURRENT_VIEWPORT_W = 0x140;
+	CURRENT_VIEWPORT_X = 0;
+	CURRENT_VIEWPORT_CENTER_X = CURRENT_VIEWPORT_W/2;
+	race_render();
+	while((int)D(___2438c8h) <= 0x12c){
+
+		race___40164h();
+		timer_ticks++;
+		race_logic();
+		race_render();
+		race_render_after();
+	}
+	race_replay_gather(flat);
+	printf("  end: globals hash %08x\n", race_replay_hash(flat));
+	if(getenv("VAR_HASHES")){
+
+		unsigned 	i, o, k;
+		__DWORD__ 	h;
+
+		for(i = o = 0; i < race_replay_count(); o += race_replay_var_size(i++)){
+			for(h = 0x811c9dc5, k = 0; k < race_replay_var_size(i); k++) h = (h^flat[o+k])*0x01000193;
+			printf("end var %s %08x\n", race_replay_var_name(i), h);
+		}
+	}
+	for(n = 0; n < NUM_OF_CARS; n++) ((struct_94_t *)___1de580h)[n].__54 = cars[n].Position;
+	race___400ech();
+	free(flat);
+}
+
+static void career_round_end(int A1){
+
+	racer_t * 	me;
+	const __BYTE__ * 	p = ___1a01e0h;
+	__DWORD__ 	h = 0x811c9dc5;
+	unsigned 	n;
+
+	career_results(A1);
+	me = (racer_t *)___1a01e0h+D(___1a1ef8h);	// sorted again
+	for(n = 0; n < 0x14*sizeof(racer_t); n++) h = (h^p[n])*0x01000193;
+	printf("CAREER round %d: you rank %d with %d points, $%d; racers hash %08x\n", ++career_round, me->rank, me->points, me->money, h);
+}
+
+// a race of the round, as gba/race's career_ui.c race(): 1 if it ends the game
+static int career_race(int num_cars){
+
+	__BYTE__ 	grid[4];
+
+	career_race_track(grid);
+	career_race_fill(num_cars, grid);
+	career_race_run(D(___1a103ch), num_cars);
+	career_race_after(num_cars, grid);
+	if(career_leading()){
+
+		if(career_leader_round()) return 1;
+		career_round_end(0);
+	}
+	else career_round_end(0);
+
+	return 0;
+}
+
+static int career(char * argv[]){
+
+	static __BYTE__ 	carcol[0x300], copper[0x300];
+	char 		path[1024];
+	int 		rounds = atoi(argv[4]);
+	FILE * 		fd;
+
+	career_bakes = argv[2];
+	snprintf(path, sizeof(path), "%s/bake-tr0/carcol.pal", career_bakes);
+	if(!(fd = fopen(path, "rb"))||(fread(carcol, 1, 0x300, fd) != 0x300)){ perror(path); return 1; }
+	fclose(fd);
+	snprintf(path, sizeof(path), "%s/bake-tr0/copper.pal", career_bakes);
+	if(!(fd = fopen(path, "rb"))||(fread(copper, 1, 0x300, fd) != 0x300)){ perror(path); return 1; }
+	fclose(fd);
+	___1a0fb8h = copper;
+	___1a0fe0h = carcol;
+	srand_watcom106(strtoul(argv[3], 0, 0));
+	career_new("RACER", 0, 1);
+	// CAREER_LEAD=1: you lead from the start, as gba/race's -DCAREER_LEAD
+	if(getenv("CAREER_LEAD")&&atoi(getenv("CAREER_LEAD"))) ((racer_t *)___1a01e0h+D(___1a1ef8h))->points = 200;
+
+	while(career_round < rounds){
+
+		if(career_leading()){
+
+			career_adversary_accept();
+			if(career_race(2)){
+
+				printf("CAREER the Adversary beaten\n");
+				break;
+			}
+			continue;
+		}
+		career_signup_open();
+		if(career_signup_check(0) == CAREER_FULL){
+
+			career_signup_rest();
+			career_round_end(1);
+			continue;
+		}
+		career_signup(0);
+		while(!career_signup_full()) ___3079ch_cdecl(3);
+		career_signup_order();
+		if(career_race(4)) break;
+	}
+
+	return 0;
+}
+
 int main(int argc, char * argv[]){
 
 	FILE * 		fd;
@@ -254,6 +417,7 @@ int main(int argc, char * argv[]){
 	if((argc >= 4)&&!strcmp(argv[1], "--setup")) return setup(argc, argv);
 	if((argc == 5)&&!strcmp(argv[1], "--quick")) return quick(argv);
 	if((argc == 5)&&!strcmp(argv[1], "--race")) return race(argv);
+	if((argc == 5)&&!strcmp(argv[1], "--career")) return career(argv);
 	if((argc != 2)&&(argc != 3)){ fprintf(stderr, "usage: replay TICKLOG.BIN [OUT.BIN]\n"); return 1; }
 
 	if(!(fd = fopen(argv[1], "rb"))){ perror(argv[1]); return 1; }

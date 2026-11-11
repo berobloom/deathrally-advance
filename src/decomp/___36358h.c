@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 #pragma pack(1)
 typedef struct x655_s {
@@ -116,7 +117,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 		}
 	}
 
-	if(ebp == 0){
+	if((ebp == 0)&&CAREER_DRAW){
 
 		___35dd0h();
 		ecx = 0x14;
@@ -164,6 +165,8 @@ void ___36358h_cdecl(__DWORD__ A1){
 				
 				if((eax == D(___1a1ef8h))&&(D(___196ab0h) == 1)) break;
 
+				if(CAREER_DRAW){
+
 				edx = D(esp+0x4);
 				eax ^= eax;
 				L(eax) = B(esp+edx);
@@ -194,6 +197,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 					ecx--;
 					if(ecx == 0) break;
 				}
+				}
 			}
 		}
 
@@ -219,7 +223,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 					edi += 0x5;
 					s_6c[eax/0x6c].points = edi;
 					ecx = edx+0xe6;
-					___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+5", ecx);
+					if(CAREER_DRAW) ___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+5", ecx);
 				}
 			}
 			break;
@@ -242,7 +246,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 					edi += 0x3;
 					s_6c[eax/0x6c].points = edi;
 					ecx += 0xe6;
-					___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+3", ecx);
+					if(CAREER_DRAW) ___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+3", ecx);
 				}
 			}
 			break;
@@ -265,7 +269,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 					edi++;
 					s_6c[eax/0x6c].points = edi;
 					ecx += 0xe6;
-					___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+1", ecx);
+					if(CAREER_DRAW) ___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, "+1", ecx);
 				}
 			}
 			break;
@@ -279,7 +283,7 @@ void ___36358h_cdecl(__DWORD__ A1){
 		if((int)eax >= 3) break;
 	}
 
-	if(ebp == 0){
+	if((ebp == 0)&&CAREER_DRAW){
 
 		D(esp+0x4) = 0;
 

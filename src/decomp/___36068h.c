@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1a1028h[];
 	extern __BYTE__ ___1de7d0h[];
@@ -63,7 +64,7 @@ void ___36068h_cdecl(__DWORD__ A1){
 		}
 	}
 
-	if(A1 == 0){
+	if((A1 == 0)&&CAREER_DRAW){
 
 		___35dd0h();
 
@@ -88,6 +89,8 @@ void ___36068h_cdecl(__DWORD__ A1){
 
 			if((B(esp+n) == D(___1a1ef8h))&&(D(___196ab0h) == 1)) break;
 
+			if(CAREER_DRAW){
+
 			j = -1;
 			while(++j < 0x12){
 
@@ -98,16 +101,17 @@ void ___36068h_cdecl(__DWORD__ A1){
 				}
 			}
 		}
+			}
 
 		if((s_6c[B(esp+n)].damage != 0x64)&&((B(esp+n) != D(___1a1ef8h))||(D(___196ab0h) != 1))){
 
 			s_6c[B(esp+n)].points += EasyPoints[n];
-			___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, fmtPoints(EasyPoints[n]), 0x280*(0x13*B(esp+n)+0x59)+0xe6);
+			if(CAREER_DRAW) ___12e78h_cdecl(___1a10b8h, (font_props_t *)___185c7ah, fmtPoints(EasyPoints[n]), 0x280*(0x13*B(esp+n)+0x59)+0xe6);
 		}
 
 	}
 
-	if(A1 == 0){
+	if((A1 == 0)&&CAREER_DRAW){
 	
 		___12e78h_cdecl(___1a1108h, (font_props_t *)___185c0bh, "Press any key to continue...", 0x46b6e);
 		___12cb8h__VESA101_PRESENTSCREEN();

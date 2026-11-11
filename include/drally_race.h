@@ -178,6 +178,10 @@ typedef struct race_baked_s {
 	const __BYTE__ *	rev_cars;
 	const race_car_shapes_t * rev_shapes;
 	const __BYTE__ *	rev_obstacle;
+	// how many car images cars has, the first ones of the RACE_CAR_VARIANTS,
+	// or 0 for all of them: a car whose image is past them races with
+	// its model's (a spiked car with its car's without the spikes)
+	int 			variants;
 } race_baked_t;
 extern const race_baked_t * race_baked;
 extern const race_loaders_t race_loaders_baked;

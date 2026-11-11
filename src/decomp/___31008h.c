@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_keyboard.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 #include "sfx.h"
 
 #pragma pack(1)
@@ -206,36 +207,8 @@ void ___31008h(void){
 			if((int)D(esp+0x28) >= 0x100) break;
 		}
 
-		while(1){
-
-			___3079ch_cdecl(1);
-			if((B(___1a1f64h+3) >= 4)&&(B(___1a1f64h+4) >= 4)&&(B(___1a1f64h+5) >= 4)) break;
-		}
-
-		memset(esp, 0, 4);
-
-		n = -1;
-		while(++n < 4){
-
-			while(1){
-
-				eax = 1+rand_watcom106()%4;
-				D(___1de7d0h+0x54*n+0x40) = eax;
-				if(B(esp+eax-1) == 0) break;
-			}
-			
-			B(esp+eax-1) = 1;
-		}
-
+		career_adversary_decline();
 		___3892ch_cdecl(1);
-		edx  = 0;
-
-		n = -1;
-		while(++n < 0x14){
-
-			ecx = s_6c[n].points;
-			if(((int)edx < (int)ecx)&&(n != D(___1a1ef8h))) edx = ecx;
-		}
 
 #if defined(DR_MULTIPLAYER)
 		if(___19bd60h != 0){
@@ -244,7 +217,7 @@ void ___31008h(void){
 		}
 		else {
 #endif // DR_MULTIPLAYER
-			D(___1a0a50h+0xc) = !((int)edx < (int)s_6c[D(___1a1ef8h)].points);
+			career_adversary_declined();
 #if defined(DR_MULTIPLAYER)
 		}
 #endif // DR_MULTIPLAYER
@@ -253,10 +226,7 @@ void ___31008h(void){
 	}
 	else {
 
-		D(___1a1028h) = 3;
-		D(___1a103ch) = 1;
-		D(___196af0h) = 0;
-		D(___196aech) = 0;
+		career_adversary_accept();
 		___33010h_cdecl(2);
 
 		if(D(___196ae8h) == 1){

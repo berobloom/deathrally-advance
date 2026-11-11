@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
@@ -312,43 +313,7 @@ void ___36adch(void){
 		x = x%0x280;
 		___12e78h_v3(___1a1108h___185c0bh, esp, x, y);
 		
-		ebx = ___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec100;
-		ebx += 100*___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec;
-		ebx += 6000*___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].min;
-
-		eax = 0x64*LAP_BEST_SEC+0x1770*LAP_BEST_MIN+LAP_BEST_100;
-
-		if((int)eax < (int)ebx){
-
-			eax = LAP_BEST_MIN+LAP_BEST_SEC+LAP_BEST_100;
-
-			if(eax != 0){
-
-				strcpy(___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].name, s_6c[D(___1a1ef8h)].name);
-				strupr_watcom106(___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].name);
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].min = LAP_BEST_MIN;
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec = LAP_BEST_SEC;
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec100 = LAP_BEST_100;
-			}
-		}
-
-		eax = ___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].min;
-		eax += ___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec;
-		eax += ___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec100;
-
-		if(eax == 0){
-
-			eax = 0x64*LAP_BEST_SEC+0x1770*LAP_BEST_MIN+LAP_BEST_100;
-
-			if((int)eax > 0){
-
-				strcpy(___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].name, s_6c[D(___1a1ef8h)].name);
-				strupr_watcom106(___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].name);
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].min = LAP_BEST_MIN;
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec = LAP_BEST_SEC;
-				___19f750h[s_6c[D(___1a1ef8h)].car][B(___1a1f64h+D(___1a1028h))].sec100 = LAP_BEST_100;
-			}
-		}
+		career_lap_record();
 
 		itoa_watcom106(LAP_BEST_MIN, esp+0x78, 0xa);
 		itoa_watcom106(LAP_BEST_SEC, esp+0x50, 0xa);

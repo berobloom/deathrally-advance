@@ -9,7 +9,7 @@
 void __VGA3_SETMODE(void);
 void dRally_System_clean(void);
 
-unsigned char err_l[] = 
+const unsigned char err_l[] = 
 "\x01" "Unable to allocate sufficient amount of Base Memory!\0"
 "\x02" "Unable to free Base Memory block!\0"
 "\x03" "Unable to change the size of a Base Memory block!\0"

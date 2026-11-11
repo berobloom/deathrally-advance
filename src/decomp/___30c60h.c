@@ -1,6 +1,5 @@
 #include "drally.h"
 #include "drally_structs_fixed.h"
-#include "drmemory.h"
 
 	extern __BYTE__ ___1a01e0h[];
 	extern __BYTE__ ___1a1ef8h[];
@@ -8,23 +7,23 @@
 	extern __DWORD__ ___19bd60h;
 #endif // DR_MULTIPLAYER
 
-__POINTER__ ___3f71ch__allocateMemory(__DWORD__);
+
+// the first A1 racers in reverse order. Their copy is kept here rather than
+// allocated, which the GBA, without the game's allocator, can't
+DR_COLD static racer_t vp[20];
 
 static void helper00(int A1){
 
 	int 			n;
-	racer_t * 		vp;
 	racer_t * 		s_6c;
 
 	s_6c = (racer_t *)___1a01e0h;
 
-	vp = (racer_t *)___3f71ch__allocateMemory(20*sizeof(racer_t));
 	memcpy(vp, s_6c, 20*sizeof(racer_t));
 
 	n = -1;
 	while(++n < A1) memcpy(&s_6c[n], &vp[A1-n-1], sizeof(racer_t));
 
-	dRMemory_free((__POINTER__)vp);
 	D(___1a1ef8h) = (A1-1)-D(___1a1ef8h);
 }
 

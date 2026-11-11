@@ -20,7 +20,7 @@ __DWORD__ ___19dec0h[4];
 __BYTE__ ___19ded0h[0x80];
 __BYTE__ ___19df50h[0xc00];
 __BYTE__ ___19eb50h[0xc00];
-__BYTE__ ___19f750h[0xa20];
+DR_COLD __BYTE__ ___19f750h[0xa20];	// the career's state, between races
 __DWORD__ ___1a0170h_PriceMines;
 __DWORD__ ___1a0174h_PriceSpikedBumpers;
 __DWORD__ ___1a0178h_PriceRocketFuel;
@@ -35,16 +35,16 @@ __POINTER__ ___1a01d0h[4];
 
 
 
-__BYTE__ ___1a01e0h[0x870];
-__BYTE__ ___1a0a50h[0x10];
+DR_COLD __BYTE__ ___1a01e0h[0x870];
+DR_COLD __BYTE__ ___1a0a50h[0x10];
 //__BYTE__ ___1a0a60h[0x300];   // cinem.c
 char ___1a0d60h[0xc8];
 __BYTE__ ___1a0e28h[0xc8];
 __DWORD__ CONFIG_SOUND_ADDR;
 FILE * ___1a0ef4h;
-__BYTE__ ___1a0ef8h[0xc];
-__BYTE__ ___1a0f04h[0x14];
-__BYTE__ ___1a0f18h[0x6c];
+DR_COLD __BYTE__ ___1a0ef8h[0xc];
+DR_COLD __BYTE__ ___1a0f04h[0x14];
+DR_COLD __BYTE__ ___1a0f18h[0x6c];
 __POINTER__ ___1a0f84h;
 __POINTER__ ___1a0f88h;
 __POINTER__ ___1a0f8ch;
@@ -135,7 +135,7 @@ kb_control_t ___1a1140h;
 __BYTE__ ___1a1160h[4];
 __DWORD__ ___1a1164h_gp_accelerate;
 __BYTE__ ___1a1168h[4];
-__BYTE__ ___1a116ch[0xce4];
+DR_COLD __BYTE__ ___1a116ch[0xce4];
 
 __DWORD__ ___1a1e50h_com_port_standard;
 __POINTER__ ___1a1e54h;
@@ -200,9 +200,9 @@ __DWORD__ LOC_END;          // cinem.c
 */
 
 __DWORD__ ___1a1f3ch_counter;
-__BYTE__ ___1a1f40h[0xe];	
+DR_COLD __BYTE__ ___1a1f40h[0xe];	
 __BYTE__ ___1a1f4eh[0x16];
-__BYTE__ ___1a1f64h[0x6];
+DR_COLD __BYTE__ ___1a1f64h[0x6];
 __BYTE__ ___1a1f6ah[0x87];
 __BYTE__ ___1a1ff1h[0xb];
 char ___1a1ffch_modem_init_string[0x15];
@@ -299,8 +299,8 @@ __BYTE__ ___243328h[4];
 __BYTE__ ___24332ch[4];
 __BYTE__ ___243330h[4];
 __BYTE__ ___243334h[4];
-__BYTE__ ___243338h[0x28c];
-__BYTE__ ___2435c4h[0x290];
+DR_COLD __BYTE__ ___243338h[0x28c];
+DR_COLD __BYTE__ ___2435c4h[0x290];
 __BYTE__ ___243854h[0x20];
 __BYTE__ ___243874h[4];
 __BYTE__ ___243878h[4];

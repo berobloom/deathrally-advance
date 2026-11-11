@@ -106,6 +106,8 @@ Maxmod mixes 24 channels (16 for the songs, which have up to 16, and 8 for effec
 
 Maxmod puts about 5 KB of code and 0.8 KB of data in IWRAM. Only the mixer, which needs the speed, stays there. The pattern and effect code (`mm_mas`, `mm_mas_arm`, `mm_effect`) runs from ROM, and its data is in EWRAM, as are Maxmod's channel and mixing buffers. `TRX_OHI_DAT` (1 KB), `race_ima.c`'s list of changed tiles, newlib's `__sf` (360 bytes) and `gba/race`'s table of baked files moved to EWRAM as well. A race leaves about 1 KB of the stack untouched on all ten tracks. Reversed tracks made `race_ima.c`'s IWRAM code about 270 bytes larger, which leaves about 700 bytes. The AI's way round (`X___1de920h`, `Y___1ded20h`), which only the buildings use, moved to EWRAM for it.
 
+The career put the racers (2.1 KB), the lap records (2.6 KB), the chat box (3.3 KB) and the sign-up's tables in reach of the GBA's code, and its own state in IWRAM. They're all `DR_COLD` now, and so is the narrow view's table of HUD positions (`___243338h`, `___2435c4h`, 1.3 KB), which the GBA's wide view never reads. `___58b20h()`'s error messages (1.1 KB) are `const`, in ROM, and the menus' palette (`___2b318h()`, 7 KB of tables) is left out of a `DR_CAREER_NODRAW` build. A career race leaves about 1.6 KB of the stack untouched.
+
 `mmFrame()` runs in the vblank interrupt, and Maxmod isn't reentrant. A vblank during `mmStart()` once left `mmReadPattern()` looping forever, so `sound.c` turns interrupts off around each Maxmod call. `TR0-MUS.CMF` has one stray command, effect 89 on an unused channel. The desktop's player skips it, but Maxmod's effect table has no entry that far, and it crashed. `tools/gbabake` clears effects outside 1-26.
 
 ## Next Steps, Most Promising First
@@ -120,7 +122,7 @@ Items 1-4 below are done, and the race runs at full speed. The rest would make r
 2. **(Done) The `D()`/`F32()` macros** (`include/drally.h`) read through a packed `may_alias` struct, which means byte loads on the GBA. For globals known to be 4-aligned (most of the `___xxxxxxh` arrays), a word-access variant would be much cheaper. Do the hottest files first.
 3. **(Done for `4dcach`) The double divisions that are left** (`__divdf3`, about 3% of the logic): `race___4dcach` divides by 1.15 and 1.2 three times per car, and there are others. Each costs hundreds of cycles. Replacing them with float, or with multiplying by the reciprocal, is a new-math step.
 4. **(Done) `sqrtf`** (newlib, Thumb in ROM, about 2%). Copy `libm`'s `ef_sqrt` object into IWRAM the way `gba/replay/Makefile` does for libgcc.
-5. **More `DR_HOT`:** the stack, which the vblank interrupt adds to, has about 700 bytes that a race never touches. Moving more cold data to EWRAM would make room (newlib's `__sf` and `TRX_OHI_DAT` have moved, for the sound). Candidates are `race___55ae0h`, the skid-mark helpers in `race___54668h`, and `race___4b62ch`'s inner loops. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
+5. **More `DR_HOT`:** the stack, which the vblank interrupt adds to, has about 1.6 KB that a race never touches. Moving more cold data to EWRAM would make room (newlib's `__sf` and `TRX_OHI_DAT` have moved, for the sound). Candidates are `race___55ae0h`, the skid-mark helpers in `race___54668h`, and `race___4b62ch`'s inner loops. `race___4c434h` is 11 KB of Thumb code, too big to move whole.
 6. The rest of the AI and physics float math into fixed point, if the steps above don't reach the target.
 
 ## How to Measure

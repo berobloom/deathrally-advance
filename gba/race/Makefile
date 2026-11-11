@@ -39,7 +39,9 @@ include ../game.mk
 
 # DR_IMA_TILES: the track image the race draws into is the track's tiles
 # in ROM, with the ones drawn into in EWRAM, see src/race/race_ima.c
-CFLAGS += -DDR_RACE_NODRAW -DDR_IMA_TILES $(RACE_CFLAGS)
+# DR_CAREER_NODRAW: the career's menu functions without their drawing, see
+# drally_career.h; career_ui.c draws its own screens
+CFLAGS += -DDR_RACE_NODRAW -DDR_IMA_TILES -DDR_CAREER_NODRAW $(RACE_CFLAGS)
 ifdef TICKS
 CFLAGS += -DTICKS_PER_SEC=$(TICKS)
 endif
@@ -69,11 +71,15 @@ $(BUILD)/libmm/%.o: $(LIBMM)
 	@cd $(@D) && $(AR) x $(LIBMM) $*.o
 	@$(OBJCOPY) --rename-section .iwram=.text --rename-section .bss=.sbss $@
 
-$(ELF): $(BUILD)/main.o $(BUILD)/sound.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(LIBMM_ROM:%=$(BUILD)/libmm/%.o) $(GAME_LIB)
+$(ELF): $(BUILD)/main.o $(BUILD)/career_ui.o $(BUILD)/sound.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(LIBMM_ROM:%=$(BUILD)/libmm/%.o) $(GAME_LIB)
 	$(CC) $(LDFLAGS) -Wl,-Map,$(BUILD)/drrace.map -o $@ $^ -lmm -lgba -lm
 
 # rebuilt every time: PRE and RACE_CFLAGS change what goes in
-$(BUILD)/main.o: main.c FORCE
+$(BUILD)/main.o: main.c gba.h FORCE
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -Wall -c -o $@ $<
+
+$(BUILD)/career_ui.o: career_ui.c gba.h FORCE
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -Wall -c -o $@ $<
 
@@ -82,7 +88,6 @@ $(BUILD)/main.o: main.c FORCE
 MMUTIL := $(DEVKITPRO)/tools/bin/mmutil
 $(BUILD)/soundbank-$(NAME).bin: $(BAKES:%=%/.done)
 	$(MMUTIL) -o$@ -h$(BUILD)/soundbank-$(NAME).h $(sort $(wildcard $(BAKE)/efe*.wav)) $(foreach t,$(TRACKS),$(BUILD)/bake-tr$(t)/tr$(t).s3m) > /dev/null
-	cp $@ $(BUILD)/soundbank.bin
 
 $(BUILD)/sound.o: sound.c $(BUILD)/soundbank-$(NAME).bin
 	$(CC) $(CFLAGS) -I$(BUILD) -Wall -c -o $@ $<
@@ -91,6 +96,8 @@ $(BUILD)/assets-$(NAME).o: assets.S $(BAKES:%=%/.done) $(BUILD)/soundbank-$(NAME
 ifdef PRE
 	cp $(PRE) $(BAKE)/pre.bin
 endif
+	# assets.S's soundbank.bin: this ROM's, whichever was built last
+	cp $(BUILD)/soundbank-$(NAME).bin $(BUILD)/soundbank.bin
 	$(CC) $(ARCH) $(ASFLAGS_PRE) -DTRACKS="$(subst $(space),$(comma),$(strip $(TRACKS)))" -Wa,-I$(BAKE) -Wa,-I$(BUILD) -c -o $@ $<
 
 $(BUILD)/bake-tr%/.done: $(BAKETOOL)

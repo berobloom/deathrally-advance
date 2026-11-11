@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, forward or (all but the first) reversed, in any of the six cars, with the laps, the rivals' skill, your upgrades and weapons or none chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, forward or (all but the first) reversed, in any of the six cars, with the laps, the rivals' skill, your upgrades and weapons or none chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. A career, the game's own rounds of three races with prize money, points and ranks against the other 19 drivers, up to the race against the Adversary, plays on text screens for now. See [Status](#status).
 
 ## Game Data
 
@@ -95,6 +95,24 @@ Setting up takes about 30 frames. Checks that it's the same setup as the desktop
 
 Comparing the two found a bug in the decompiled code: two calls to the random number generator in one statement, whose order C leaves open. The desktop and the GBA compilers placed the race's power-ups differently. They're now called in the desktop's order.
 
+### The Career
+
+The game keeps a career's state between races in its menus' functions, mixed in with their drawing: the sign-up (`___3266ch()`), PREPARE TO RACE (`___33010h_cdecl()`), which also runs the race, the round's results (`___3892ch_cdecl()` and the three race results screens) and the Adversary's challenge (`___31008h()`). The state half of each now lives in `src/career/career.c`, which the desktop's menus call as they did before and the GBA calls from its own screens:
+
+* `career_new()`: a new game, as START A NEW GAME leaves it: your name, face and difficulty, and the 19 others with their random money and upgrades.
+* `career_signup_open()`, `_check()`, `_signup()`, `_rest()` and `_order()`: the round's three races and their tracks, the others signing up at random while you choose, and each grid's order.
+* `career_race_track()`, `_fill()` and `_after()`: the race's track, laps and grid, the racers into the race's inputs (`___1de7d0h`), and after the race the prize money, the kill bonuses, the damage and the wins.
+* `career_results()`: the round's points, the racers sorted and ranked on them, and your lap record.
+* `career_leader_round()` and `career_adversary_*()`: once you lead, the race against the Adversary, or chickening out.
+
+The results screens' functions also hand out the points. Built with `DR_CAREER_NODRAW` they leave their drawing out and keep the rest, and `career_results()` calls them.
+
+On the GBA, `gba/race/career_ui.c` draws its own text screens around them: a new game, the hub with your rank, points, money, car and damage, the sign-up with the three races filling up, PREPARE TO RACE, the race, its results, and the standings with what each driver scored in the round. The racers' car colors come from MENU.BPA's `CARCOL.PAL` and `COPPER.PAL`, which `tools/gbabake` bakes. A career's races follow one another without resetting the race's globals, as on the desktop.
+
+`tools/replay --career BAKES SEED ROUNDS` plays a career on the desktop as `gba/race`'s career benchmark does (`RACE_CFLAGS="-DRACE_BENCH -DCAREER_BENCH=n -DRACE_SEED=s"`): always the easy race, with the AI driving your car. It prints a hash of the race's globals after each race and of the 20 racers after each round. Four rounds match the GBA's, and so do three races against the Adversary (`CAREER_LEAD=1`, and `-DCAREER_LEAD` on the GBA, give you the lead from the start). In one of those, the engine sound's pitch at the end differs, which nothing else reads.
+
+### Speed
+
 In mGBA, with the AI driving all four cars, a whole race runs at 60.0 frames per second at the real 70 ticks a second, on all ten tracks. At most two seconds a race show 59, which is one frame shown twice. If the logic falls more than two ticks behind, the game slows down rather than catching up. `make TICKS=60` runs one tick a frame, at 6/7 of the game's speed. `RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=n"` builds a benchmark: one tick a frame however long it takes, with the AI driving your car. At the end it logs the cost of a tick and a hash of the race, which a change that is meant to keep the race the same must not move.
 
 ### Building
@@ -108,11 +126,11 @@ Requirements:
 ```sh
 make -C gba/proto            # builds gba/proto/drproto-tr0.gba
 make -C gba/proto TRACK=5    # any track, 0-9
-make -C gba/race             # builds gba/race/drrace.gba: a quick race on any track, in any car
+make -C gba/race             # builds gba/race/drrace.gba: the career, or a quick race on any track, in any car
 make -C gba/race TRACK=8     # drrace-tr8.gba, track 8 only, which starts straight away
 ```
 
-Each prototype ROM holds one track and is about 2 MB. The race ROM is about 29 MB of the cartridge's 32: 6 MB that all tracks share, most of it the six cars' 96 rotation frames in each of the four cars' colors, about 1.4 MB for each track and as much again for it reversed, and the 3.5 MB soundbank with the ten songs and 44 sound effects. The seventh car and the cars with spikes, which a quick race doesn't use, are left out to make room.
+Each prototype ROM holds one track and is about 2 MB. The race ROM is about 31.6 MB of the cartridge's 32: 7 MB that all tracks share, most of it the seven cars' 96 rotation frames in each of the four cars' colors, about 1.4 MB for each track and as much again for it reversed, and the 3.5 MB soundbank with the ten songs and 44 sound effects. The cars with spikes are left out to make room: a car with spikes races with its car's picture and shape without them (`race_baked_t`'s `variants`), which `tools/replay --career` does too.
 
 ### Controls
 
@@ -137,23 +155,25 @@ In `gba/race`:
 | R            | Turbo                                    |
 | L            | Machine gun                              |
 | Select       | Drop a mine                              |
-| Start        | Let the AI drive your car, or, once the race is over, choose the next race |
+| Start        | Let the AI drive your car, or, once the race is over, go on (so does A) |
 
-Before a race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill, your car's upgrades, and whether there are weapons. A or Start races. Without weapons nobody has guns or mines, and the HUD box shows the lap time instead. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
+The title screen chooses the career or a quick race. In the career's screens, the D-pad moves, A chooses and B goes back. A new game asks for your name (A on it, then up and down change the letter and left and right move along), your face, which is one of the drivers' and leaves that driver out, and the difficulty. At the sign-up, left and right pick a race and A signs up, or B sits the round out. The others sign up as you choose, and a race that has its four is full.
+
+Before a quick race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill, your car's upgrades, and whether there are weapons. A or Start races, and B goes back to the title. Without weapons nobody has guns or mines, and the HUD box shows the lap time instead. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
 Its meter, at the bottom right, shows frames per second and the share of the CPU used. The bottom left shows your position and lap.
 
 ### Status
 
-Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed, with the track's music and the sound effects.
+Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed, with the track's music and the sound effects. A career on text screens, with the game's own sign-up, prize money, points, ranks and the Adversary, the same as the desktop's.
 
 Not done yet:
 
-* Choosing the opponents and their cars.
+* In the career: the shop (cars, upgrades and repairs), the underground market, the loan shark, sabotage and the random events, the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
-* Menus, shops and the underground market, which are drawn at 640x480.
+* The menus' own screens, which are drawn at 640x480.
 * The menus' music, and the sound effects starting partway through, which Maxmod can't do.
 * Saving in SRAM.
 * Testing on real hardware.

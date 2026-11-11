@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___196a84h[];
 	extern __BYTE__ ___196a98h[];
@@ -112,7 +113,7 @@ void ___2415ch(void){
 	s_6c[D(___1a1ef8h)].loanshark_counter = -1;
 	s_6c[D(___1a1ef8h)].rank = 20;
 	s_6c[D(___1a1ef8h)].refund = ___18e298h[0].price;
-	___2b318h();
+	if(CAREER_DRAW) ___2b318h();	// the menus' palette
 	D(___1a1ee8h) = 0;
 	D(___1a1ec0h) = 0;
 	D(___1a1ee0h) = 0;

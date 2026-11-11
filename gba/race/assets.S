@@ -9,11 +9,11 @@
 	.incbin	"\file"
 	.endm
 
-#define RACE_GBA_CARS		6	// main.c's NUM_MODELS
+#define RACE_GBA_CARS		7	// main.c's GBA_CAR_IMAGES
 #define RACE_SHAPES_SIZE	8064	// sizeof(race_car_shapes_t), which main.c checks
 
-@ the first n bytes of file: the GBA's cars are the 6 models, without the
-@ 7th or the spiked ones, which a quick race doesn't use
+@ the first n bytes of file: the GBA's cars are the 7 models, the
+@ Adversary's last, without the spiked ones, which race the models' images
 	.macro	asset_part name, file, n
 	.align	4
 	.global	\name
@@ -36,6 +36,8 @@
 	asset	hud_bin, hud.bin
 	asset	lamps_obj, lamps.obj
 	asset_part	cars_obj, cars-all.obj, RACE_GBA_CARS*4*96*5*5*64
+	asset	carcol_pal, carcol.pal
+	asset	copper_pal, copper.pal
 	asset	sfx_bin, sfx.bin
 	asset	soundbank_bin, soundbank.bin
 #if defined(RACE_PRE)

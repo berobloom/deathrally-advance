@@ -31,6 +31,7 @@
 #include <maxmod.h>
 #include "sound.h"
 #include "race_replay.h"
+#include "gba.h"
 
 // baked by tools/gbabake, see assets.S
 // each track's files, see assets.S
@@ -91,6 +92,8 @@ void race___40164h(void);
 	extern int CURRENT_VIEWPORT_X;
 	extern int CURRENT_VIEWPORT_CENTER_X;
 	extern kb_control_t ___1a1140h;
+	extern char ___19bd64h[16];
+void race___400ech(void);
 
 #define REG_WAITCNT		(*(vu16 *)0x04000204)
 // WININ/WINOUT layer bits and BLDCNT fields, which libgba leaves out
@@ -113,6 +116,9 @@ void race___40164h(void);
 #define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
 #define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars_obj
 #define NUM_CARS		4
+// the car images in the ROM, assets.S's RACE_GBA_CARS: the 7 models,
+// the Adversary's last, without the spiked ones (see race_baked_t)
+#define GBA_CAR_IMAGES		7
 // the game's timer runs at 70 Hz, 7 ticks every 6 frames. Each tick runs
 // race_logic() and race_render() once, as the game did on its 70 Hz VGA
 // screen, and the vblank interrupt draws the last finished one, so a tick
@@ -137,7 +143,7 @@ void race___40164h(void);
 #define HUD_MAP			((u16 *)SCREEN_BASE_BLOCK(30))
 #define HUD_CHARS		((u8 *)CHAR_BASE_BLOCK(3))
 // and the game's own box at the top left, 64x32: 8x4 of its tiles
-#define BOX_TILE0		48	// after the glyphs
+#define BOX_TILE0		64	// after the glyphs
 #define BOX_W			64
 #define BOX_H			32
 #if !defined(RACE_IMA_TILES)
@@ -174,7 +180,8 @@ EWRAM_DATA static race_baked_t baked = {
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
 	.cars = cars_img, .shapes = cars_shp, .sprites = sprites_bin, .hud = hud_bin,
 	.obstacles = obstacles,
-	.rev_cars = cars_rev_img, .rev_shapes = cars_rev_shp, .rev_obstacle = setup_obst_rev
+	.rev_cars = cars_rev_img, .rev_shapes = cars_rev_shp, .rev_obstacle = setup_obst_rev,
+	.variants = GBA_CAR_IMAGES
 };
 
 static int track_w, track_h;		// in tiles
@@ -207,7 +214,7 @@ static void copy32(void * dst, const void * src, u32 bytes){
 }
 
 // to mGBA's debug log
-static void say(const char * fmt, ...){
+void say(const char * fmt, ...){
 
 	va_list 	ap;
 
@@ -284,7 +291,7 @@ static void update_track(int cam_x, int cam_y){
 // --- HUD -------------------------------------------------------------------
 
 // 5x7 glyphs, one byte per row, bit 4 is the leftmost pixel
-static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMBW ";
+static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMBWJQYZ.$:-+!?',( ";
 static const u8 hud_font[][7] = {
 	{14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31}, {31,2,4,2,1,17,14},
 	{2,6,10,18,31,2,2}, {31,16,30,1,1,17,14}, {6,8,16,30,17,17,14}, {31,1,2,4,8,8,8},
@@ -295,6 +302,10 @@ static const u8 hud_font[][7] = {
 	{1,1,2,4,8,16,16}, {31,4,4,4,4,4,4}, {17,18,20,24,20,18,17}, {17,25,21,19,17,17,17},
 	{14,4,4,4,4,4,14}, {30,17,17,17,17,17,30}, {2,4,8,16,8,4,2}, {8,4,2,1,2,4,8},
 	{17,17,17,31,17,17,17}, {17,27,21,21,17,17,17}, {30,17,17,30,17,17,30}, {17,17,17,21,21,21,10},
+	{7,2,2,2,2,18,12}, {14,17,17,17,21,18,13}, {17,17,10,4,4,4,4}, {31,1,2,4,8,16,31},
+	{0,0,0,0,0,12,12}, {4,15,20,14,5,30,4}, {0,12,12,0,12,12,0}, {0,0,0,31,0,0,0},
+	{0,4,4,31,4,4,0}, {4,4,4,4,4,0,4}, {14,17,1,2,4,0,4}, {4,4,8,0,0,0,0},
+	{0,0,0,0,12,4,8}, {2,4,8,8,8,4,2},
 	{0,0,0,0,0,0,0}
 };
 
@@ -343,6 +354,7 @@ static void init_hud(void){
 
 	for(g = 0; g < 128; g++) hud_glyph[g] = sizeof(hud_chars)-2;	// space
 	for(g = 0; g < (int)sizeof(hud_chars)-1; g++) hud_glyph[(int)hud_chars[g]] = g;
+	for(g = 'a'; g <= 'z'; g++) hud_glyph[g] = hud_glyph[g-0x20];
 	for(x = 0; x < 32*32; x++) HUD_MAP[x] = sizeof(hud_chars)-2;
 	for(y = 0; y < BOX_H/8; y++) for(x = 0; x < BOX_W/8; x++) HUD_MAP[32*y+x] = BOX_TILE0+(BOX_W/8)*y+x;
 	for(x = 0; x < BOX_W*BOX_H; x += 2) ((u16 *)(HUD_CHARS+64*BOX_TILE0))[x/2] = 0;
@@ -717,13 +729,13 @@ static void choice_row(int row, int chosen, const char * label, const char * val
 // before a race: up and down pick a row, left and right change it (the
 // track pans by, your car turns in the middle), and A or Start races
 #define CHOICES 		6
-static void choose_race(void){
+static int choose_race(void){
 
 	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, row = 0, n;
 	char 	num[8];
 
 #if defined(RACE_BENCH)
-	return;			// the first track, with nobody to choose
+	return 0;		// the first track, with nobody to choose
 #endif
 	view_drawing = 0;
 	sound_music(-1);
@@ -776,11 +788,11 @@ static void choose_race(void){
 
 			scanKeys();
 			n = keysDown();
-			if(n&(KEY_A|KEY_START)){
+			if(n&(KEY_A|KEY_START|KEY_B)){
 
 				OAM[0].attr0 = OBJ_DISABLE;
 				init_hud();		// the race's
-				return;
+				return !!(n&KEY_B);	// B: back to the title
 			}
 			if(n&KEY_UP) row = (row+CHOICES-1)%CHOICES;
 			if(n&KEY_DOWN) row = (row+1)%CHOICES;
@@ -807,15 +819,21 @@ static void choose_race(void){
 	}
 }
 
-static const char * start_race(void){
+// the race: a quick one with what choose_race() chose, or with career
+// set the career's, which ___1de7d0h and the rest hold already (see
+// career_race() in career.c), with you in place my_index of num_cars
+static const char * start_race(int career, int my_index, int num_cars){
 
-	int 		n, my_index, num_cars;
+	int 		n;
 
 	view_drawing = 0;
 	view_ready = -1;
 	timer_ticks = 0;
 	if(race_replay_size() > sizeof(flat)) return "flat[] too small";
-	race_replay_scatter(flat_boot);
+	// a quick race from the globals as they were at start-up; the
+	// career's from those its last race left, as on the desktop (see
+	// gba_career_reset())
+	if(!career) race_replay_scatter(flat_boot);
 #if defined(RACE_PRE)
 	// as the desktop's menus left it
 	if(race_pre[2] != race_replay_size()) return "pre.bin is from another build";
@@ -823,7 +841,16 @@ static const char * start_race(void){
 	num_cars = race_pre[1];
 	race_replay_scatter((const __BYTE__ *)(race_pre+3));
 #else
-	{
+	if(career){
+
+		// the track the career's race is on, turned round or not
+		for(n = 0; (n < (int)race_tracks_n)&&(race_tracks[n].track != (u32)(___19bd64h[2]-'0')); n++);
+		if(n == (int)race_tracks_n) return "the career's track isn't in the ROM";
+		reversed = D(___1de7d0h+0x48);
+		use_track(&race_tracks[n]);
+		say("career race on %s%s, %d laps, you in place %d of %d", ___19bd64h, reversed ? " reversed" : "", NUM_OF_LAPS, my_index, num_cars);
+	}
+	else {
 		// gbabake's car colors (track.pal), red, blue, yellow and green
 		// yours, then a DELIVERATOR, a WRAITH and a SENTINEL
 		int 			models[NUM_CARS] = { my_model, 5, 4, 2 };
@@ -998,9 +1025,59 @@ static void draw_view(void){
 	isr_cycles += cycles()-t;
 }
 
-int main(void){
+// --- text screens --------------------------------------------------------------
 
-	const char * 	err;
+u32 gba_cycles(void){ return cycles(); }
+
+// the HUD's glyphs on black, and nothing else
+void gba_text_screen(void){
+
+	int 	n;
+
+	view_drawing = 0;
+	VBlankIntrWait();
+	REG_DISPCNT = MODE_0 | BG1_ON;
+	REG_BG1HOFS = 0;
+	REG_BG1VOFS = 0;
+	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
+	BG_PALETTE[0] = 0;
+}
+
+void gba_print(int col, int row, const char * s){
+
+	for(; *s&&(col < 32); s++, col++) if(col >= 0) HUD_MAP[row*32 + col] = hud_glyph[*s & 127];
+}
+
+// the next frame, and the keys pressed since the last, the arrows
+// repeating while they're held
+u16 gba_frame(void){
+
+	VBlankIntrWait();
+	scanKeys();
+
+	return keysDown()|(keysDownRepeat()&(KEY_UP|KEY_DOWN|KEY_LEFT|KEY_RIGHT));
+}
+
+static void fail(const char * err);
+
+// what the game's ___3f71ch__allocateMemory() calls when it's out of
+// memory, before it prints so and exits: here it stops at fail()
+void dRally_System_clean(void){ fail("out of memory"); }
+void __VGA3_SETMODE(void){}
+
+static void fail(const char * err){
+
+	hud_print(0, 0, "ERR");
+	say("%s", err);
+	REG_DISPCNT = MODE_0 | BG1_ON;
+	while(1) VBlankIntrWait();
+}
+
+// the race start_race() set up, until it's over and you press Start or A
+// (never in the benchmark)
+static void run_race(void){
+
 	int 		n, frames = 0, over = 0;
 	u32 		last_report = 0, last_drawn = 0, last_isr, t;
 #if !defined(RACE_BENCH)
@@ -1009,51 +1086,6 @@ int main(void){
 	u32 		idle = 0, logic = 0, render = 0, ticks = 0, logic_max = 0;
 	char 		line[32];
 
-	// the IWRAM below the stack, marked so that ojgbarun's stackfree= can
-	// tell how much of it the stack ever reaches
-	{
-		extern u32 __iheap_start[];
-		u32 * p = __iheap_start, * sp = __builtin_frame_address(0);
-
-		for(; p < sp-64; p++) *p = 0x57AC57AC;
-	}
-
-	REG_WAITCNT = 0x4017;		// ROM at 3/1 wait states with prefetch, works on flash carts
-	REG_DEBUG_ENABLE = 0xC0DE;
-	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
-
-	sound_init();			// before the vblank handler, which mixes
-	irqInit();
-	irqSet(IRQ_VBLANK, vblank_handler);
-	irqEnable(IRQ_VBLANK);
-	REG_TM3CNT_H = TIMER_START | TIMER_COUNT;
-	REG_TM2CNT_H = TIMER_START;
-
-	for(n = 0; n < 256; n++) ring_row[n] = n % RING_H;
-
-	REG_DISPCNT = LCDC_OFF;
-	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
-	use_track(&race_tracks[0]);
-
-	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
-	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
-	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
-	// shadows: inside the OBJ window the track (BG0) is darkened
-	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ | WIN_BLD) << 8);
-	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN;
-	REG_BLDY = 9;
-
-	race_replay_gather(flat_boot);
-	if(race_tracks_n > 1) choose_race();
-	t = vblanks;
-	if((err = start_race())){
-
-		hud_print(0, 0, "ERR");
-		say("start_race: %s", err);
-		REG_DISPCNT = MODE_0 | BG1_ON;
-		while(1) VBlankIntrWait();
-	}
-	say("race set up in %lu frames", vblanks-t);
 
 	VBlankIntrWait();	// which draws it
 	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | BG2_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
@@ -1088,19 +1120,13 @@ int main(void){
 		scanKeys();
 		keys = keysHeld();
 		down = keysDown();
-		if(down & KEY_START){
-
-			// once RACE OVER shows
-			if(over||((int)D(___2438c8h) > 0)){
-
-				// another race, on a track chosen again if there's a choice
-				if(race_tracks_n > 1) choose_race();
-				start_race();
-				REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | BG2_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
-				over = 0;
-			}
-			else D(___243ce0h) = !D(___243ce0h);
-		}
+		// once it's over, Start or A leaves; before, Start lets the AI
+		// drive your car or not
+		if(over&&(down & (KEY_START|KEY_A))) break;
+#if defined(CAREER_BENCH)
+		if(over) break;		// the career goes on by itself
+#endif
+		if(down & KEY_START) D(___243ce0h) = !D(___243ce0h);
 		read_keys(keys, down);
 
 		// the game's 70 Hz timer, for the vblanks since the last frame:
@@ -1152,6 +1178,17 @@ int main(void){
 				say("BENCH end: %lu ticks, logic %llu cycles a tick, at most %lu; over 190k %lu, 200k %lu, 225k %lu; globals hash %08lx",
 					bench_ticks, bench_logic/bench_ticks, bench_max, bench_over190, bench_over200, bench_over225, race_replay_hash(flat));
 				for(n = 0; n < NUM_OF_CARS; n++) say("BENCH car %d: lap %d pos %d fin %lu", n, car(n)->Lap, car(n)->Position, car(n)->Finished);
+#if defined(VAR_HASHES)
+				{
+					unsigned 	i, o, k;
+					__DWORD__ 	h;
+
+					for(i = o = 0; i < race_replay_count(); o += race_replay_var_size(i++)){
+						for(h = 0x811c9dc5, k = 0; k < race_replay_var_size(i); k++) h = (h^flat[o+k])*0x01000193;
+						say("end var %s %08lx", race_replay_var_name(i), h);
+					}
+				}
+#endif
 				{
 					// what the race drew into the track, as tools/replay --race prints it
 					unsigned 	used, max, dropped;
@@ -1167,6 +1204,10 @@ int main(void){
 					say("BENCH track image %08lx: %u of %u tiles drawn into, %u writes dropped", h, used, max, dropped);
 				}
 #endif
+				// the places, and with them the damage and the kills,
+				// as race_main() leaves them in ___1de7d0h
+				for(n = 0; n < NUM_OF_CARS; n++) ((struct_94_t *)___1de580h)[n].__54 = car(n)->Position;
+				race___400ech();
 			}
 		}
 		follow_camera();
@@ -1203,4 +1244,95 @@ int main(void){
 			frames = 0; idle = logic = render = ticks = logic_max = 0;
 		}
 	}
+	view_drawing = 0;
+}
+
+// quick races, one after another: the track and the rest chosen before
+// each, as long as there's a choice. Until B in the choice
+static void quick_races(void){
+
+	const char * 	err;
+	u32 		t;
+
+	for(;;){
+
+		if((race_tracks_n > 1)&&choose_race()) return;
+		t = vblanks;
+		if((err = start_race(0, 0, 0))) fail(err);
+		say("race set up in %lu frames", vblanks-t);
+		run_race();
+	}
+}
+
+// a new career: the race's globals as at start-up, as a quick race
+// before it may have left them, like the desktop game's when it starts
+void gba_career_reset(void){
+
+	race_replay_scatter(flat_boot);
+}
+
+// the career's race, which career.c set up
+void gba_career_race(int my_index, int num_cars){
+
+	const char * 	err;
+
+	if((err = start_race(1, my_index, num_cars))) fail(err);
+	run_race();
+	sound_music(-1);
+}
+
+int main(void){
+
+	int 		n;
+
+	// the IWRAM below the stack, marked so that ojgbarun's stackfree= can
+	// tell how much of it the stack ever reaches
+	{
+		extern u32 __iheap_start[];
+		u32 * p = __iheap_start, * sp = __builtin_frame_address(0);
+
+		for(; p < sp-64; p++) *p = 0x57AC57AC;
+	}
+
+	REG_WAITCNT = 0x4017;		// ROM at 3/1 wait states with prefetch, works on flash carts
+	REG_DEBUG_ENABLE = 0xC0DE;
+	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
+
+	sound_init();			// before the vblank handler, which mixes
+	irqInit();
+	irqSet(IRQ_VBLANK, vblank_handler);
+	irqEnable(IRQ_VBLANK);
+	REG_TM3CNT_H = TIMER_START | TIMER_COUNT;
+	REG_TM2CNT_H = TIMER_START;
+
+	for(n = 0; n < 256; n++) ring_row[n] = n % RING_H;
+
+	REG_DISPCNT = LCDC_OFF;
+	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	use_track(&race_tracks[0]);
+
+	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
+	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
+	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
+	// shadows: inside the OBJ window the track (BG0) is darkened
+	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ | WIN_BLD) << 8);
+	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN;
+	REG_BLDY = 9;
+
+	race_replay_gather(flat_boot);
+	setRepeat(20, 5);
+#if defined(CAREER_BENCH)
+	(void)quick_races;
+	career_play();
+#elif defined(RACE_BENCH)||defined(RACE_PRE)
+	quick_races();
+#else
+	// a ROM with one track has only its quick race
+	if(race_tracks_n == 1) for(;;) quick_races();
+	for(;;){
+
+		if(gba_title() == 0) career_play();
+		else quick_races();
+	}
+#endif
 }

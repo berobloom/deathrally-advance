@@ -2,6 +2,7 @@
 #include "drally_fonts.h"
 #include "drally_keyboard.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 #include "sfx.h"
 
 #pragma pack(1)
@@ -87,8 +88,7 @@ void ___3266ch(void){
 
 
 	s_6c = (racer_t *)___1a01e0h;
-	D(___1a1028h) = -1;
-	___31588h();
+	career_signup_open();
 
 	n = -1;
 	while(++n < 7){
@@ -180,11 +180,7 @@ void ___3266ch(void){
 						y = x/0x280;
 						x = x%0x280;
 						___12e78h_v3(___1a10b8h___185c7ah, esp, x, y);
-						ebx = B(___1a1f64h+D(___185a50h)+3);
-						D(___1a1028h) = D(___185a50h);
-						B(___1a0ef8h+4*D(___185a50h)+ebx) = D(___1a1ef8h);
-						B(___1a1f64h+D(___185a50h)+3)++;
-						D(___1a103ch) = ebx;
+						career_signup(D(___185a50h));
 						___12cb8h__VESA101_PRESENTSCREEN();
 
 						while(1){
@@ -195,42 +191,7 @@ void ___3266ch(void){
 							if((B(___1a1f64h+3) >= 4)&&(B(___1a1f64h+4) >= 4)&&(B(___1a1f64h+5) >= 4)) break;
 						}
 
-						n2 = -1;
-						while(++n2 < 3){
-
-							memset(esp+0x3c, 0, 0x14);
-							B(esp+0x50) = B(___1a0ef8h+4*n2);
-							B(esp+0x51) = B(___1a0ef8h+4*n2+1);
-							B(esp+0x52) = B(___1a0ef8h+4*n2+2);
-							B(esp+0x53) = B(___1a0ef8h+4*n2+3);
-
-							edi = 4*n2;
-							n3 = -1;
-							while(++n3 < 4){
-
-								eax = 0;
-								while(1){
-
-									n = B(esp+eax+0x50);
-									eax++;
-									if(B(esp+n+0x3c) == 0) break;
-								}
-
-								eax = B(esp+0x51);
-								if(((int)eax > n)&&(B(esp+eax+0x3c) == 0)) n = eax;
-
-								eax = B(esp+0x52);
-								if(((int)eax > n)&&(B(esp+eax+0x3c) == 0)) n = eax;
-
-								eax = B(esp+0x53);
-								if(((int)eax > n)&&(B(esp+eax+0x3c) == 0)) n = eax;
-
-								B(esp+n+0x3c) = 1;
-								B(___1a0ef8h+edi) = n;
-								if(D(___1a1ef8h) == n) D(___1a103ch) = n3;
-								edi++;
-							}
-						}
+						career_signup_order();
 
 						if(!___32230h()&&!___31868h()){	// NO_SABOTAGE && NO_EVENTS
 

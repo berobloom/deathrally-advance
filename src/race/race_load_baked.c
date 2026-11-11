@@ -49,7 +49,9 @@ int race_car_variant(int n){
 	struct_54_t * 	s_54 = (struct_54_t *)___1de7d0h;
 	int 		model = D(___1de580h+0x94*n);
 
-	return ((s_54[n].__24 == 1)&&(model < 6)) ? RACE_CAR_MODELS+model : model;
+	int 		v = ((s_54[n].__24 == 1)&&(model < 6)) ? RACE_CAR_MODELS+model : model;
+
+	return (race_baked->variants&&(v >= race_baked->variants)) ? model : v;
 }
 
 static void baked_inf(void){
