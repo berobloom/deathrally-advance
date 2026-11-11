@@ -730,6 +730,14 @@ static void choose_race(void){
 		const u8 * 	frames;
 
 		use_track(&race_tracks[k]);
+		if(reversed){
+
+			// turned round as the race will have it; race_setup() sets
+			// TRX_HEIGHT, which the turned tiles go by, again
+			TRX_HEIGHT = track_ph;
+			race_ima_reverse();
+			ima_pad = race_ima_pad();
+		}
 		x = (track_pw-SCREEN_W)/2;
 		y = (track_ph-SCREEN_H)/2;
 		for(;;){
