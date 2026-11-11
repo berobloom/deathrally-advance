@@ -76,9 +76,11 @@ void race_ima_read(int x, int y, __BYTE__ * dst, int n);
 void race_ima_write(int x, int y, const __BYTE__ * src, int n);
 void race_ima_draw(int x, int y, const __BYTE__ * src, int n);
 void race_ima_lookup(int x, int y, int w, int h, const __BYTE__ * tab);
+void race_ima_reverse(void);		// turned round, for a reversed track
 #if defined(DR_IMA_TILES)
 void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles);
-const __BYTE__ * race_ima_tile(int tx, int ty);
+const __BYTE__ * race_ima_tile(int tx, int ty, int * turned);
+int race_ima_pad(void);
 // the next tile drawn into since the last call, ty << 8 | tx, -1 if there
 // is none, or -2 for all of them
 int race_ima_dirty(void);
@@ -136,13 +138,15 @@ typedef struct {
 void race___49bd4h(void);
 void race___42824h(void);
 void race_inf_apply(const __BYTE__ * inf);
+void race___4af3ch_places(void);
 extern const race_loaders_t race_loaders_files;
 void race_setup(int MyIndex, int NumCars, const race_loaders_t * load);
 
 // race_loaders_baked: the track and the cars already decoded, as tools/gbabake
 // writes them, from wherever race_baked points. The track buffers are used
-// where they are, so on the GBA they stay in ROM. Without a scene step,
-// the buildings, which are only drawn, and reversed tracks aren't baked yet
+// where they are, so on the GBA they stay in ROM, and for a reversed track
+// they are baked turned round. The buildings, which are only drawn, aren't
+// baked
 #define RACE_CAR_MODELS		7		// KUPLA ... SPECIAL, then the -S variants of the first 6
 #define RACE_CAR_VARIANTS	(RACE_CAR_MODELS+6)
 typedef struct race_baked_s {
@@ -166,6 +170,14 @@ typedef struct race_baked_s {
 	const __BYTE__ *	hud;		// hud.bin, RACE_HUD_SIZE bytes
 	__POINTER__ 		ima;		// TRX_IMA, which the logic draws skid marks into
 	__BYTE__ *		obstacles;	// 0x800 bytes, the logic changes them
+	// a reversed track's, turned round: rev.mas, rev.vai, rev.lr1,
+	// cars-rev.img and cars-rev.shp, and the obstacles (obst-rev.bin)
+	const __BYTE__ *	rev_mas;
+	const __BYTE__ *	rev_vai;
+	const __BYTE__ *	rev_lr1;
+	const __BYTE__ *	rev_cars;
+	const race_car_shapes_t * rev_shapes;
+	const __BYTE__ *	rev_obstacle;
 } race_baked_t;
 extern const race_baked_t * race_baked;
 extern const race_loaders_t race_loaders_baked;

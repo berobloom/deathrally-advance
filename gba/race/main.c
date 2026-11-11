@@ -40,6 +40,11 @@ typedef struct {
 	const u32 * 	inf;			// width and height in tiles, then in pixels
 	const u8 * 	tiles, * mas, * setup_inf, * vai, * lr1;
 	const u8 * 	ski, * blo, * lit, * varjo, * drv, * ohi;
+	// reversed: rev_pal's size, 0 if the game doesn't reverse it, and the
+	// colors and maps turned round
+	u32 		reversible;
+	const u16 * 	rev_pal;
+	const u8 * 	rev_mas, * rev_vai, * rev_lr1;
 } race_track_t;
 extern const race_track_t race_tracks[];
 extern const u32 race_tracks_n;
@@ -47,6 +52,10 @@ static const race_track_t * trk;	// the race's
 extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
 extern const u8 cars_img[];
 extern const race_car_shapes_t cars_shp[];
+extern const u8 cars_rev_img[];
+extern const race_car_shapes_t cars_rev_shp[];
+extern const u8 setup_obst_rev[];
+_Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE");
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
 extern const u8 lamps_obj[];		// 6 KB a frame, see gbabake
@@ -64,6 +73,7 @@ void race___40164h(void);
 	extern __BYTE__ ___1e6ed0h[];
 	extern __BYTE__ ___1de7d0h[];
 	extern int NUM_OF_LAPS;
+	extern __POINTER__ RACE_PEDESTR_BPK;
 	extern __BYTE__ ___243ce0h[];
 	extern __BYTE__ ___2438c8h[];
 	extern __DWORD__ MY_CAR_IDX;
@@ -163,13 +173,22 @@ EWRAM_BSS static __BYTE__ obstacles[0x800] __attribute__((aligned(4)));
 EWRAM_DATA static race_baked_t baked = {
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
 	.cars = cars_img, .shapes = cars_shp, .sprites = sprites_bin, .hud = hud_bin,
-	.obstacles = obstacles
+	.obstacles = obstacles,
+	.rev_cars = cars_rev_img, .rev_shapes = cars_rev_shp, .rev_obstacle = setup_obst_rev
 };
 
 static int track_w, track_h;		// in tiles
 static int track_pw, track_ph;		// in pixels; the tiles are padded to a multiple of 8
 static int cam_x, cam_y;
-static int vis_x0 = -1, vis_y0, vis_x1, vis_y1;
+// the track turned round, see race_ima.c. RACE_CFLAGS=-DRACE_REVERSED: from
+// the start, for the benchmark to compare with tools/replay --race Nr
+#if defined(RACE_REVERSED)
+static int reversed = 1;
+#else
+static int reversed;
+#endif
+static int ima_pad;			// and its image this far down its tiles
+static int vis_x0 = -1, vis_y0, vis_x1, vis_y1;	// in its tiles
 static int shown_frame[NUM_CARS];	// rotation frame in each car's OBJ VRAM
 static const u8 * car_frames[NUM_CARS];	// each car's frames in cars_obj
 static volatile u32 vblanks;
@@ -227,15 +246,18 @@ static void vblank_handler(void){
 
 static void load_tile(int tx, int ty){
 
-	int slot = (tx & (RING_W-1)) + ring_row[ty]*RING_W;
+	int slot = (tx & (RING_W-1)) + ring_row[ty]*RING_W, turned;
 
-	// as the race has drawn into it
-	copy32(TRACK_CHARS + 64*slot, race_ima_tile(tx, ty), 64);
-	TRACK_MAP[(ty & 31)*32 + (tx & 31)] = slot;
+	// as the race has drawn into it, or as it is in ROM, turned round by
+	// the screen if the track is reversed
+	copy32(TRACK_CHARS + 64*slot, race_ima_tile(tx, ty, &turned), 64);
+	TRACK_MAP[(ty & 31)*32 + (tx & 31)] = slot | (turned ? 0x0c00 : 0);
 }
 
 // load the tiles that came into view since the last call, then scroll
 static void update_track(int cam_x, int cam_y){
+
+	cam_y += ima_pad;
 
 	int x0 = cam_x >> 3, y0 = cam_y >> 3;
 	int x1 = (cam_x + SCREEN_W - 1) >> 3, y1 = (cam_y + SCREEN_H - 1) >> 3;
@@ -539,7 +561,9 @@ static void place_sprite(int o, int k, const sprite_t * s){
 		shown[k] = s->img;
 	}
 	OAM[o].attr0 = OBJ_Y(s->y) | OBJ_256_COLOR | OBJ_SQUARE;
-	OAM[o].attr1 = OBJ_X(s->x) | OBJ_SIZE((s->size == 16) ? 1 : 0);
+	// race___4af3ch() turns the spectators' pictures round on a reversed track
+	OAM[o].attr1 = OBJ_X(s->x) | OBJ_SIZE((s->size == 16) ? 1 : 0)
+		| ((reversed&&(s->img >= RACE_PEDESTR_BPK)&&(s->img < RACE_PEDESTR_BPK+0x2400)) ? OBJ_HFLIP|OBJ_VFLIP : 0);
 	OAM[o].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
 }
 
@@ -620,12 +644,17 @@ static void use_track(const race_track_t * t){
 	baked.drv_dat = t->drv;
 	baked.ohi_dat = t->ohi;
 	baked.tiles = t->tiles;
+	baked.rev_mas = t->reversible ? t->rev_mas : 0;
+	baked.rev_vai = t->rev_vai;
+	baked.rev_lr1 = t->rev_lr1;
+	if(!t->reversible) reversed = 0;
+	ima_pad = 0;
 	track_w = t->inf[0];
 	track_h = t->inf[1];
 	track_pw = t->inf[2];
 	track_ph = t->inf[3];
-	copy32(BG_PALETTE, t->pal, 512);
-	copy32(SPRITE_PALETTE, t->pal, 512);
+	copy32(BG_PALETTE, reversed ? t->rev_pal : t->pal, 512);
+	copy32(SPRITE_PALETTE, reversed ? t->rev_pal : t->pal, 512);
 	init_hud();			// its colours are the track's
 	// what was on screen is another track's, and so are the tiles drawn into
 	vis_x0 = -1;
@@ -652,6 +681,7 @@ static void apply_choices(void){
 	int 		n;
 
 	NUM_OF_LAPS = laps;
+	D(___1de7d0h+0x48) = reversed;
 	for(n = 1; n < NUM_CARS; n++) D(___1de7d0h+0x54*n+0x44) = rivals;
 	r = ___1de7d0h;
 	D(r+0x14) = (upgrades < max_engine[my_model]) ? upgrades : max_engine[my_model];
@@ -682,7 +712,7 @@ static void choice_row(int row, int chosen, const char * label, const char * val
 static void choose_race(void){
 
 	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, row = 0, n;
-	char 	num[4];
+	char 	num[8];
 
 #if defined(RACE_BENCH)
 	return;			// the first track, with nobody to choose
@@ -706,6 +736,7 @@ static void choose_race(void){
 
 			for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
 			*put_num(num, trk->track+1, 2) = 0;
+			if(reversed) strcat(num, " REV");
 			choice_row(0, row, "TRACK", num);
 			choice_row(1, row, "", model_names[my_model]);
 			*put_num(num, laps, 1) = 0;
@@ -738,7 +769,18 @@ static void choose_race(void){
 			if(n&KEY_DOWN) row = (row+1)%CHOICES;
 			n = (n&KEY_RIGHT) ? 1 : (n&KEY_LEFT) ? -1 : 0;
 			if(!n) continue;
-			if(row == 0){ k = (k+race_tracks_n+n)%race_tracks_n; break; }
+			if(row == 0){
+
+				// each track, then reversed if the game reverses it
+				if((n > 0)&&!reversed&&race_tracks[k].reversible) reversed = 1;
+				else if((n < 0)&&reversed) reversed = 0;
+				else {
+
+					k = (k+race_tracks_n+n)%race_tracks_n;
+					reversed = (n < 0)&&race_tracks[k].reversible;
+				}
+				break;
+			}
 			if(row == 1) my_model = (my_model+NUM_MODELS+n)%NUM_MODELS;
 			if(row == 2) laps = (laps+n+8)%9+1;		// 1-9
 			if(row == 3) rivals = (rivals+n+3)%3;
@@ -787,6 +829,7 @@ static const char * start_race(void){
 	race_baked = &baked;
 	race_sprite_cb = on_sprite;
 	race_setup(my_index, num_cars, &race_loaders_baked);
+	ima_pad = race_ima_pad();
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
 	// RACE_CFLAGS=-DVAR_HASHES: each global's, as VAR_HASHES=1 tools/replay --quick prints them

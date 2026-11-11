@@ -44,6 +44,17 @@
 //   cars-all.obj the same as sprites, as in cars.obj, for each car image
 //                in each of the 4 places' colors: [image][place][frame]
 //
+// and for the track reversed, turned round by 180 degrees as race___4af3ch()
+// turns it, which race_loaders_baked can't do to the data in ROM. TR0, which
+// the game never reverses (it has no TR0-FLIP.PAL), gets empty ones:
+//   track-rev.pal  the reversed track's colors, TRn-FLIP.PAL, as track.pal
+//   rev.mas      track.mas, vai.bin and lr1.bin reversed
+//   rev.vai
+//   rev.lr1
+//   obst-rev.bin OBST_REV.BPK decoded, the obstacles race___42824h() loads instead
+//   cars-rev.img cars.img turned with it: frame k is frame k+48 upside down
+//   cars-rev.shp their shapes
+//
 // With a race recorded on this track by the desktop game (make ticklog),
 // also race.bin, the recording up to the race's start, which gba/race
 // starts the race from; cars.obj then has the recorded race's cars.
@@ -174,6 +185,39 @@ static __POINTER__ read_race(const char * path, int w, int h, const char * outdi
 	return spins;
 }
 
+static void write_file(const char * dir, const char * name, const void * p, unsigned size);
+
+// whether the track has a reversed version, which the game gives its own colors
+static int reversible;
+
+// a map turned round by 180 degrees: its bytes in the opposite order, or
+// nothing for a track that isn't reversed
+static void write_reversed(const char * dir, const char * name, const __BYTE__ * p, unsigned size){
+
+	__BYTE__ * 	r = malloc(size);
+	unsigned 	i;
+
+	for(i = 0; i < size; i++) r[i] = p[size-1-i];
+	write_file(dir, name, r, reversible ? size : 0);
+	free(r);
+}
+
+// a 6-bit VGA palette with the cars' colors, as BGR555
+static void write_pal(const char * dir, const char * name, __BYTE__ * pal){
+
+	FILE * 	fd;
+	int 	n;
+
+	for(n = 0; n < 4; n++) car_ramp(pal, n);
+	fd = out(dir, name);
+	for(n = 0; n < 0x100; n++){
+
+		__WORD__ c = (pal[3*n] >> 1) | ((pal[3*n+1] >> 1) << 5) | ((pal[3*n+2] >> 1) << 10);
+		fputc(c, fd); fputc(c >> 8, fd);
+	}
+	fclose(fd);
+}
+
 static void write_file(const char * dir, const char * name, const void * p, unsigned size){
 
 	FILE * 	fd = out(dir, name);
@@ -242,11 +286,13 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	src = read_entry(bpa_name, entry);
 	bpk_decode4(wq*hq, 0x30a, buf, src);
 	write_file(outdir, "vai.bin", buf, wq*hq);
+	write_reversed(outdir, "rev.vai", buf, wq*hq);
 	free(src);
 	snprintf(entry, sizeof(entry), "TR%d-LR1.BPK", track);
 	src = read_entry(bpa_name, entry);
 	bpk_decode4(wq*hq, 0x30a, buf, src);
 	write_file(outdir, "lr1.bin", buf, wq*hq);
+	write_reversed(outdir, "rev.lr1", buf, wq*hq);
 	free(src);
 	free(buf);
 
@@ -318,6 +364,7 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	bake_bpk2("MINES1A.BPK", outdir, "mines1a.bin", 0x140);
 	bake_bpk2("BLOWI.BPK", outdir, "blowi.bin", 0x600);
 	bake_bpk2("OBSTACLE.BPK", outdir, "obstacle.bin", 0x800);
+	bake_bpk2("OBST_REV.BPK", outdir, "obst-rev.bin", 0x800);
 
 	cars = calloc(13, CAR_FRAMES*CAR_W*CAR_W);
 	for(v = 0; v < 13; v++){
@@ -331,6 +378,27 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	shapes = calloc(13, sizeof(race_car_shapes_t));
 	for(v = 0; v < 13; v++) race_car_shapes(cars+v*CAR_FRAMES*CAR_W*CAR_W, &shapes[v]);
 	write_file(outdir, "cars.shp", shapes, 13*sizeof(race_car_shapes_t));
+
+	// turned for a reversed track: race___4af3ch() reverses each car's 96
+	// frames as a whole, then the order of the frames in each half
+	{
+		__POINTER__ 	rev = malloc(13*CAR_FRAMES*CAR_W*CAR_W);
+		unsigned 	f, k, F = CAR_W*CAR_W;
+
+		for(v = 0; v < 13; v++){
+			for(f = 0; f < CAR_FRAMES; f++){
+
+				const __BYTE__ * 	from = cars+(v*CAR_FRAMES+(f+CAR_FRAMES/2)%CAR_FRAMES)*F;
+				__BYTE__ * 		to = rev+(v*CAR_FRAMES+f)*F;
+
+				for(k = 0; k < F; k++) to[k] = from[F-1-k];
+			}
+		}
+		write_file(outdir, "cars-rev.img", rev, 13*CAR_FRAMES*CAR_W*CAR_W);
+		for(v = 0; v < 13; v++) race_car_shapes(rev+v*CAR_FRAMES*CAR_W*CAR_W, &shapes[v]);
+		write_file(outdir, "cars-rev.shp", shapes, 13*sizeof(race_car_shapes_t));
+		free(rev);
+	}
 	free(shapes);
 
 	// recolored as race___42824h() does for the car in place n
@@ -522,15 +590,23 @@ int main(int argc, char * argv[]){
 	ima = calloc(1, w*h);
 	bpk_decode4(w*h, 0x30a, ima, src);
 	free(src);
-	for(n = 0; n < 4; n++) car_ramp(pal, n);
+	write_pal(outdir, "track.pal", pal);
+	{
+		BPA * 		bpa = bpa_open(bpa_name);
 
-	fd = out(outdir, "track.pal");
-	for(n = 0; n < 0x100; n++){
+		snprintf(entry, sizeof(entry), "TR%d-FLIP.PAL", track);
+		bpa_search(bpa, entry);
+		reversible = (bpa_entry_size(bpa) != 0);
+		bpa_close(bpa);
+		if(reversible){
 
-		__WORD__ c = (pal[3*n] >> 1) | ((pal[3*n+1] >> 1) << 5) | ((pal[3*n+2] >> 1) << 10);
-		fputc(c, fd); fputc(c >> 8, fd);
+			src = read_entry(bpa_name, entry);
+			memcpy(pal, src, 0x300);
+			free(src);
+			write_pal(outdir, "track-rev.pal", pal);
+		}
+		else write_file(outdir, "track-rev.pal", pal, 0);
 	}
-	fclose(fd);
 
 	fd = out(outdir, "track.tiles");
 	for(ty = 0; ty < th; ty++){
@@ -555,6 +631,7 @@ int main(int argc, char * argv[]){
 	fd = out(outdir, "track.mas");
 	fwrite(mas, 1, w*h, fd);
 	fclose(fd);
+	write_reversed(outdir, "rev.mas", mas, w*h);
 
 	fd = out(outdir, "track.inf");
 	put32(fd, tw); put32(fd, th); put32(fd, w); put32(fd, h);

@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, in any of the six cars, with the laps, the rivals' skill and your upgrades chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, forward or (all but the first) reversed, in any of the six cars, with the laps, the rivals' skill and your upgrades chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
 
 ## Game Data
 
@@ -70,6 +70,8 @@ The details, and what is left to do, are in [docs/gba-race-speed.md](docs/gba-ra
 * `race_render()` keeps the camera, animations, lap times and other state that the desktop updates while drawing. Built with `DR_RACE_NODRAW`, it skips the drawing itself. A desktop check (`DR_CHECK_NODRAW=1` in a `make ticklog` build) runs every frame of a race both ways and finds no difference in the race.
 * The cars' sprites come from their positions and rotation frames in the game's car structs, and the camera from the game's own look-ahead.
 
+A reversed track is the whole track turned round by 180 degrees, as the game's `race___4af3ch()` does it to its buffers, with its own colors (`TRn-FLIP.PAL`) and obstacle pictures (`OBST_REV.BPK`). The game reverses all but TR0. On the GBA the track's mask, AI maps and the cars' frames are baked turned round. The image is read turned (`race_ima_reverse()`), and its tiles are shown with the screen's own flip bits. `tools/replay --race 3r BAKEDIR SEED` runs a reversed race from the baked data, and `files:GAMEDIR` instead of BAKEDIR from the game's files. All nine reversed tracks give the same result both ways and on the GBA.
+
 The race code draws skid marks, mines, craters, power-ups and obstacles into the track image, and reads back the pixels under them. The whole image doesn't fit in the GBA's RAM: TR0's alone is 720 KB. So the race code goes through a small API, `race_ima_read()`, `_write()`, `_draw()` and `_lookup()` in `src/race/race_ima.c`. On the desktop it works on `TRX_IMA` directly. Built with `DR_IMA_TILES`, as `gba/race` is, the image is the track's 8x8 tiles in ROM, with each tile the race draws into copied to a pool of 2,048 in EWRAM (128 KB). A whole race draws into at most about 1,800. The vblank interrupt loads the changed tiles that are on screen. `make -C tools/replay IMA_TILES=n` builds `replay-tiles`, the desktop with the GBA's tiles, for checking the two against each other.
 
 What the race draws over the track, the spectators and their splats, wrecks, explosions, smoke, gun flashes, shots, rockets, the start lights and the finish flag, goes through `race_sprite()` in `src/race/race_render.c` as well as into the desktop's back buffer. On the GBA a callback turns each picture into a hardware sprite, in front of the cars or behind them in the order the game draws them, with up to 40 a frame. The start lights and the finish flag, which waves on the leader's last lap, are 80x60 pictures in two sprites. `tools/gbabake` bakes the 16 picture files into `sprites.bin` (360 KB). It also bakes the lights' 3 frames and the flag's 64 into `lamps.obj`, already laid out as the sprites' tiles, so that a new frame is a single 6 KB DMA copy.
@@ -110,7 +112,7 @@ make -C gba/race             # builds gba/race/drrace.gba: a quick race on any t
 make -C gba/race TRACK=8     # drrace-tr8.gba, track 8 only, which starts straight away
 ```
 
-Each prototype ROM holds one track and is about 2 MB. The race ROM is about 26 MB: 11 MB that all tracks share, most of it every car's 96 rotation frames in each of the four cars' colors, about 1.4 MB for each track, and the 3.5 MB soundbank with the ten songs and 44 sound effects.
+Each prototype ROM holds one track and is about 2 MB. The race ROM is about 29 MB of the cartridge's 32: 6 MB that all tracks share, most of it the six cars' 96 rotation frames in each of the four cars' colors, about 1.4 MB for each track and as much again for it reversed, and the 3.5 MB soundbank with the ten songs and 44 sound effects. The seventh car and the cars with spikes, which a quick race doesn't use, are left out to make room.
 
 ### Controls
 
@@ -137,7 +139,7 @@ In `gba/race`:
 | Select       | Drop a mine                              |
 | Start        | Let the AI drive your car, or, once the race is over, choose the next race |
 
-Before a race, up and down pick a row and left and right change it: the track, which pans by slowly, your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill and your car's upgrades. A or Start races. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
+Before a race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill and your car's upgrades. A or Start races. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
 Its meter, at the bottom right, shows frames per second and the share of the CPU used. The bottom left shows your position and lap.
 
@@ -147,7 +149,6 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 
 Not done yet:
 
-* Reversed tracks, which the baked setup leaves out.
 * Choosing the opponents and their cars, and the weapons.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.

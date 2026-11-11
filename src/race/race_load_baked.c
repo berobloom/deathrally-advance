@@ -38,6 +38,7 @@
 	extern int TRX_OHI_DAT[0x100];
 	extern __DWORD__ NUM_OF_OBJECTS;
 	extern __DWORD__ NUM_OF_TEXTURES;
+	extern __BYTE__ ___196dach[];
 
 const race_baked_t * race_baked;
 
@@ -110,7 +111,8 @@ static void baked_load(void){
 		race_car_shape[n] = race_baked->shapes+v;
 	}
 
-	memcpy(race_baked->obstacles, race_baked->obstacle, 0x800);
+	// race___3f970h() has set ___196dach already
+	memcpy(race_baked->obstacles, D(___196dach) ? race_baked->rev_obstacle : race_baked->obstacle, 0x800);
 	memcpy(TRX_SKI_TAB, race_baked->ski_tab, 0x100);
 	memcpy(TRX_BLO_TAB, race_baked->blo_tab, 0x100);
 	memcpy(TRX_LIT_TAB, race_baked->lit_tab, 0x100);
@@ -136,4 +138,25 @@ static void baked_load(void){
 	NUM_OF_TEXTURES = 0;
 }
 
-const race_loaders_t race_loaders_baked = { baked_inf, baked_alloc, baked_load, 0 };
+// a reversed track (race___4af3ch()): the buffers baked turned round, the
+// track image turned as it's read, and the places turned as the game does
+static void baked_scene(void){
+
+	int 	n;
+
+	if((D(___196dach) == 0)||!race_baked->rev_mas) return;
+	TRX_MAS = (__POINTER__)race_baked->rev_mas;
+	TRX_VAI = (__POINTER__)race_baked->rev_vai;
+	TRX_LR1 = (__POINTER__)race_baked->rev_lr1;
+	race_ima_reverse();
+	for(n = 0; n < 4; n++){
+
+		int 	v = (n < NUM_OF_CARS) ? race_car_variant(n) : 0;
+
+		race_car_slot[n] = (__BYTE__ *)race_baked->rev_cars+v*sizeof(car_spins_t);
+		race_car_shape[n] = race_baked->rev_shapes+v;
+	}
+	race___4af3ch_places();
+}
+
+const race_loaders_t race_loaders_baked = { baked_inf, baked_alloc, baked_load, baked_scene };

@@ -73,6 +73,119 @@ static void helper00(__POINTER__ ptr, __DWORD__ dim){
 }
 
 
+// REVERSE TRACK: where the cars start, the power-ups, the obstacles and
+// the AI's way round, turned round by 180 degrees with the track.
+// race___4af3ch() turns the track's buffers and the buildings as well,
+// which race_loaders_baked has baked turned or leaves out
+void race___4af3ch_places(void){
+
+	int 		n;
+	struct_35e_t * 	s_35e;
+
+	s_35e = (struct_35e_t *)___1e6ed0h;
+
+	n = -1;
+	while(++n < 4){
+
+		s_35e[n].XLocation = (float)(int)(TRX_WIDTH-1-(int)(double)s_35e[n].XLocation);
+		s_35e[n].YLocation = (float)(int)(TRX_HEIGHT-1-(int)(double)s_35e[n].YLocation);
+		s_35e[n].ImgIndex = (s_35e[n].ImgIndex+48)%96;
+		s_35e[n].__156 = (float)(3.75*(double)(int)s_35e[n].ImgIndex);
+		s_35e[n].Direction = (float)(3.75*(double)(int)s_35e[n].ImgIndex);
+		s_35e[n].ImgOffset = s_35e[n].ImgIndex*sizeof(img40x40)+n*sizeof(car_spins_t);
+	}
+
+	n = -1;
+	while(++n < 0x10){
+
+		if((int)D(___1f2488h+0x120*n) > 0){
+		
+			D(___1f2488h+0x120*n) = TRX_WIDTH-1-D(___1f2488h+0x120*n);
+		}
+				
+		if((int)D(___1f2488h+0x120*n+4) > 0){
+		
+			D(___1f2488h+0x120*n+4) = TRX_HEIGHT-1-D(___1f2488h+0x120*n+4);
+		}
+	}
+
+	n = -1;
+	while(++n < 0x14){
+
+		if((int)D(___1df720h+0x20*n) > 0){
+		
+			D(___1df720h+0x20*n) = TRX_WIDTH-1-D(___1df720h+0x20*n)-0x10;
+		}
+
+		if((int)D(___1df720h+0x20*n+4) > 0){
+		
+			D(___1df720h+0x20*n+4) = TRX_HEIGHT-1-D(___1df720h+0x20*n+4)-0x10;
+		}
+	}
+
+	n = -1;
+	while(++n < (int)D(___243c5ch)){
+
+		X___1de920h[n] = TRX_WIDTH-1-X___1de920h[n];
+		Y___1ded20h[n] = TRX_HEIGHT-1-Y___1ded20h[n];
+	}
+
+	return;
+}
+
+// the buildings, which the GBA doesn't have: 315 KB that only this would
+// link in
+static void race___4af3ch_buildings(void){
+
+	__DWORD__ 		eax;
+	int 		i, j, dim, m, n;
+	x2c_t * 	q;
+	__BYTE__ 		b_tmp;
+
+	m = -1;
+	while(++m < (int)D(NUM_OF_OBJECTS)){
+
+		n = -1;
+		while(++n < ___1f3b08h[m].PointsN){
+
+			___1f3b08h[m].CONST_X___8[n] = 0-___1f3b08h[m].CONST_X___8[n];
+			___1f3b08h[m].CONST_Y_134[n] = 0-___1f3b08h[m].CONST_Y_134[n];
+		}
+
+		eax = 0-___1f3b08h[m]._390;
+		___1f3b08h[m]._390 = (int)(-1.0*(double)(int)___1f3b08h[m]._38C);
+		___1f3b08h[m]._38C = eax;
+
+		eax = 0-___1f3b08h[m]._398;
+		___1f3b08h[m]._398 = (int)(-1.0*(double)(int)___1f3b08h[m]._394);
+		___1f3b08h[m]._394 = eax;
+
+
+		___1f3b08h[m].TRX_X = TRX_WIDTH-1-___1f3b08h[m].TRX_X;
+		___1f3b08h[m].TRX_Y = TRX_HEIGHT-1-___1f3b08h[m].TRX_Y;
+	} // w
+
+	i = -1;
+	while(++i < (int)D(NUM_OF_TEXTURES)){
+
+		q = &___240b48h[i];
+
+		q->XPos = 0x100*(TRX_WIDTH-1)-q->XPos-q->width*q->_14;
+		q->YPos = 0x100*(TRX_HEIGHT-1)-q->YPos-q->height*q->_14;
+
+		dim = q->width*q->height;
+		eax = dim/2;
+		j = -1;
+		while(++j < (int)eax){
+
+			b_tmp = B(___243d5ch+q->offset+j);
+			B(___243d5ch+q->offset+j) = B(___243d5ch+dim+q->offset-j-1);
+			B(___243d5ch+dim+q->offset-j-1) = b_tmp;
+		}
+	}
+
+}
+
 // REVERSE TRACK
 void race___4af3ch(void){
 
@@ -84,10 +197,7 @@ void race___4af3ch(void){
 	__BYTE__ 		b_tmp;
 	double 		d1, d2, d3;
 	__POINTER__ 		esip;
-	struct_35e_t * 	s_35e;
 
-
-	s_35e = (struct_35e_t *)___1e6ed0h;
 
 	helper00(TRX_IMA, TRX_WIDTH*TRX_HEIGHT);
 	helper00(TRX_MAS, TRX_WIDTH*TRX_HEIGHT);
@@ -169,93 +279,7 @@ void race___4af3ch(void){
 		}
 	}
 
-	n = -1;
-	while(++n < 4){
-
-		s_35e[n].XLocation = (float)(int)(TRX_WIDTH-1-(int)(double)s_35e[n].XLocation);
-		s_35e[n].YLocation = (float)(int)(TRX_HEIGHT-1-(int)(double)s_35e[n].YLocation);
-		s_35e[n].ImgIndex = (s_35e[n].ImgIndex+48)%96;
-		s_35e[n].__156 = (float)(3.75*(double)(int)s_35e[n].ImgIndex);
-		s_35e[n].Direction = (float)(3.75*(double)(int)s_35e[n].ImgIndex);
-		s_35e[n].ImgOffset = s_35e[n].ImgIndex*sizeof(img40x40)+n*sizeof(car_spins_t);
-	}
-
-	n = -1;
-	while(++n < 0x10){
-
-		if((int)D(___1f2488h+0x120*n) > 0){
-		
-			D(___1f2488h+0x120*n) = TRX_WIDTH-1-D(___1f2488h+0x120*n);
-		}
-				
-		if((int)D(___1f2488h+0x120*n+4) > 0){
-		
-			D(___1f2488h+0x120*n+4) = TRX_HEIGHT-1-D(___1f2488h+0x120*n+4);
-		}
-	}
-
-	n = -1;
-	while(++n < 0x14){
-
-		if((int)D(___1df720h+0x20*n) > 0){
-		
-			D(___1df720h+0x20*n) = TRX_WIDTH-1-D(___1df720h+0x20*n)-0x10;
-		}
-
-		if((int)D(___1df720h+0x20*n+4) > 0){
-		
-			D(___1df720h+0x20*n+4) = TRX_HEIGHT-1-D(___1df720h+0x20*n+4)-0x10;
-		}
-	}
-
-	n = -1;
-	while(++n < (int)D(___243c5ch)){
-
-		X___1de920h[n] = TRX_WIDTH-1-X___1de920h[n];
-		Y___1ded20h[n] = TRX_HEIGHT-1-Y___1ded20h[n];
-	}
-
-	m = -1;
-	while(++m < (int)D(NUM_OF_OBJECTS)){
-
-		n = -1;
-		while(++n < ___1f3b08h[m].PointsN){
-
-			___1f3b08h[m].CONST_X___8[n] = 0-___1f3b08h[m].CONST_X___8[n];
-			___1f3b08h[m].CONST_Y_134[n] = 0-___1f3b08h[m].CONST_Y_134[n];
-		}
-
-		eax = 0-___1f3b08h[m]._390;
-		___1f3b08h[m]._390 = (int)(-1.0*(double)(int)___1f3b08h[m]._38C);
-		___1f3b08h[m]._38C = eax;
-
-		eax = 0-___1f3b08h[m]._398;
-		___1f3b08h[m]._398 = (int)(-1.0*(double)(int)___1f3b08h[m]._394);
-		___1f3b08h[m]._394 = eax;
-
-
-		___1f3b08h[m].TRX_X = TRX_WIDTH-1-___1f3b08h[m].TRX_X;
-		___1f3b08h[m].TRX_Y = TRX_HEIGHT-1-___1f3b08h[m].TRX_Y;
-	} // w
-
-	i = -1;
-	while(++i < (int)D(NUM_OF_TEXTURES)){
-
-		q = &___240b48h[i];
-
-		q->XPos = 0x100*(TRX_WIDTH-1)-q->XPos-q->width*q->_14;
-		q->YPos = 0x100*(TRX_HEIGHT-1)-q->YPos-q->height*q->_14;
-
-		dim = q->width*q->height;
-		eax = dim/2;
-		j = -1;
-		while(++j < (int)eax){
-
-			b_tmp = B(___243d5ch+q->offset+j);
-			B(___243d5ch+q->offset+j) = B(___243d5ch+dim+q->offset-j-1);
-			B(___243d5ch+dim+q->offset-j-1) = b_tmp;
-		}
-	}
-
+	race___4af3ch_places();
+	race___4af3ch_buildings();
 	return;
 }

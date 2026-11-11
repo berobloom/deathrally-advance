@@ -40,14 +40,27 @@ void race_ima_lookup(int x, int y, int w, int h, const __BYTE__ * tab){
 	for(j = 0; j < h; j++, dst += TRX_WIDTH) for(i = 0; i < w; i++) dst[i] = tab[dst[i]];
 }
 
+// turned round by 180 degrees, for a reversed track, as race___4af3ch() does
+void race_ima_reverse(void){
+
+	__BYTE__ * 	p = TRX_IMA, * q = TRX_IMA+TRX_WIDTH*TRX_HEIGHT-1, b;
+
+	while(p < q){ b = *p; *p++ = *q; *q-- = b; }
+}
+
 #else
 
 // The GBA has no room for the whole image: it is the track's 8x8 tiles in
 // ROM, with the ones drawn into copied to a pool in RAM. A tile that
 // changes goes on a list for the screen to load again.
+//
+// Reversed (race_ima_reverse()), the image is turned round by 180 degrees.
+// Tile t is then ROM tile N-1-t turned, pixel o of it the ROM tile's 63-o,
+// and copied to the pool turned. The widths are all multiples of 8, but a
+// height may not be: the turned image starts ima_pad rows into its tiles.
 
 static const __BYTE__ * 	ima_tiles;	// 64 bytes each, row by row
-static int 			ima_tw, ima_th;
+static int 			ima_tw, ima_th, ima_rev, ima_pad;
 static __BYTE__ 		(*pool)[64];
 static unsigned 		pool_n, pool_max, pool_full;
 // each tile's place in the pool+1, or 0; bit 15: on the list, which the
@@ -75,15 +88,35 @@ void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles){
 	}
 	slots = calloc(tw*th, sizeof(slots[0]));
 	pool_n = pool_full = 0;
+	ima_rev = ima_pad = 0;
 	dirty_tail = dirty_head;
 	dirty_lost = 0;
 }
 
-const __BYTE__ * race_ima_tile(int tx, int ty){
+// before anything is drawn into it
+void race_ima_reverse(void){
 
-	unsigned 	s = slots[ty*ima_tw+tx]&0x7fff;
+	ima_rev = 1;
+	ima_pad = 8*ima_th-TRX_HEIGHT;
+}
 
-	return s ? pool[s-1] : ima_tiles+64*(ty*ima_tw+tx);
+int race_ima_pad(void){ return ima_pad; }
+
+// tile (tx, ty) as it is now; *turned: it is to be shown turned round
+const __BYTE__ * race_ima_tile(int tx, int ty, int * turned){
+
+	unsigned 	t = ty*ima_tw+tx, s = slots[t]&0x7fff;
+
+	*turned = !s&&ima_rev;
+	if(s) return pool[s-1];
+
+	return ima_tiles+64*(ima_rev ? ima_tw*ima_th-1-t : t);
+}
+
+// pixel o of tile t as it is in ROM
+static inline __BYTE__ rom_px(unsigned t, int o){
+
+	return ima_rev ? ima_tiles[64*(ima_tw*ima_th-1-t)+63-o] : ima_tiles[64*t+o];
 }
 
 int race_ima_dirty(void){
@@ -115,7 +148,7 @@ void race_ima_stats(unsigned * used, unsigned * max, unsigned * dropped){
 }
 
 // pixel (x, y) where the row before or after it holds it, or 0 if it's
-// outside the image
+// outside the image. Its tile row is (y+ima_pad) >> 3
 static inline int place(int * x, int * y){
 
 	while(*x < 0){ *x += TRX_WIDTH; (*y)--; }
@@ -137,11 +170,11 @@ static inline void changed(unsigned t, int tx, int ty){
 	dirty_head++;
 }
 
-// tile t copied to the pool, from p, to be drawn into, or 0 if the pool is full
-static inline __BYTE__ * to_pool(unsigned t, const __BYTE__ * p){
+// tile t copied to the pool from ROM, to be drawn into, or 0 if the pool is full
+static inline __BYTE__ * to_pool(unsigned t){
 
 	__DWORD__ * 		d;
-	const __DWORD__ * 	q = (const __DWORD__ *)p;
+	const __DWORD__ * 	q;
 	int 			i;
 
 	if(pool_n == pool_max){
@@ -150,7 +183,16 @@ static inline __BYTE__ * to_pool(unsigned t, const __BYTE__ * p){
 		return 0;
 	}
 	d = (__DWORD__ *)pool[pool_n];
-	for(i = 0; i < 16; i++) d[i] = q[i];
+	if(ima_rev){
+
+		q = (const __DWORD__ *)(ima_tiles+64*(ima_tw*ima_th-1-t));
+		for(i = 0; i < 16; i++) d[15-i] = __builtin_bswap32(q[i]);
+	}
+	else {
+
+		q = (const __DWORD__ *)(ima_tiles+64*t);
+		for(i = 0; i < 16; i++) d[i] = q[i];
+	}
 	slots[t] |= ++pool_n;
 
 	return pool[pool_n-1];
@@ -167,21 +209,37 @@ static inline __BYTE__ * to_pool(unsigned t, const __BYTE__ * p){
 static inline void tile_op(int op, unsigned t, int tx, int ty, int o, __BYTE__ * buf, int k){
 
 	unsigned 	s = slots[t];
-	__BYTE__ * 	p = (s&0x7fff) ? pool[(s&0x7fff)-1] : (__BYTE__ *)ima_tiles+64*t;
+	__BYTE__ * 	p;
 	int 		i;
 
-	p += o;
-	if(op == OP_READ){
+	if(!(s&0x7fff)&&ima_rev){
 
-		for(i = 0; i < k; i++) buf[i] = p[i];
-		return;
-	}
-	for(i = 0; i < k; i++) if(((op == OP_WRITE)||buf[i])&&(p[i] != buf[i])) break;
-	if(i == k) return;
-	if(!(s&0x7fff)){
+		// still the turned ROM tile
+		if(op == OP_READ){
 
-		if(!(p = to_pool(t, p-o))) return;
+			for(i = 0; i < k; i++) buf[i] = rom_px(t, o+i);
+			return;
+		}
+		for(i = 0; i < k; i++) if(((op == OP_WRITE)||buf[i])&&(rom_px(t, o+i) != buf[i])) break;
+		if(i == k) return;
+		if(!(p = to_pool(t))) return;
 		p += o;
+	}
+	else {
+
+		p = ((s&0x7fff) ? pool[(s&0x7fff)-1] : (__BYTE__ *)ima_tiles+64*t)+o;
+		if(op == OP_READ){
+
+			for(i = 0; i < k; i++) buf[i] = p[i];
+			return;
+		}
+		for(i = 0; i < k; i++) if(((op == OP_WRITE)||buf[i])&&(p[i] != buf[i])) break;
+		if(i == k) return;
+		if(!(s&0x7fff)){
+
+			if(!(p = to_pool(t))) return;
+			p += o;
+		}
 	}
 	for(; i < k; i++) if((op == OP_WRITE)||buf[i]) p[i] = buf[i];
 	// read again: the screen may have taken it off the list meanwhile
@@ -190,19 +248,20 @@ static inline void tile_op(int op, unsigned t, int tx, int ty, int o, __BYTE__ *
 
 DR_HOT static void span(int op, int x, int y, __BYTE__ * buf, int n){
 
-	int 	tx, k;
+	int 	tx, k, iy;
 	unsigned 	t;
 
 	// all in one row of the image: a tile at a time
 	if((y >= 0)&&(y < TRX_HEIGHT)&&(x >= 0)&&(x+n <= TRX_WIDTH)){
 
+		iy = y+ima_pad;
 		tx = x >> 3;
-		t = (y >> 3)*ima_tw+tx;
+		t = (iy >> 3)*ima_tw+tx;
 		for(x &= 7; n > 0; x = 0, t++, tx++){
 
 			k = 8-x;
 			if(k > n) k = n;
-			tile_op(op, t, tx, y >> 3, 8*(y&7)+x, buf, k);
+			tile_op(op, t, tx, iy >> 3, 8*(iy&7)+x, buf, k);
 			buf += k;
 			n -= k;
 		}
@@ -222,7 +281,8 @@ DR_HOT static void span(int op, int x, int y, __BYTE__ * buf, int n){
 			k = 8-(x&7);
 			if(k > n) k = n;
 			if(k > TRX_WIDTH-x) k = TRX_WIDTH-x;
-			tile_op(op, (y >> 3)*ima_tw+(x >> 3), x >> 3, y >> 3, 8*(y&7)+(x&7), buf, k);
+			iy = y+ima_pad;
+			tile_op(op, (iy >> 3)*ima_tw+(x >> 3), x >> 3, iy >> 3, 8*(iy&7)+(x&7), buf, k);
 		}
 		x += k;
 		buf += k;
@@ -241,22 +301,33 @@ DR_HOT void race_ima_lookup(int x, int y, int w, int h, const __BYTE__ * tab){
 	for(j = 0; j < h; j++){
 		for(i = 0; i < w; i++){
 
-			int 		px = x+i, py = y+j;
+			int 		px = x+i, py = y+j, o;
 			unsigned 	t, s;
 			__BYTE__ * 	p;
-			__BYTE__ 	v;
+			__BYTE__ 	u, v;
 
 			if(((unsigned)px >= (unsigned)TRX_WIDTH)||((unsigned)py >= (unsigned)TRX_HEIGHT)){
 
 				if(!place(&px, &py)) continue;
 			}
+			py += ima_pad;
 			t = (py >> 3)*ima_tw+(px >> 3);
+			o = 8*(py&7)+(px&7);
 			s = slots[t];
-			p = (s&0x7fff) ? pool[(s&0x7fff)-1] : (__BYTE__ *)ima_tiles+64*t;
-			v = tab[p[8*(py&7)+(px&7)]];
-			if(v == p[8*(py&7)+(px&7)]) continue;
-			if(!(s&0x7fff)&&!(p = to_pool(t, p))) continue;
-			p[8*(py&7)+(px&7)] = v;
+			if(s&0x7fff){
+
+				p = pool[(s&0x7fff)-1];
+				u = p[o];
+			}
+			else {
+
+				p = 0;
+				u = rom_px(t, o);
+			}
+			v = tab[u];
+			if(v == u) continue;
+			if(!p&&!(p = to_pool(t))) continue;
+			p[o] = v;
 			if(!(slots[t]&0x8000)) changed(t, px >> 3, py >> 3);
 		}
 	}

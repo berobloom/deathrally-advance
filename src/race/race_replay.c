@@ -222,6 +222,8 @@ __DWORD__ * race_replay_done(void){
 
 #endif // DR_REPLAY
 
+#include <sys/stat.h>
+
 static __BYTE__ * read_baked(const char * dir, const char * name, unsigned size){
 
 	char 		path[0x400];
@@ -233,6 +235,17 @@ static __BYTE__ * read_baked(const char * dir, const char * name, unsigned size)
 	fclose(fd);
 
 	return p;
+}
+
+// or 0 if it's empty: a track the game doesn't reverse
+static __BYTE__ * read_baked_opt(const char * dir, const char * name, unsigned size){
+
+	char 		path[0x400];
+	struct stat 	st;
+
+	snprintf(path, sizeof(path), "%s/%s", dir, name);
+
+	return (stat(path, &st) == 0)&&(st.st_size == 0) ? 0 : read_baked(dir, name, size);
 }
 
 // what tools/gbabake baked for a track, in DIR, read for race_loaders_baked
@@ -259,6 +272,12 @@ const race_baked_t * race_baked_read(const char * dir){
 	baked->obstacle = read_baked(dir, "obstacle.bin", 0x800);
 	baked->cars = read_baked(dir, "cars.img", RACE_CAR_VARIANTS*sizeof(car_spins_t));
 	baked->shapes = (const race_car_shapes_t *)read_baked(dir, "cars.shp", RACE_CAR_VARIANTS*sizeof(race_car_shapes_t));
+	baked->rev_mas = read_baked_opt(dir, "rev.mas", w*h);
+	baked->rev_vai = read_baked_opt(dir, "rev.vai", (w >> 2)*(h >> 2));
+	baked->rev_lr1 = read_baked_opt(dir, "rev.lr1", (w >> 2)*(h >> 2));
+	baked->rev_cars = read_baked(dir, "cars-rev.img", RACE_CAR_VARIANTS*sizeof(car_spins_t));
+	baked->rev_shapes = (const race_car_shapes_t *)read_baked(dir, "cars-rev.shp", RACE_CAR_VARIANTS*sizeof(race_car_shapes_t));
+	baked->rev_obstacle = read_baked(dir, "obst-rev.bin", 0x800);
 	baked->tiles = read_baked(dir, "track.tiles", ((w+7) >> 3)*((h+7) >> 3)*64);
 	{
 		unsigned 	i, size = 0;
@@ -554,8 +573,6 @@ void race_check_setup(int MyIndex, int NumCars, const char * bakes){
 	char 			dir[0x400];
 
 	snprintf(dir, sizeof(dir), "%s/%s", bakes, ___19bd64h);
-	// race___3f970h() takes ___196dach from there
-	if(D(___1de7d0h+0x48) != 0){ fprintf(stderr, "race_check_setup: %s reversed, which isn't baked yet\n", ___19bd64h); return; }
 	race_baked = race_baked_read(dir);
 
 	pre = malloc(race_replay_size());

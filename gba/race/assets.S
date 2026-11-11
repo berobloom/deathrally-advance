@@ -9,18 +9,33 @@
 	.incbin	"\file"
 	.endm
 
+#define RACE_GBA_CARS		6	// main.c's NUM_MODELS
+#define RACE_SHAPES_SIZE	8064	// sizeof(race_car_shapes_t), which main.c checks
+
+@ the first n bytes of file: the GBA's cars are the 6 models, without the
+@ 7th or the spiked ones, which a quick race doesn't use
+	.macro	asset_part name, file, n
+	.align	4
+	.global	\name
+\name:
+	.incbin	"\file", 0, \n
+	.endm
+
 	.section .rodata
 
 @ the same for every track
 	asset	setup_mines1a, mines1a.bin
 	asset	setup_blowi, blowi.bin
 	asset	setup_obstacle, obstacle.bin
-	asset	cars_img, cars.img
-	asset	cars_shp, cars.shp
+	asset_part	cars_img, cars.img, RACE_GBA_CARS*96*40*40
+	asset_part	cars_shp, cars.shp, RACE_GBA_CARS*RACE_SHAPES_SIZE
+	asset_part	cars_rev_img, cars-rev.img, RACE_GBA_CARS*96*40*40
+	asset_part	cars_rev_shp, cars-rev.shp, RACE_GBA_CARS*RACE_SHAPES_SIZE
+	asset	setup_obst_rev, obst-rev.bin
 	asset	sprites_bin, sprites.bin
 	asset	hud_bin, hud.bin
 	asset	lamps_obj, lamps.obj
-	asset	cars_obj, cars-all.obj
+	asset_part	cars_obj, cars-all.obj, RACE_GBA_CARS*4*96*5*5*64
 	asset	sfx_bin, sfx.bin
 	asset	soundbank_bin, soundbank.bin
 #if defined(RACE_PRE)
@@ -42,6 +57,12 @@
 	asset	tr\n\()_varjo, bake-tr\n/varjo.tab
 	asset	tr\n\()_drv, bake-tr\n/drv.dat
 	asset	tr\n\()_ohi, bake-tr\n/ohi.dat
+	@ reversed, or empty if the game doesn't reverse it
+	asset	tr\n\()_rev_pal, bake-tr\n/track-rev.pal
+tr\n\()_rev_pal_end:
+	asset	tr\n\()_rev_mas, bake-tr\n/rev.mas
+	asset	tr\n\()_rev_vai, bake-tr\n/rev.vai
+	asset	tr\n\()_rev_lr1, bake-tr\n/rev.lr1
 	.endr
 
 @ race_track_t race_tracks[race_tracks_n]: the track's number, then its files
@@ -51,7 +72,8 @@ race_tracks:
 	.irp	n, TRACKS
 	.word	\n, tr\n\()_pal, tr\n\()_inf, tr\n\()_tiles, tr\n\()_mas, tr\n\()_setup_inf, tr\n\()_vai, tr\n\()_lr1
 	.word	tr\n\()_ski, tr\n\()_blo, tr\n\()_lit, tr\n\()_varjo, tr\n\()_drv, tr\n\()_ohi
+	.word	tr\n\()_rev_pal_end-tr\n\()_rev_pal, tr\n\()_rev_pal, tr\n\()_rev_mas, tr\n\()_rev_vai, tr\n\()_rev_lr1
 	.endr
 	.global	race_tracks_n
 race_tracks_n:
-	.word	(race_tracks_n-race_tracks)/(14*4)
+	.word	(race_tracks_n-race_tracks)/(19*4)

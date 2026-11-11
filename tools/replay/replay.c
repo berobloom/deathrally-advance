@@ -29,7 +29,12 @@
 // "-DRACE_BENCH -DRACE_SEED=n"): the AI drives every car, a tick at a time.
 // Prints the hash of the globals and of the track image at the end, which
 // gba/race logs too.
+//
+// TRACK with an r after it (3r) is the track reversed. BAKEDIR files:GAMEDIR
+// sets the race up from the game's files in GAMEDIR instead, as the
+// desktop game does (not in replay-tiles), to check the baked data against.
 
+#include <unistd.h>
 #include "drally.h"
 #include "drally_structs_free.h"
 #include "race_replay.h"
@@ -62,6 +67,11 @@ void dRally_Sound_pushEffect(__BYTE__ channel, __BYTE__ n, __DWORD__ unk, __DWOR
 void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){}
 void dRally_Sound_adjustEffect(__BYTE__ channel, __DWORD__ vol, __DWORD__ freq, __DWORD__ balance){}
 
+// what the game's files loader calls when it runs out of memory, before
+// it says so and exits
+void dRally_System_clean(void){}
+void __VGA3_SETMODE(void){}
+
 static void * read_file(const char * path, long * size){
 
 	FILE * 	fd;
@@ -87,7 +97,6 @@ static int setup(int argc, char * argv[]){
 
 	if(pre[2] != race_replay_size()){ fprintf(stderr, "%s: from another build\n", argv[2]); return 1; }
 	race_replay_scatter((__BYTE__ *)(pre+3));
-	if(D(___1de7d0h+0x48) != 0){ fprintf(stderr, "%s: a reversed track, which isn't baked yet\n", argv[2]); return 1; }
 	race_baked = race_baked_read(argv[3]);
 	race_setup(pre[0], pre[1], &race_loaders_baked);
 	race_replay_gather(flat);
@@ -115,16 +124,38 @@ static int setup(int argc, char * argv[]){
 	return 0;
 }
 
-// gba/race's quick race: models and colors as in its main.c
-static int quick(char * argv[]){
+// race_quick() on TRACK, reversed if it ends in r, and the loaders BAKEDIR names
+static const race_loaders_t * quick_setup(const char * track, const char * bakes, __DWORD__ seed){
 
 	static const int 	models[4] = { 3, 5, 4, 2 };
 	static const __BYTE__ 	colors[4][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
+
+	race_quick(atoi(track), models, colors, seed);
+	if(track[strlen(track)-1] == 'r') D(___1de7d0h+0x48) = 1;
+	if(!strncmp(bakes, "files:", 6)){
+
+#if defined(DR_IMA_TILES)
+		fprintf(stderr, "replay-tiles can't set a race up from the game's files\n");
+		exit(1);
+#else
+		void dRally_Memory_init(void);
+
+		if(chdir(bakes+6)){ perror(bakes+6); exit(1); }
+		dRally_Memory_init();		// race_alloc() allocates through it
+		return &race_loaders_files;
+#endif
+	}
+	race_baked = race_baked_read(bakes);
+
+	return &race_loaders_baked;
+}
+
+// gba/race's quick race: models and colors as in its main.c
+static int quick(char * argv[]){
+
 	__BYTE__ * 		flat = malloc(race_replay_size());
 
-	race_quick(atoi(argv[2]), models, colors, strtoul(argv[4], 0, 0));
-	race_baked = race_baked_read(argv[3]);
-	race_setup(0, 4, &race_loaders_baked);
+	race_setup(0, 4, quick_setup(argv[2], argv[3], strtoul(argv[4], 0, 0)));
 	race_replay_gather(flat);
 	printf("set up: globals hash %08x\n", race_replay_hash(flat));
 	if(getenv("VAR_HASHES")){
@@ -160,15 +191,11 @@ static __DWORD__ ima_hash(void){
 // gba/race's benchmark race: see its main.c
 static int race(char * argv[]){
 
-	static const int 	models[4] = { 3, 5, 4, 2 };
-	static const __BYTE__ 	colors[4][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
 	__BYTE__ * 		flat = malloc(race_replay_size());
 	struct_35e_t * 		cars = (struct_35e_t *)___1e6ed0h;
 	unsigned 		ticks = 0, n;
 
-	race_quick(atoi(argv[2]), models, colors, strtoul(argv[4], 0, 0));
-	race_baked = race_baked_read(argv[3]);
-	race_setup(0, 4, &race_loaders_baked);
+	race_setup(0, 4, quick_setup(argv[2], argv[3], strtoul(argv[4], 0, 0)));
 	race_replay_gather(flat);
 	printf("set up: globals hash %08x\n", race_replay_hash(flat));
 
