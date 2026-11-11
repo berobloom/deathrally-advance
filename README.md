@@ -4,7 +4,7 @@ A fork of [**dRally**](https://github.com/urxp/dRally) by Neomalius (urxp)
 
 dRally is an open-source engine for _Death Rally_ (1996), rebuilt from the original executable, that runs natively on Linux and BSD. **Death Rally Advance** reorganizes its source into modules and starts a port to **the Game Boy Advance**, as a cartridge ROM with the game data built in.
 
-This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, in any of the seven cars, chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
+This is an early work in progress. On the GBA you can now **drive a race run by the game's own race code**, against the game's AI, on any of the ten tracks, in any of the six cars, with the laps, the rivals' skill and your upgrades chosen at the start: `gba/race`. The game's own code sets the race up on the GBA, and the race is drawn with the GBA's tile and sprite hardware at 60 frames per second, at the game's real speed. Skid marks, mines, power-ups and obstacles show on the track, and spectators, wrecks, explosions, shots, the start lights and the finish flag over it. The game's own HUD box shows turbo, ammo, mines and damage. Each track's music plays, with the engine and the race's other sound effects. There are no menus yet. See [Status](#status).
 
 ## Game Data
 
@@ -137,7 +137,7 @@ In `gba/race`:
 | Select       | Drop a mine                              |
 | Start        | Let the AI drive your car, or, once the race is over, choose the next race |
 
-Before a race, up and down pick the track or the car, and left and right change it: the track pans by slowly, and your car turns in the middle of the screen. A or Start races. The opponents are always a Lotus, a Porsche and a sedan.
+Before a race, up and down pick a row and left and right change it: the track, which pans by slowly, your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill and your car's upgrades. A or Start races. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
 Its meter, at the bottom right, shows frames per second and the share of the CPU used. The bottom left shows your position and lap.
 
@@ -148,7 +148,7 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 Not done yet:
 
 * Reversed tracks, which the baked setup leaves out.
-* Choosing the opponents, the laps and upgrades: the race is a quick race.
+* Choosing the opponents and their cars, and the weapons.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.

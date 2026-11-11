@@ -62,6 +62,8 @@ void race_logic(void);
 void race___40164h(void);
 
 	extern __BYTE__ ___1e6ed0h[];
+	extern __BYTE__ ___1de7d0h[];
+	extern int NUM_OF_LAPS;
 	extern __BYTE__ ___243ce0h[];
 	extern __BYTE__ ___2438c8h[];
 	extern __DWORD__ MY_CAR_IDX;
@@ -260,7 +262,7 @@ static void update_track(int cam_x, int cam_y){
 // --- HUD -------------------------------------------------------------------
 
 // 5x7 glyphs, one byte per row, bit 4 is the leftmost pixel
-static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMB ";
+static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMBW ";
 static const u8 hud_font[][7] = {
 	{14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31}, {31,2,4,2,1,17,14},
 	{2,6,10,18,31,2,2}, {31,16,30,1,1,17,14}, {6,8,16,30,17,17,14}, {31,1,2,4,8,8,8},
@@ -270,7 +272,8 @@ static const u8 hud_font[][7] = {
 	{30,17,17,30,20,18,17}, {31,16,16,30,16,16,31}, {14,17,17,17,17,17,14}, {17,17,17,17,17,10,4},
 	{1,1,2,4,8,16,16}, {31,4,4,4,4,4,4}, {17,18,20,24,20,18,17}, {17,25,21,19,17,17,17},
 	{14,4,4,4,4,4,14}, {30,17,17,17,17,17,30}, {2,4,8,16,8,4,2}, {8,4,2,1,2,4,8},
-	{17,17,17,31,17,17,17}, {17,27,21,21,17,17,17}, {30,17,17,30,17,17,30}, {0,0,0,0,0,0,0}
+	{17,17,17,31,17,17,17}, {17,27,21,21,17,17,17}, {30,17,17,30,17,17,30}, {17,17,17,21,21,21,10},
+	{0,0,0,0,0,0,0}
 };
 
 EWRAM_BSS static u8 hud_glyph[128];		// glyph number of each character
@@ -629,16 +632,57 @@ static void use_track(const race_track_t * t){
 	race_ima_tiles(t->tiles, track_w, track_h, RACE_IMA_TILES);
 }
 
-// your car's model, 0-6 (KUPLA, PICKUP, SEDAN, CAMARO, PORCHE, LOTUS, SPECIAL)
-#define NUM_MODELS		7
-static int my_model = 3;
+// what you race with: your car (0-5, the game's VAGABOND to DELIVERATOR),
+// the laps, the others' difficulty (0-2, SPEED MAKES ME DIZZY to PETROL IN
+// MY VEINS) and your car's upgrades. The defaults are race_quick()'s
+#define NUM_MODELS		6
+static int my_model = 3, laps = 4, rivals = 1, upgrades = 0;
+static const char * const model_names[NUM_MODELS] = { "VAGABOND", "DERVISH", "SENTINEL", "SHRIEKER", "WRAITH", "DELIVERATOR" };
 
-// before a race: up and down pick the track or the car, left and right
-// show them, and A or Start races
+// the engine and tires each car can be fitted with: race___3f970h()'s
+// tables have 1.00 in the places past them, which would leave the car
+// crawling. Armor goes up to 4 on all of them
+static const u8 max_engine[NUM_MODELS] = { 1, 2, 2, 3, 3, 4 };
+static const u8 max_tires[NUM_MODELS] = { 2, 2, 3, 3, 4, 4 };
+
+// race_quick()'s quick race, with the choices put in
+static void apply_choices(void){
+
+	__BYTE__ * 	r;
+	int 		n;
+
+	NUM_OF_LAPS = laps;
+	for(n = 1; n < NUM_CARS; n++) D(___1de7d0h+0x54*n+0x44) = rivals;
+	r = ___1de7d0h;
+	D(r+0x14) = (upgrades < max_engine[my_model]) ? upgrades : max_engine[my_model];
+	D(r+0x18) = (upgrades < max_tires[my_model]) ? upgrades : max_tires[my_model];
+	D(r+0x1c) = upgrades;
+}
+
+// one row of choose_race(), centred, with arrows if it's the one chosen
+static void choice_row(int row, int chosen, const char * label, const char * value){
+
+	char 	line[32];
+	int 	n = 0;
+
+	line[n++] = (row == chosen) ? '<' : ' ';
+	line[n++] = ' ';
+	while(*label) line[n++] = *label++;
+	if(n > 2) line[n++] = ' ';
+	while(*value) line[n++] = *value++;
+	line[n++] = ' ';
+	line[n++] = (row == chosen) ? '>' : ' ';
+	line[n] = 0;
+	hud_print((SCREEN_W/8-n)/2, (row < 2) ? 1+2*row : 13+row, line);
+}
+
+// before a race: up and down pick a row, left and right change it (the
+// track pans by, your car turns in the middle), and A or Start races
+#define CHOICES 		5
 static void choose_race(void){
 
 	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, row = 0, n;
-	char 	line[16];
+	char 	num[4];
 
 #if defined(RACE_BENCH)
 	return;			// the first track, with nobody to choose
@@ -660,17 +704,17 @@ static void choose_race(void){
 		y = (track_ph-SCREEN_H)/2;
 		for(;;){
 
-			// the choices, with arrows on the one that left and right change
 			for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
-			memcpy(line, "< TRACK    >", 13);
-			put_num(line+8, trk->track+1, 2);
-			if(row != 0) line[0] = line[11] = ' ';
-			hud_print((SCREEN_W/8-12)/2, 2, line);
-			memcpy(line, "< CAR   >", 10);
-			put_num(line+6, my_model+1, 1);
-			if(row != 1) line[0] = line[8] = ' ';
-			hud_print((SCREEN_W/8-9)/2, 4, line);
-			hud_print((SCREEN_W/8-7)/2, 16, "PRESS A");
+			*put_num(num, trk->track+1, 2) = 0;
+			choice_row(0, row, "TRACK", num);
+			choice_row(1, row, "", model_names[my_model]);
+			*put_num(num, laps, 1) = 0;
+			choice_row(2, row, "LAPS", num);
+			*put_num(num, rivals+1, 1) = 0;
+			choice_row(3, row, "RIVALS", num);
+			*put_num(num, upgrades, 1) = 0;
+			choice_row(4, row, "UPGRADES", num);
+			hud_print((SCREEN_W/8-7)/2, 19, "PRESS A");
 
 			// the track going by slowly
 			VBlankIntrWait();
@@ -690,17 +734,15 @@ static void choose_race(void){
 				init_hud();		// the race's
 				return;
 			}
-			if(n&(KEY_UP|KEY_DOWN)) row ^= 1;
-			if(row == 0){
-
-				if(n&KEY_LEFT){ k = (k+race_tracks_n-1)%race_tracks_n; break; }
-				if(n&KEY_RIGHT){ k = (k+1)%race_tracks_n; break; }
-			}
-			else {
-
-				if(n&KEY_LEFT) my_model = (my_model+NUM_MODELS-1)%NUM_MODELS;
-				if(n&KEY_RIGHT) my_model = (my_model+1)%NUM_MODELS;
-			}
+			if(n&KEY_UP) row = (row+CHOICES-1)%CHOICES;
+			if(n&KEY_DOWN) row = (row+1)%CHOICES;
+			n = (n&KEY_RIGHT) ? 1 : (n&KEY_LEFT) ? -1 : 0;
+			if(!n) continue;
+			if(row == 0){ k = (k+race_tracks_n+n)%race_tracks_n; break; }
+			if(row == 1) my_model = (my_model+NUM_MODELS+n)%NUM_MODELS;
+			if(row == 2) laps = (laps+n+8)%9+1;		// 1-9
+			if(row == 3) rivals = (rivals+n+3)%3;
+			if(row == 4) upgrades = (upgrades+n+5)%5;
 		}
 	}
 }
@@ -723,7 +765,7 @@ static const char * start_race(void){
 #else
 	{
 		// gbabake's car colors (track.pal), red, blue, yellow and green
-		// yours, then LOTUS, PORCHE and SEDAN
+		// yours, then a DELIVERATOR, a WRAITH and a SENTINEL
 		int 			models[NUM_CARS] = { my_model, 5, 4, 2 };
 		static const __BYTE__ 	colors[NUM_CARS][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
 		// RACE_CFLAGS=-DRACE_SEED=n: always the same race, to compare its
@@ -735,7 +777,8 @@ static const char * start_race(void){
 #endif
 
 		race_quick(trk->track, models, colors, seed);
-		say("quick race on TR%lu, seed %lu", trk->track, seed);
+		apply_choices();
+		say("quick race on TR%lu, seed %lu, %d laps, rivals %d, upgrades %d", trk->track, seed, laps, rivals, upgrades);
 		my_index = 0;
 		num_cars = NUM_CARS;
 	}
