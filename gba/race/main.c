@@ -630,30 +630,47 @@ static void use_track(const race_track_t * t){
 	race_ima_tiles(t->tiles, track_w, track_h, RACE_IMA_TILES);
 }
 
-// before a race: left and right show the tracks, A or Start races on the one shown
-static void choose_track(void){
+// your car's model, 0-6 (KUPLA, PICKUP, SEDAN, CAMARO, PORCHE, LOTUS, SPECIAL)
+#define NUM_MODELS		7
+static int my_model = 3;
 
-	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, n;
+// before a race: up and down pick the track or the car, left and right
+// show them, and A or Start races
+static void choose_race(void){
+
+	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, row = 0, n;
 	char 	line[16];
 
 #if defined(RACE_BENCH)
 	return;			// the first track, with nobody to choose
 #endif
-
 	view_drawing = 0;
-	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON;
+	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | OBJ_ON | OBJ_1D_MAP;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	// your car, turning in the middle of the screen in car 0's sprite
+	OAM[0].attr0 = OBJ_Y(SCREEN_H/2-32) | OBJ_256_COLOR | OBJ_SQUARE;
+	OAM[0].attr1 = OBJ_X(SCREEN_W/2-32) | OBJ_SIZE(3);
+	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
 	for(;;){
 
+		const u8 * 	frames;
+
 		use_track(&race_tracks[k]);
-		for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
-		memcpy(line, "< TRACK    >", 13);
-		put_num(line+8, trk->track+1, 2);
-		hud_print((SCREEN_W/8-12)/2, 3, line);
-		hud_print((SCREEN_W/8-7)/2, 16, "PRESS A");
 		x = (track_pw-SCREEN_W)/2;
 		y = (track_ph-SCREEN_H)/2;
 		for(;;){
+
+			// the choices, with arrows on the one that left and right change
+			for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
+			memcpy(line, "< TRACK    >", 13);
+			put_num(line+8, trk->track+1, 2);
+			if(row != 0) line[0] = line[11] = ' ';
+			hud_print((SCREEN_W/8-12)/2, 2, line);
+			memcpy(line, "< CAR   >", 10);
+			put_num(line+6, my_model+1, 1);
+			if(row != 1) line[0] = line[8] = ' ';
+			hud_print((SCREEN_W/8-9)/2, 4, line);
+			hud_print((SCREEN_W/8-7)/2, 16, "PRESS A");
 
 			// the track going by slowly
 			VBlankIntrWait();
@@ -662,15 +679,28 @@ static void choose_track(void){
 			x += dx;
 			if(vblanks&1) y += dy;
 			update_track(x, y);
+			frames = cars_obj+my_model*NUM_CARS*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+			for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
+
 			scanKeys();
 			n = keysDown();
 			if(n&(KEY_A|KEY_START)){
 
+				OAM[0].attr0 = OBJ_DISABLE;
 				init_hud();		// the race's
 				return;
 			}
-			if(n&KEY_LEFT){ k = (k+race_tracks_n-1)%race_tracks_n; break; }
-			if(n&KEY_RIGHT){ k = (k+1)%race_tracks_n; break; }
+			if(n&(KEY_UP|KEY_DOWN)) row ^= 1;
+			if(row == 0){
+
+				if(n&KEY_LEFT){ k = (k+race_tracks_n-1)%race_tracks_n; break; }
+				if(n&KEY_RIGHT){ k = (k+1)%race_tracks_n; break; }
+			}
+			else {
+
+				if(n&KEY_LEFT) my_model = (my_model+NUM_MODELS-1)%NUM_MODELS;
+				if(n&KEY_RIGHT) my_model = (my_model+1)%NUM_MODELS;
+			}
 		}
 	}
 }
@@ -693,7 +723,8 @@ static const char * start_race(void){
 #else
 	{
 		// gbabake's car colors (track.pal), red, blue, yellow and green
-		static const int 	models[NUM_CARS] = { 3, 5, 4, 2 };	// CAMARO, LOTUS, PORCHE, SEDAN
+		// yours, then LOTUS, PORCHE and SEDAN
+		int 			models[NUM_CARS] = { my_model, 5, 4, 2 };
 		static const __BYTE__ 	colors[NUM_CARS][3] = { {63, 8, 4}, {8, 24, 63}, {63, 52, 4}, {8, 52, 12} };
 		// RACE_CFLAGS=-DRACE_SEED=n: always the same race, to compare its
 		// hash with tools/replay --quick
@@ -904,7 +935,7 @@ int main(void){
 	REG_BLDY = 9;
 
 	race_replay_gather(flat_boot);
-	if(race_tracks_n > 1) choose_track();
+	if(race_tracks_n > 1) choose_race();
 	t = vblanks;
 	if((err = start_race())){
 
@@ -954,7 +985,7 @@ int main(void){
 			if(over||((int)D(___2438c8h) > 0)){
 
 				// another race, on a track chosen again if there's a choice
-				if(race_tracks_n > 1) choose_track();
+				if(race_tracks_n > 1) choose_race();
 				start_race();
 				REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | BG2_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
 				over = 0;
