@@ -65,13 +65,15 @@ void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles){
 	ima_tw = tw;
 	ima_th = th;
 	free((void *)slots);
-	slots = calloc(tw*th, sizeof(slots[0]));
+	// the pool first: it stays, and each track's slots, which differ in
+	// size, then come after it instead of leaving holes before it
 	if(max_tiles != pool_max){
 
 		free(pool);
 		pool = malloc(max_tiles*64);
 		pool_max = pool ? max_tiles : 0;
 	}
+	slots = calloc(tw*th, sizeof(slots[0]));
 	pool_n = pool_full = 0;
 	dirty_tail = dirty_head;
 	dirty_lost = 0;

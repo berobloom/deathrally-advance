@@ -1,5 +1,6 @@
 @ Data baked by tools/gbabake from the game's files, see its list of them.
-@ The Makefile puts the bake directory on the include path.
+@ The Makefile puts the build directory and the first track's bake
+@ directory on the include path, and lists the tracks in TRACKS.
 
 	.macro	asset name, file
 	.align	4
@@ -10,19 +11,7 @@
 
 	.section .rodata
 
-	asset	track_pal, track.pal
-	asset	track_inf, track.inf
-	asset	track_tiles, track.tiles
-	asset	track_mas, track.mas
-	asset	setup_inf, inf.bin
-	asset	setup_vai, vai.bin
-	asset	setup_lr1, lr1.bin
-	asset	setup_ski, ski.tab
-	asset	setup_blo, blo.tab
-	asset	setup_lit, lit.tab
-	asset	setup_varjo, varjo.tab
-	asset	setup_drv, drv.dat
-	asset	setup_ohi, ohi.dat
+@ the same for every track
 	asset	setup_mines1a, mines1a.bin
 	asset	setup_blowi, blowi.bin
 	asset	setup_obstacle, obstacle.bin
@@ -35,3 +24,32 @@
 #if defined(RACE_PRE)
 	asset	race_pre, pre.bin
 #endif
+
+@ each track's
+	.irp	n, TRACKS
+	asset	tr\n\()_pal, bake-tr\n/track.pal
+	asset	tr\n\()_inf, bake-tr\n/track.inf
+	asset	tr\n\()_tiles, bake-tr\n/track.tiles
+	asset	tr\n\()_mas, bake-tr\n/track.mas
+	asset	tr\n\()_setup_inf, bake-tr\n/inf.bin
+	asset	tr\n\()_vai, bake-tr\n/vai.bin
+	asset	tr\n\()_lr1, bake-tr\n/lr1.bin
+	asset	tr\n\()_ski, bake-tr\n/ski.tab
+	asset	tr\n\()_blo, bake-tr\n/blo.tab
+	asset	tr\n\()_lit, bake-tr\n/lit.tab
+	asset	tr\n\()_varjo, bake-tr\n/varjo.tab
+	asset	tr\n\()_drv, bake-tr\n/drv.dat
+	asset	tr\n\()_ohi, bake-tr\n/ohi.dat
+	.endr
+
+@ race_track_t race_tracks[race_tracks_n]: the track's number, then its files
+	.align	2
+	.global	race_tracks
+race_tracks:
+	.irp	n, TRACKS
+	.word	\n, tr\n\()_pal, tr\n\()_inf, tr\n\()_tiles, tr\n\()_mas, tr\n\()_setup_inf, tr\n\()_vai, tr\n\()_lr1
+	.word	tr\n\()_ski, tr\n\()_blo, tr\n\()_lit, tr\n\()_varjo, tr\n\()_drv, tr\n\()_ohi
+	.endr
+	.global	race_tracks_n
+race_tracks_n:
+	.word	(race_tracks_n-race_tracks)/(14*4)

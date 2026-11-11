@@ -31,11 +31,17 @@
 #include "race_replay.h"
 
 // baked by tools/gbabake, see assets.S
-extern const u16 track_pal[256];
-extern const u8 track_tiles[];
-extern const u32 track_inf[];
-extern const u8 track_mas[], setup_inf[], setup_vai[], setup_lr1[];
-extern const u8 setup_ski[], setup_blo[], setup_lit[], setup_varjo[], setup_drv[], setup_ohi[];
+// each track's files, see assets.S
+typedef struct {
+	u32 		track;			// 0-9
+	const u16 * 	pal;
+	const u32 * 	inf;			// width and height in tiles, then in pixels
+	const u8 * 	tiles, * mas, * setup_inf, * vai, * lr1;
+	const u8 * 	ski, * blo, * lit, * varjo, * drv, * ohi;
+} race_track_t;
+extern const race_track_t race_tracks[];
+extern const u32 race_tracks_n;
+static const race_track_t * trk;	// the race's
 extern const u8 setup_mines1a[], setup_blowi[], setup_obstacle[];
 extern const u8 cars_img[];
 extern const race_car_shapes_t cars_shp[];
@@ -117,9 +123,12 @@ void race___40164h(void);
 #define HUD_MAP			((u16 *)SCREEN_BASE_BLOCK(30))
 #define HUD_CHARS		((u8 *)CHAR_BASE_BLOCK(3))
 // and the game's own box at the top left, 64x32: 8x4 of its tiles
-#define BOX_TILE0		32
+#define BOX_TILE0		48	// after the glyphs
 #define BOX_W			64
 #define BOX_H			32
+#if !defined(RACE_IMA_TILES)
+#define RACE_IMA_TILES		2048	// the tiles the race can draw into, as race_load_baked.c's
+#endif
 // under it on BG2, its map in screenblock 29: a black tile, as BG1 shows its colour 0 as see-through
 #define BOX_BACK_MAP		((u16 *)SCREEN_BASE_BLOCK(29))
 #define BOX_BACK_TILE		(BOX_TILE0+(BOX_W/8)*(BOX_H/8))
@@ -152,12 +161,9 @@ EWRAM_BSS static __BYTE__ flat[0x4000] __attribute__((aligned(4)));
 EWRAM_BSS static __BYTE__ flat_boot[0x4000] __attribute__((aligned(4)));
 EWRAM_BSS static __BYTE__ obstacles[0x800] __attribute__((aligned(4)));
 
-static const race_baked_t baked = {
-	.inf = setup_inf, .mas = track_mas, .vai = setup_vai, .lr1 = setup_lr1,
-	.ski_tab = setup_ski, .blo_tab = setup_blo, .lit_tab = setup_lit, .varjo_tab = setup_varjo,
-	.drv_dat = setup_drv, .ohi_dat = setup_ohi,
+static race_baked_t baked = {
 	.mines1a = setup_mines1a, .blowi = setup_blowi, .obstacle = setup_obstacle,
-	.cars = cars_img, .shapes = cars_shp, .tiles = track_tiles, .sprites = sprites_bin, .hud = hud_bin,
+	.cars = cars_img, .shapes = cars_shp, .sprites = sprites_bin, .hud = hud_bin,
 	.obstacles = obstacles
 };
 
@@ -255,7 +261,7 @@ static void update_track(int cam_x, int cam_y){
 // --- HUD -------------------------------------------------------------------
 
 // 5x7 glyphs, one byte per row, bit 4 is the leftmost pixel
-static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/ ";
+static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMB ";
 static const u8 hud_font[][7] = {
 	{14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31}, {31,2,4,2,1,17,14},
 	{2,6,10,18,31,2,2}, {31,16,30,1,1,17,14}, {6,8,16,30,17,17,14}, {31,1,2,4,8,8,8},
@@ -263,7 +269,9 @@ static const u8 hud_font[][7] = {
 	{15,16,16,14,1,1,30}, {14,17,16,16,16,17,14}, {17,17,17,17,17,17,14}, {24,25,2,4,8,19,3},
 	{14,17,16,23,17,17,15}, {17,17,10,4,10,17,17}, {16,16,16,16,16,16,31}, {14,17,17,31,17,17,17},
 	{30,17,17,30,20,18,17}, {31,16,16,30,16,16,31}, {14,17,17,17,17,17,14}, {17,17,17,17,17,10,4},
-	{1,1,2,4,8,16,16}, {0,0,0,0,0,0,0}
+	{1,1,2,4,8,16,16}, {31,4,4,4,4,4,4}, {17,18,20,24,20,18,17}, {17,25,21,19,17,17,17},
+	{14,4,4,4,4,4,14}, {30,17,17,17,17,17,30}, {2,4,8,16,8,4,2}, {8,4,2,1,2,4,8},
+	{17,17,17,31,17,17,17}, {17,27,21,21,17,17,17}, {30,17,17,30,17,17,30}, {0,0,0,0,0,0,0}
 };
 
 EWRAM_BSS static u8 hud_glyph[128];		// glyph number of each character
@@ -274,7 +282,7 @@ static int closest_color(int r, int g, int b){
 
 	for(n = 1; n < 256; n++){
 
-		int c = track_pal[n], dr = (c & 31) - r, dg = ((c >> 5) & 31) - g, db = ((c >> 10) & 31) - b;
+		int c = trk->pal[n], dr = (c & 31) - r, dg = ((c >> 5) & 31) - g, db = ((c >> 10) & 31) - b;
 		int d = dr*dr + dg*dg + db*db;
 		if(d < best_d){ best_d = d; best = n; }
 	}
@@ -595,6 +603,78 @@ static void follow_camera(void){
 	if(cam_y < 0) cam_y = 0;
 }
 
+// the track the race and the screen use from now on
+static void use_track(const race_track_t * t){
+
+	trk = t;
+	baked.inf = t->setup_inf;
+	baked.mas = t->mas;
+	baked.vai = t->vai;
+	baked.lr1 = t->lr1;
+	baked.ski_tab = t->ski;
+	baked.blo_tab = t->blo;
+	baked.lit_tab = t->lit;
+	baked.varjo_tab = t->varjo;
+	baked.drv_dat = t->drv;
+	baked.ohi_dat = t->ohi;
+	baked.tiles = t->tiles;
+	track_w = t->inf[0];
+	track_h = t->inf[1];
+	track_pw = t->inf[2];
+	track_ph = t->inf[3];
+	copy32(BG_PALETTE, t->pal, 512);
+	copy32(SPRITE_PALETTE, t->pal, 512);
+	init_hud();			// its colours are the track's
+	// what was on screen is another track's, and so are the tiles drawn into
+	vis_x0 = -1;
+	race_ima_tiles(t->tiles, track_w, track_h, RACE_IMA_TILES);
+}
+
+// before a race: left and right show the tracks, A or Start races on the one shown
+static void choose_track(void){
+
+	int 	k = trk-race_tracks, x = 0, y = 0, dx = 1, dy = 1, n;
+	char 	line[16];
+
+#if defined(RACE_BENCH)
+	return;			// the first track, with nobody to choose
+#endif
+
+	view_drawing = 0;
+	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON;
+	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	for(;;){
+
+		use_track(&race_tracks[k]);
+		for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
+		memcpy(line, "< TRACK    >", 13);
+		put_num(line+8, trk->track+1, 2);
+		hud_print((SCREEN_W/8-12)/2, 3, line);
+		hud_print((SCREEN_W/8-7)/2, 16, "PRESS A");
+		x = (track_pw-SCREEN_W)/2;
+		y = (track_ph-SCREEN_H)/2;
+		for(;;){
+
+			// the track going by slowly
+			VBlankIntrWait();
+			if((x+dx < 0)||(x+dx > track_pw-SCREEN_W)) dx = -dx;
+			if((y+dy < 0)||(y+dy > track_ph-SCREEN_H)) dy = -dy;
+			x += dx;
+			if(vblanks&1) y += dy;
+			update_track(x, y);
+			scanKeys();
+			n = keysDown();
+			if(n&(KEY_A|KEY_START)){
+
+				init_hud();		// the race's
+				return;
+			}
+			if(n&KEY_LEFT){ k = (k+race_tracks_n-1)%race_tracks_n; break; }
+			if(n&KEY_RIGHT){ k = (k+1)%race_tracks_n; break; }
+		}
+	}
+}
+
 static const char * start_race(void){
 
 	int 		n, my_index, num_cars;
@@ -623,8 +703,8 @@ static const char * start_race(void){
 		__DWORD__ 		seed = cycles();
 #endif
 
-		race_quick(TRACK, models, colors, seed);
-		say("quick race on TR%d, seed %lu", TRACK, seed);
+		race_quick(trk->track, models, colors, seed);
+		say("quick race on TR%lu, seed %lu", trk->track, seed);
 		my_index = 0;
 		num_cars = NUM_CARS;
 	}
@@ -810,16 +890,10 @@ int main(void){
 	REG_TM2CNT_H = TIMER_START;
 
 	for(n = 0; n < 256; n++) ring_row[n] = n % RING_H;
-	track_w = track_inf[0];
-	track_h = track_inf[1];
-	track_pw = track_inf[2];
-	track_ph = track_inf[3];
 
 	REG_DISPCNT = LCDC_OFF;
-	copy32(BG_PALETTE, track_pal, 512);
-	copy32(SPRITE_PALETTE, track_pal, 512);
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
-	init_hud();
+	use_track(&race_tracks[0]);
 
 	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
 	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
@@ -830,6 +904,7 @@ int main(void){
 	REG_BLDY = 9;
 
 	race_replay_gather(flat_boot);
+	if(race_tracks_n > 1) choose_track();
 	t = vblanks;
 	if((err = start_race())){
 
@@ -875,9 +950,13 @@ int main(void){
 		down = keysDown();
 		if(down & KEY_START){
 
-			if(over){
+			// once RACE OVER shows
+			if(over||((int)D(___2438c8h) > 0)){
 
+				// another race, on a track chosen again if there's a choice
+				if(race_tracks_n > 1) choose_track();
 				start_race();
+				REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON | BG2_ON | OBJ_ON | OBJ_1D_MAP | OBJ_WIN_ON;
 				over = 0;
 			}
 			else D(___243ce0h) = !D(___243ce0h);
