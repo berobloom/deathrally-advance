@@ -112,7 +112,7 @@ The results screens' functions also hand out the points. Built with `DR_CAREER_N
 
 On the GBA, `gba/race/career_ui.c` draws its own text screens around them: a new game, the hub with your rank, points, money, car, damage and loan, the shop, the underground market, the loan shark's visit, the sign-up and the sabotage it brings with the three races filling up, PREPARE TO RACE, the race, its results, and the standings with what each driver scored in the round. The shop shows the car on sale, or yours, turning in the corner, from the race's car frames, with the game's own words for each car, upgrade and repair (`src/shop/shop_texts.c` and `car_data.c`), and so does the market for its items and loans. Spiked bumpers work in the race, but the car is drawn without them, as the ROM has no room for the spiked cars' pictures. The racers' car colors come from MENU.BPA's `CARCOL.PAL` and `COPPER.PAL`, which `tools/gbabake` bakes. A career's races follow one another without resetting the race's globals, as on the desktop.
 
-`tools/gbarun` runs a ROM headless in mGBA's library: it presses buttons, writes and reads memory, and saves screenshots at the frames a script gives, and prints what the ROM logs. `tools/gbarun/shop.txt` walks a new career into the shop. It needs mGBA's library and headers (`libmgba-dev`).
+`tools/gbarun` runs a ROM headless in mGBA's library: it presses buttons, writes and reads memory, and saves screenshots at the frames a script gives, and prints what the ROM logs. With `-s FILE` it keeps the cartridge's save memory in FILE between runs. `tools/gbarun/shop.txt` walks a new career into the shop. It needs mGBA's library and headers (`libmgba-dev`).
 
 `tools/replay --career BAKES SEED ROUNDS` plays a career on the desktop as `gba/race`'s career benchmark does (`RACE_CFLAGS="-DRACE_BENCH -DCAREER_BENCH=n -DRACE_SEED=s"`): always the easy race, with the AI driving your car. It prints a hash of the race's globals after each race and of the 20 racers after each round. Four rounds match the GBA's, and so do three races against the Adversary (`CAREER_LEAD=1`, and `-DCAREER_LEAD` on the GBA, give you the lead from the start). In one of those, the engine sound's pitch at the end differs, which nothing else reads.
 
@@ -164,6 +164,8 @@ In `gba/race`:
 
 The title screen chooses the career or a quick race. In the career's screens, the D-pad moves, A chooses and B goes back. A new game asks for your name (A on it, then up and down change the letter and left and right move along), your face, which is one of the drivers' and leaves that driver out, and the difficulty. At the sign-up, left and right pick a race and A signs up, or B sits the round out. The others sign up as you choose, and a race that has its four is full.
 
+The career saves itself in the cartridge's SRAM each time you're back at its hub, with the lap records, in the desktop's saved game's form. Choosing the career again offers to continue it or start a new one; a career that's over, won or lost, is no longer offered.
+
 Before a quick race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill, your car's upgrades, and whether there are weapons. A or Start races, and B goes back to the title. Without weapons nobody has guns or mines, and the HUD box shows the lap time instead. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
 Its meter, at the bottom right, shows frames per second and the share of the CPU used. The bottom left shows your position and lap.
@@ -180,7 +182,6 @@ Not done yet:
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
 * The menus' music, and the sound effects starting partway through, which Maxmod can't do.
-* Saving in SRAM.
 * Testing on real hardware.
 
 ## Desktop

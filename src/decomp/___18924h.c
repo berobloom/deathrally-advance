@@ -2,6 +2,7 @@
 #include "drmemory.h"
 #include "drally_structs_fixed.h"
 #include "sfx.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___1866b8h[];
@@ -11,18 +12,7 @@
 	extern __BYTE__ ___1866b8h[];
 	extern __BYTE__ ___185b58h[];
 	extern __BYTE__ ___1866b8h[];
-	extern __BYTE__ ___185a48h[];
-	extern __BYTE__ ___185a44h[];
-	extern __BYTE__ ___185a40h[];
-	extern __BYTE__ ___185a3ch[];
-	extern __DWORD__ ___243d44h;
-	extern __BYTE__ ___196ab4h[];
 	extern __POINTER__ ___1a0f9ch;
-	extern __BYTE__ ___1a1ef8h[];
-	extern __BYTE__ ___185a14h_UseWeapons[];
-	extern __BYTE__ ___1a01e0h[];
-	extern __DWORD__ ___196a94h_difficulty;
-	extern __BYTE__ ___1a0a50h[];
 
 
 __DWORD__ ___146c4h_cdecl(__DWORD__);
@@ -48,9 +38,7 @@ __DWORD__ ___18924h(void){
 	__BYTE__ 	key;
 	int 		n;
 	FILE *		fd;
-	racer_t * 	s_6c;
-
-	s_6c = (racer_t *)___1a01e0h;
+	saved_game_t * 	sg;
 
 	n = -1;
 	while(++n < 8){
@@ -97,12 +85,6 @@ __DWORD__ ___18924h(void){
 		B(___185b58h+0xb) = 1; 
 		strcpy(___1866b8h+0x1c2, "Enter The Shop");
 		B(___185b58h+0xd) = 1;
-		D(___185a48h) = 0;
-		D(___185a44h) = 0;
-		D(___185a40h) = 0;
-		D(___185a3ch) = 0;
-		___243d44h = 0;
-		D(___196ab4h) = 0;
 		strcpy(___1866b8h, "Continue Racing"); 
 		___1a0f9ch = ___3f71ch__allocateMemory(0x883);
 		memset(___1a0f9ch, 0, 0x883);
@@ -117,12 +99,9 @@ __DWORD__ ___18924h(void){
 		n = 0;
 		while(++n < 0x883) B(___1a0f9ch+n) = ROL_BYTE(B(___1a0f9ch+n), n%6)+key-0x11*n;
 
-		D(___1a1ef8h) = B(___1a0f9ch+1);
-		D(___185a14h_UseWeapons) = B(___1a0f9ch+2);
-		___196a94h_difficulty = B(___1a0f9ch+3);
-		memcpy(s_6c, ___1a0f9ch+0x13, 20*sizeof(racer_t));
+		sg = (saved_game_t *)___1a0f9ch;
 		for (int i = 0; i < 20; i++) {
-			racer_t* rc = &s_6c[i];
+			racer_t* rc = &sg->racers[i];
 			rc->damage = SDL_SwapLE32(rc->damage);
 			rc->engine = SDL_SwapLE32(rc->engine);
 			rc->tires = SDL_SwapLE32(rc->tires);
@@ -145,11 +124,8 @@ __DWORD__ ___18924h(void){
 			rc->rocket_fuel = SDL_SwapLE32(rc->rocket_fuel);
 			rc->sabotage = SDL_SwapLE32(rc->sabotage);
 		}
+		career_load(sg);
 		dRMemory_free(___1a0f9ch);
-		D(___1a0a50h) = !!(s_6c[D(___1a1ef8h)].mines != 8);
-		D(___1a0a50h+4) = !!(s_6c[D(___1a1ef8h)].spikes != 1);
-		D(___1a0a50h+8) = !!(s_6c[D(___1a1ef8h)].rocket_fuel != 1);
-		D(___1a0a50h+0xc) = !!(s_6c[D(___1a1ef8h)].sabotage != 1);
 		___2a608h_cdecl("Game Loaded.");
 		eax = 1;
 	}

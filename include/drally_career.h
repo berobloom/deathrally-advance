@@ -93,4 +93,9 @@ int career_market_welcome(void);
 int career_offer(int * pay, int * target);
 void career_offer_accept(int ev, int target);
 
+// a saved game, as the desktop's DR.SG files hold it
+struct saved_game_s;
+void career_save(struct saved_game_s * sg, const char * name);
+void career_load(const struct saved_game_s * sg);
+
 #endif // __DRALLY_CAREER_H

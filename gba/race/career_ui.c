@@ -229,6 +229,97 @@ static int new_game(void){
 	}
 }
 
+// --- saving --------------------------------------------------------------------------
+
+// the cartridge's battery-backed SRAM, read and written a byte at a time:
+// the career at CAREER_SAVE, as the desktop's DR.SG files hold it, and
+// the lap records at RECORDS_SAVE, as its DR.CFG does
+#define SAVE_RAM		((volatile u8 *)0x0e000000)
+#define CAREER_SAVE		0x0000
+#define CAREER_MAGIC		0x31535244	// "DRS1"
+#define RECORDS_SAVE		0x1000
+#define RECORDS_MAGIC		0x31525244	// "DRR1"
+
+	extern record_t ___19f750h[6][18];
+
+// for the emulators and flash carts that look for it to know the save type
+__attribute__((used)) static const char sram_id[] = "SRAM_V113";
+
+static u32 sram_sum(const u8 * p, int n){
+
+	u32 	h = 0x811c9dc5;
+
+	while(n--) h = (h^*p++)*0x01000193;
+
+	return h;
+}
+
+static void sram_put(int at, const void * src, int n){
+
+	const u8 	* p = src;
+
+	while(n--) SAVE_RAM[at++] = *p++;
+}
+
+static void sram_get(int at, void * dst, int n){
+
+	u8 	* p = dst;
+
+	while(n--) *p++ = SAVE_RAM[at++];
+}
+
+// a block: its magic, its checksum, then it
+static void block_save(int at, u32 magic, const void * src, int n){
+
+	u32 	head[2] = { magic, sram_sum(src, n) };
+
+	// the magic last, so that a block cut short by power off isn't taken
+	sram_put(at+8, src, n);
+	sram_put(at+4, &head[1], 4);
+	sram_put(at, &head[0], 4);
+}
+
+static int block_load(int at, u32 magic, void * dst, int n){
+
+	u32 	head[2];
+
+	(void)*(volatile const char *)sram_id;	// kept in the ROM
+	sram_get(at, head, 8);
+	if(head[0] != magic) return 0;
+	sram_get(at+8, dst, n);
+
+	return sram_sum(dst, n) == head[1];
+}
+
+// the career as it stands, and the lap records with it
+static void career_store(void){
+
+	EWRAM_BSS static saved_game_t 	sg;
+
+	career_save(&sg, racer(ME)->name);
+	block_save(CAREER_SAVE, CAREER_MAGIC, &sg, sizeof(sg));
+	block_save(RECORDS_SAVE, RECORDS_MAGIC, ___19f750h, sizeof(record_t)*6*18);
+}
+
+// the game over: no career to go on with
+static void career_forget(void){
+
+	u32 	none = 0;
+
+	sram_put(CAREER_SAVE, &none, 4);
+	block_save(RECORDS_SAVE, RECORDS_MAGIC, ___19f750h, sizeof(record_t)*6*18);
+}
+
+// the saved career, if there's one, and the lap records. 1 if there was
+static int career_restore(saved_game_t * sg){
+
+	EWRAM_BSS static record_t 	rec[6][18];
+
+	if(block_load(RECORDS_SAVE, RECORDS_MAGIC, rec, sizeof(rec))) memcpy(___19f750h, rec, sizeof(rec));
+
+	return block_load(CAREER_SAVE, CAREER_MAGIC, sg, sizeof(*sg));
+}
+
 // --- the standings -----------------------------------------------------------------
 
 // all 20 by rank, two pages of 10, with what each scored in the round if gained
@@ -1011,6 +1102,42 @@ static void events(void){
 	}
 }
 
+// a saved career to go on with, or a new one: 1 for the saved one, which
+// it loads, 0 for new, -1 for B
+static int continue_or_new(void){
+
+	EWRAM_BSS static saved_game_t 	sg;
+	const racer_t * 	me;
+	int 			row = 0;
+
+#if defined(CAREER_BENCH)
+	return 0;
+#endif
+	if(!career_restore(&sg)) return 0;
+	me = &sg.racers[sg.me];
+	gba_text_screen();
+	center(1, "CAREER");
+	print(6, 6, "%s", me->name);
+	print(6, 7, "RANK %d, %d POINTS", (int)me->rank, (int)me->points);
+	print(6, 8, "$%d, %s", (int)me->money, car_names[me->car]);
+	gba_print(1, 18, "A CHOOSE, B BACK");
+	for(;;){
+
+		u16 	k;
+
+		item(4, row ? 13 : 4, "CONTINUE");
+		item(13, row ? 13 : 4, "NEW CAREER");
+		k = gba_frame();
+		if(k&(KEY_UP|KEY_DOWN)) row = !row;
+		if(k&KEY_B) return -1;
+		if(k&(KEY_A|KEY_START)) break;
+	}
+	if(row) return 0;
+	career_load(&sg);
+
+	return 1;
+}
+
 // --- the hub ---------------------------------------------------------------------------
 
 void career_play(void){
@@ -1026,16 +1153,26 @@ void career_play(void){
 #else
 	srand_watcom106(gba_cycles());
 #endif
-	if(!new_game()) return;
+	n = continue_or_new();
+	if(n < 0) return;
+	if(n == 0){
+
+		if(!new_game()) return;
 #if defined(CAREER_LEAD)
-	// RACE_CFLAGS=-DCAREER_LEAD: you lead from the start, to test the
-	// Adversary's race, as tools/replay --career with CAREER_LEAD=1
-	racer(ME)->points = 200;
+		// RACE_CFLAGS=-DCAREER_LEAD: you lead from the start, to test
+		// the Adversary's race, as tools/replay --career with
+		// CAREER_LEAD=1
+		racer(ME)->points = 200;
 #endif
-	// a new game goes straight to the sign-up, welcomed (shop_main(),
-	// ___3266ch()), the shop's welcome after
-	speech_lines(game_welcome, 10);
-	if(career_leading() ? adversary() : signup()) return;
+		// a new game goes straight to the sign-up, welcomed
+		// (shop_main(), ___3266ch()), the shop's welcome after
+		speech_lines(game_welcome, 10);
+		if(career_leading() ? adversary() : signup()){
+
+			career_forget();
+			return;
+		}
+	}
 
 	for(;;){
 
@@ -1053,6 +1190,7 @@ void career_play(void){
 		if(career_leading() ? adversary() : signup()) return;
 		continue;
 #endif
+		career_store();
 		gba_text_screen();
 		print(1, 1, "%s", me->name);
 		print(1, 3, "RANK    %d", me->rank);
@@ -1066,6 +1204,7 @@ void career_play(void){
 		if(career_shop_broke()){
 
 			message("END OF THE ROAD, DRIVER", "A WRECK AND NO MONEY TO FIX IT");
+			career_forget();
 			return;
 		}
 		for(;;){
@@ -1088,7 +1227,11 @@ void career_play(void){
 			else {
 
 				career_shop_continue();
-				if(career_leading() ? adversary() : signup()) return;
+				if(career_leading() ? adversary() : signup()){
+
+					career_forget();
+					return;
+				}
 			}
 		}
 		else if(row == 1) shop();

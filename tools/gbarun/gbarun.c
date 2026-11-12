@@ -2,7 +2,10 @@
 // reading memory and saving screenshots at given frames, and prints what
 // the ROM logs (gba/race's say(), through mGBA's debug registers).
 //
-//   gbarun ROM FRAMES [SCRIPT]
+//   gbarun [-s SAVE] ROM FRAMES [SCRIPT]
+//
+// -s keeps the cartridge's save memory in the file SAVE, made if it
+// isn't there, as a real cartridge's battery would.
 //
 // SCRIPT, one command a line, # for comments:
 //
@@ -159,10 +162,17 @@ int main(int argc, char ** argv){
 	color_t 	* screen;
 	unsigned 	w, h;
 	int 		frames, n_ev = 0, f, i, release = -1;
+	const char 	* save = NULL;
 
+	if((argc > 2)&&!strcmp(argv[1], "-s")){
+
+		save = argv[2];
+		argv += 2;
+		argc -= 2;
+	}
 	if(argc < 3){
 
-		fprintf(stderr, "usage: gbarun ROM FRAMES [SCRIPT]\n");
+		fprintf(stderr, "usage: gbarun [-s SAVE] ROM FRAMES [SCRIPT]\n");
 		return 1;
 	}
 	frames = atoi(argv[2]);
@@ -182,6 +192,11 @@ int main(int argc, char ** argv){
 	if(!mCoreLoadFile(core, argv[1])){
 
 		fprintf(stderr, "gbarun: can't load %s\n", argv[1]);
+		return 1;
+	}
+	if(save&&!mCoreLoadSaveFile(core, save, false)){
+
+		fprintf(stderr, "gbarun: can't use %s for the save\n", save);
 		return 1;
 	}
 	core->reset(core);

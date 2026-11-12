@@ -1445,3 +1445,46 @@ void career_offer_accept(int ev, int target){
 	D(___196aach) = target;
 	strcpy((char *)___1a1ff1h, s_6c[target].name);
 }
+
+// --- saving ------------------------------------------------------------------------
+
+// the saved game, as ___18cf0h() saves it: you, the weapons, the
+// difficulty and the 20 racers, in this machine's byte order
+void career_save(saved_game_t * sg, const char * name){
+
+	extern __BYTE__ ___1a1ef8h[];
+
+	memset(sg, 0, sizeof(saved_game_t));
+	sg->me = D(___1a1ef8h);
+	sg->weapons = D(___185a14h_UseWeapons);
+	sg->difficulty = ___196a94h_difficulty;
+	strncpy(sg->name, name, sizeof(sg->name)-1);
+	memcpy(sg->racers, ___1a01e0h, 20*sizeof(racer_t));
+}
+
+// and as ___18924h() loads it: no welcomes, and what the market has on
+// sale by what you hold
+void career_load(const saved_game_t * sg){
+
+	extern __BYTE__ ___185a40h[];
+	extern __BYTE__ ___185a3ch[];
+	extern __BYTE__ ___1a0a50h[];
+
+	racer_t * 	me;
+
+	D(___185a48h) = 0;
+	D(___185a44h) = 0;
+	D(___185a40h) = 0;
+	D(___185a3ch) = 0;
+	___243d44h = 0;
+	D(___196ab4h) = 0;
+	D(___1a1ef8h) = sg->me;
+	D(___185a14h_UseWeapons) = sg->weapons;
+	___196a94h_difficulty = sg->difficulty;
+	memcpy(___1a01e0h, sg->racers, 20*sizeof(racer_t));
+	me = career_me();
+	D(___1a0a50h) = !!(me->mines != 8);
+	D(___1a0a50h+4) = !!(me->spikes != 1);
+	D(___1a0a50h+8) = !!(me->rocket_fuel != 1);
+	D(___1a0a50h+0xc) = !!(me->sabotage != 1);
+}

@@ -2,14 +2,11 @@
 #include "drally_structs_fixed.h"
 #include "drally_fonts.h"
 #include "drmemory.h"
+#include "drally_career.h"
 
 	extern char ___1866b8h[9][9][50];
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
-	extern __BYTE__ ___1a1ef8h[];
-	extern __BYTE__ ___185a14h_UseWeapons[];
-	extern __DWORD__ ___196a94h_difficulty;
-	extern __BYTE__ ___1a01e0h[];
 	extern __BYTE__ ___185b58h[9][9];
 
 void ___2a608h_cdecl(const char * A1);
@@ -57,10 +54,7 @@ void ___18cf0h(void){
 	__BYTE__ 		esp[0x34];
 	saved_game_t *	sg;
 	int 			n;
-	racer_t * 		s_6c;
 
-
-	s_6c = (racer_t *)___1a01e0h;
 
 	n = -1;
 	while(++n < 8){
@@ -111,11 +105,7 @@ void ___18cf0h(void){
 		sg = (saved_game_t *)___3f71ch__allocateMemory(sizeof(saved_game_t));
 		memset(sg, 0, sizeof(saved_game_t));
 
-		sg->me = D(___1a1ef8h);
-		sg->weapons = D(___185a14h_UseWeapons);
-		sg->difficulty = ___196a94h_difficulty;
-		strcpy(sg->name, esp);
-		memcpy(sg->racers, s_6c, 20*sizeof(racer_t));
+		career_save(sg, esp);
 		for (int i = 0; i < 20; i++) {
 			racer_t* rc = &sg->racers[i];
 			rc->damage = SDL_SwapLE32(rc->damage);
