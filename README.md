@@ -176,9 +176,10 @@ Working: drawing any of the ten tracks with four cars, their shadows and their h
 
 Not done yet:
 
-* In the career: the menus' backgrounds, and the end's animation.
+* In the career: the menus' backgrounds.
 * The headlights' exact colors. The game lightens each track color through the track's light table, on seven of the ten tracks; the GBA adds one color, semi-transparent, the closest of the track's palette to what the table adds on average.
-* The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
+* The track's buildings, which the game draws as perspective-projected 3D triangles every frame (`race___53464h()`), over the cars, with textures on top unless they're turned off. The tracks have 1,600 to 5,100 triangles in 40 to 84 objects each, and 50 to 380 KB of textures, about 1.5 MB in all, which the ROM has no room left for. The objects take 3 KB each as the game keeps them, more than the EWRAM for the largest track, so they'd need a smaller form, with the constant parts in ROM. Drawing them over the cars needs a layer of up to 600 8bpp tiles, and the BG VRAM is taken by the track's tiles and the HUD.
+* The end's animation (`ENDANI.HAF`), 3.8 MB of 320x200 frames: the ROM has about 540 KB left of the GBA's 32 MB.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
 * Testing on real hardware.
