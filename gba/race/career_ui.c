@@ -356,6 +356,26 @@ static void signup_draw(int chosen){
 	}
 }
 
+static void speech(const char40 * t, int n_lines);
+
+// after the grids are ordered (___32230h()): the others' cars repaired,
+// and the sabotage you paid for done
+static void sabotage(void){
+
+	char40 		t[7] = { "", "", "", "", "", "", "" };
+	int 		victim;
+
+	victim = career_signup_sabotage(gba_cycles());
+	if(victim < 0) return;
+	snprintf(t[0], 40, "[Sabotage");
+	snprintf(t[2], 40, "Money talks, and the damage is");
+	snprintf(t[3], 40, "done, %d%% worth! Sabotage says that", (int)racer(victim)->damage);
+	snprintf(t[4], 40, "%s is going down and staying", racer(victim)->name);
+	snprintf(t[5], 40, "down. That's dough baked luck for");
+	snprintf(t[6], 40, "you. And luck, she ain't no lady.");
+	speech(t, 7);
+}
+
 // the round's sign-up (___3266ch()): the others sign up as you choose. 1
 // if it ends the game
 static int signup(void){
@@ -403,6 +423,7 @@ static int signup(void){
 			}
 			signup_draw(chosen);
 			career_signup_order();
+			sabotage();
 			return race(4);
 		}
 		if(career_signup_full()) break;
@@ -449,29 +470,31 @@ static int adversary(void){
 
 static const char * const shop_items[6] = { "CAR", "ENGINE", "TIRES", "ARMOR", "REPAIR", "DONE" };
 
-// the game's 6 lines of 40 in rows SHOP_TEXT on, without its colour
+// the game's n lines of 40 in rows row0 to row0+rows-1, without its colour
 // marks ([ and {): the first line by itself, the rest run on, word-wrapped
-static void shop_text(const char40 * t){
+static void text_at(int row0, int rows, const char40 * t, int n_lines){
 
-	char 	para[6*40+8], * w;
-	int 	row = SHOP_TEXT, n, len, i;
+	char 	para[12*40+16], * w;
+	int 	row = row0, n, len, i;
 
-	for(n = 0; n < SHOP_TEXT_ROWS; n++) gba_print(1, SHOP_TEXT+n, "                            ");
+	for(n = 0; n < rows; n++) gba_print(1, row0+n, "                            ");
 	para[0] = 0;
-	for(n = 0; n < 6; n++){
+	for(n = 0; n < n_lines; n++){
 
 		len = strlen(para);
 		for(i = 0; (i < 40)&&t[n][i]&&(len < (int)sizeof(para)-2); i++){
 
+			// the loan shark's speeches are indented: not the spaces
+			if((len > 0)&&(para[len-1] == ' ')&&(t[n][i] == ' ')) continue;
 			if((t[n][i] != '[')&&(t[n][i] != '{')) para[len++] = t[n][i];
 		}
 		// a line by itself after the first, the rest run together, a
 		// word broken with a hyphen joined up again
 		if(n == 0) para[len++] = '\n';
-		else if((len > 0)&&(para[len-1] != '-')&&(para[len-1] != ' ')) para[len++] = ' ';
+		else if((len > 0)&&(para[len-1] != '-')&&(para[len-1] != ' ')&&(para[len-1] != '\n')) para[len++] = ' ';
 		para[len] = 0;
 	}
-	for(w = para; *w&&(row < SHOP_TEXT+SHOP_TEXT_ROWS); row++){
+	for(w = para; *w&&(row < row0+rows); row++){
 
 		char 	line[29];
 
@@ -489,6 +512,21 @@ static void shop_text(const char40 * t){
 		w += len;
 		if(*w == '\n') w++;
 	}
+}
+
+// the game's 6 lines of 40 under the shop's or the market's items
+static void shop_text(const char40 * t){
+
+	text_at(SHOP_TEXT, SHOP_TEXT_ROWS, t, 6);
+}
+
+// a screen of the game's words, until A
+static void speech(const char40 * t, int n_lines){
+
+	gba_text_screen();
+	text_at(3, 13, t, n_lines);
+	center(18, "PRESS A");
+	wait_key(0);
 }
 
 // what to say of the item when it's chosen, as the shop's own panels do
@@ -657,6 +695,156 @@ static void shop(void){
 	gba_show_car(-1, 0, 0);
 }
 
+// --- the underground market --------------------------------------------------------
+
+// underground_main(): the loan shark, then what's on sale until the next
+// race. career.c does the sums
+#define MARKET_DONE		5
+
+static const char * const market_items[6] = { "LOAN SHARK", "MINES", "SPIKED BUMPERS", "ROCKET FUEL", "SABOTAGE", "DONE" };
+
+// the market's own words, which its desktop functions print as they draw
+static const char40 market_out[6] = { "[OUT OF STOCK", "", "Sorry, no can do. That's out of", "stock. Hold your horse(power)s", "till after the next race.", "" };
+static const char40 market_no_sabotage[6] = { "[No sabotage. No way.", "", "What? You crazy, man? Nobody", "touches the Adversary's auto-", "mobile and lives, nobody.", "" };
+static const char40 market_denied[6] = { "[Loan denied, Vagabond driver.", "", "This is a business, not a charity.", "We don't invest in unproven wild", "cards. So buzz off, bug.", "" };
+static const char40 market_paid[6] = { "[Loan paid back.", "", "It's all here. I knew right from", "the start that I could trust you.", "Let's do this again anytime.", "" };
+static const char40 market_done[6] = { "[DONE", "", "Out of the Underground Market,", "back to the garage.", "", "" };
+
+static void market_about(int item){
+
+	racer_t * 	me = racer(ME);
+	char40 		t[6] = { "", "", "", "", "", "" };
+
+	switch(item){
+	case CAREER_MARKET_LOAN:
+		// ___2d294h(): his offer, the smallest to a Vagabond's driver,
+		// or what you owe
+		if(career_loan_owed() == 0){
+
+			shop_text(___1923c0h[(me->car == 0) ? 4 : 5-me->car]);
+			break;
+		}
+		snprintf(t[0], 40, "Pay back $%d.", career_loan_owed());
+		snprintf(t[2], 40, "Petrol brain, you owe me. You'd");
+		snprintf(t[3], 40, "better be here to pay me back, or");
+		snprintf(t[4], 40, "else we have nothing to discuss.");
+		shop_text(t);
+		break;
+	case MARKET_DONE:
+		shop_text(market_done);
+		break;
+	default:
+		if(career_market_state(item) == 1) shop_text(___193720h[item-1]);
+		else if((item == CAREER_MARKET_SABOTAGE)&&career_leading()) shop_text(market_no_sabotage);
+		else shop_text(market_out);
+		break;
+	}
+}
+
+static void market_draw(int row){
+
+	racer_t * 	me = racer(ME);
+	char 		price[12];
+	int 		item, owed = career_loan_owed();
+
+	print(1, 1, "MONEY   $%-8d", me->money);
+	if(owed) print(1, 2, "YOU OWE $%-6d %d RACE%s LEFT ", owed, 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+	else gba_print(1, 2, "                             ");
+	for(item = 0; item < 6; item++){
+
+		price[0] = 0;
+		if(item == CAREER_MARKET_LOAN){
+
+			if(owed) snprintf(price, sizeof(price), "-$%d", owed);
+			else if(career_loan_amount()) snprintf(price, sizeof(price), "+$%d", career_loan_amount());
+		}
+		else if(item < MARKET_DONE){
+
+			if(career_market_state(item) == 1) snprintf(price, sizeof(price), "$%d", career_market_price(item));
+			else snprintf(price, sizeof(price), "SOLD");
+		}
+		print(0, SHOP_ROW0+item, "%c %-19s%8s", (item == row) ? '>' : ' ', market_items[item], price);
+	}
+	gba_print(1, 19, "A BUY  B OUT                ");
+}
+
+// A on a row: the loan taken or paid back, or the item bought
+static void market_buy(int row){
+
+	racer_t * 	me = racer(ME);
+	char40 		granted[6];
+
+	if(row == CAREER_MARKET_LOAN){
+
+		if(career_loan_owed()){
+
+			if(shop_short(career_loan_owed())) return;
+			career_loan_pay();
+			shop_text(market_paid);
+		}
+		else if(!career_loan_amount()) shop_text(market_denied);
+		else {
+
+			career_loan_take();
+			// ___26fach()'s, without its line about the Esc key
+			memcpy(granted, ___192870h[me->loanshark_type], sizeof(granted));
+			granted[5][0] = 0;
+			shop_text(granted);
+		}
+		return;
+	}
+	if(career_market_state(row) != 1){
+
+		market_about(row);
+		return;
+	}
+	if(shop_short(career_market_price(row))) return;
+	career_market_buy(row);
+	shop_text(___193db0h[row-1]);
+}
+
+static void market(void){
+
+	int 	row = CAREER_MARKET_LOAN;
+
+	career_market_open();
+	gba_text_screen();
+	center(0, "THE UNDERGROUND MARKET");
+	market_about(row);
+	for(;;){
+
+		u16 	k;
+
+		market_draw(row);
+		k = gba_frame();
+		if(k&KEY_B) break;
+		if(k&(KEY_UP|KEY_DOWN)){
+
+			row = (row+((k&KEY_UP) ? 5 : 1))%6;
+			market_about(row);
+			continue;
+		}
+		if(!(k&(KEY_A|KEY_START))) continue;
+		if(row == MARKET_DONE) break;
+		market_buy(row);
+	}
+}
+
+// ___168b4h(): after three races, the loan shark comes for his money
+static void loan_collect(void){
+
+	static const char40 	paid[8] = { "[It's pay-back time, driver.", "",
+		"This is what I like to see, a guy", "who keeps his part of the bargain.",
+		"Ah, the sweet smell of money. Come", "to papa, my babies. Real nice doing",
+		"business with you, thunderboy.", "Thanks, and good racing riddance." };
+	static const char40 	hurt[8] = { "[It's pay-back time, driver.", "",
+		"Tut tut, hotshot, I can't see my", "money anywhere. I ain't amused,",
+		"joker. A deal is a deal. I got a", "reputation to look after. Too bad.",
+		"Nothing personal, but I got to hurt", "you some now. Hurt 'im, boyz." };
+
+	speech(career_loan_collect(1) ? paid : hurt, 8);
+}
+
 // --- the hub ---------------------------------------------------------------------------
 
 void career_play(void){
@@ -700,7 +888,14 @@ void career_play(void){
 		print(1, 5, "MONEY   $%d", me->money);
 		print(1, 6, "CAR     %s", car_names[me->car]);
 		print(1, 7, "DAMAGE  %d%%", me->damage);
-		// shop_main()'s end of the road: a wreck you can't pay to repair
+		if(career_loan_owed()) print(1, 8, "LOAN    $%d, %d RACE%s LEFT", career_loan_owed(), 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+		// shop_main()'s: the loan shark, then the end of the road, a
+		// wreck you can't pay to repair
+		if(career_loan_due()){
+
+			loan_collect();
+			continue;
+		}
 		if(career_shop_broke()){
 
 			message("END OF THE ROAD, DRIVER", "A WRECK AND NO MONEY TO FIX IT");
@@ -708,14 +903,15 @@ void career_play(void){
 		}
 		for(;;){
 
-			item(11, 11+2*row, career_leading() ? "FACE THE ADVERSARY" : "RACE");
-			item(13, 11+2*row, "SHOP");
-			item(15, 11+2*row, "STANDINGS");
-			item(17, 11+2*row, "QUIT");
-			for(n = 0; n < 4; n++) gba_print(2, 11+2*n, (n == row) ? ">" : " ");
+			item(10, 10+2*row, career_leading() ? "FACE THE ADVERSARY" : "RACE");
+			item(12, 10+2*row, "SHOP");
+			item(14, 10+2*row, "UNDERGROUND MARKET");
+			item(16, 10+2*row, "STANDINGS");
+			item(18, 10+2*row, "QUIT");
+			for(n = 0; n < 5; n++) gba_print(2, 10+2*n, (n == row) ? ">" : " ");
 			k = gba_frame();
-			if(k&KEY_UP) row = (row+3)%4;
-			if(k&KEY_DOWN) row = (row+1)%4;
+			if(k&KEY_UP) row = (row+4)%5;
+			if(k&KEY_DOWN) row = (row+1)%5;
 			if(k&(KEY_A|KEY_START)) break;
 		}
 		if(row == 0){
@@ -725,7 +921,8 @@ void career_play(void){
 			else if(career_leading() ? adversary() : signup()) return;
 		}
 		else if(row == 1) shop();
-		else if(row == 2) standings(0);
+		else if(row == 2) market();
+		else if(row == 3) standings(0);
 		else return;
 	}
 }

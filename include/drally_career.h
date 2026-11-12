@@ -52,4 +52,24 @@ void career_shop_buy(int item);
 int career_shop_can_race(void);
 int career_shop_broke(void);
 
+// the underground market's items, as underground_main() numbers them in
+// D(___1a1ef0h): the loan shark first
+#define CAREER_MARKET_LOAN 	0
+#define CAREER_MARKET_MINES 	1
+#define CAREER_MARKET_SPIKES 	2
+#define CAREER_MARKET_FUEL 	3
+#define CAREER_MARKET_SABOTAGE 	4
+
+void career_market_open(void);
+int career_market_state(int item);
+int career_market_price(int item);
+void career_market_buy(int item);
+int career_loan_amount(void);
+void career_loan_take(void);
+int career_loan_owed(void);
+void career_loan_pay(void);
+int career_loan_collect(int clear);
+int career_loan_due(void);
+int career_signup_sabotage(__DWORD__ seed);
+
 #endif // __DRALLY_CAREER_H

@@ -2,6 +2,7 @@
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
 #include "sfx.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a1ef0h[];
@@ -40,7 +41,7 @@ void underground___2e350h(void){
 
 	__DWORD__ 	eax, ebx, ecx, edx, edi, esi, ebp;
 	__BYTE__ 	esp[0xc];
-	int 		n, payback;
+	int 		n;
 	racer_t *	s_6c;
 
 
@@ -48,18 +49,10 @@ void underground___2e350h(void){
 	
 	switch(D(___1a1ef0h)){
 	case 0: // LOANSHARK
-		if((s_6c[D(___1a1ef8h)].loanshark_counter == -1)&&(s_6c[D(___1a1ef8h)].car != 0)){
+		if((s_6c[D(___1a1ef8h)].loanshark_counter == -1)&&(career_loan_amount() != 0)){
 
 			dRally_Sound_pushEffect(1, SFX_BUMMER, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-			s_6c[D(___1a1ef8h)].loanshark_counter = 1;
-			s_6c[D(___1a1ef8h)].loanshark_type = 5-s_6c[D(___1a1ef8h)].car;
-
-			if(s_6c[D(___1a1ef8h)].loanshark_type == 0) s_6c[D(___1a1ef8h)].money += 12000;
-			if(s_6c[D(___1a1ef8h)].loanshark_type == 1) s_6c[D(___1a1ef8h)].money += 9000;
-			if(s_6c[D(___1a1ef8h)].loanshark_type == 2) s_6c[D(___1a1ef8h)].money += 6000;
-			if(s_6c[D(___1a1ef8h)].loanshark_type == 3) s_6c[D(___1a1ef8h)].money += 3000;
-			if(s_6c[D(___1a1ef8h)].loanshark_type == 4) s_6c[D(___1a1ef8h)].money += 1500;
-
+			career_loan_take();
 			___26fach();
 			D(___185a38h_delay) = 0x136;
 			___25330h();
@@ -67,7 +60,7 @@ void underground___2e350h(void){
 		}
 		else {
 
-			if((s_6c[D(___1a1ef8h)].loanshark_counter == -1)&&(s_6c[D(___1a1ef8h)].car == 0)){
+			if((s_6c[D(___1a1ef8h)].loanshark_counter == -1)&&(career_loan_amount() == 0)){
 
 				dRally_Sound_pushEffect(2, SFX_LAUGHTER, 0, ___24cc54h_sfx_volume, 0x25500, 0x8000);
 				D(___185a38h_delay) = 0x136;
@@ -77,22 +70,14 @@ void underground___2e350h(void){
 
 			if(s_6c[D(___1a1ef8h)].loanshark_counter != -1){
 
-				if(s_6c[D(___1a1ef8h)].loanshark_type == 0) payback = 12000-2000+2000*s_6c[D(___1a1ef8h)].loanshark_counter;
-				if(s_6c[D(___1a1ef8h)].loanshark_type == 1) payback =  9000-1500+1500*s_6c[D(___1a1ef8h)].loanshark_counter;
-				if(s_6c[D(___1a1ef8h)].loanshark_type == 2) payback =  6000-1000+1000*s_6c[D(___1a1ef8h)].loanshark_counter;
-				if(s_6c[D(___1a1ef8h)].loanshark_type == 3) payback =  3000- 500+ 500*s_6c[D(___1a1ef8h)].loanshark_counter;
-				if(s_6c[D(___1a1ef8h)].loanshark_type == 4) payback =  1500- 250+ 250*s_6c[D(___1a1ef8h)].loanshark_counter;
-
-				if(payback > (int)s_6c[D(___1a1ef8h)].money){
+				if(career_loan_owed() > (int)s_6c[D(___1a1ef8h)].money){
 
 					dRally_Sound_pushEffect(2, SFX_LAUGHTER, 0, ___24cc54h_sfx_volume, 0x25500, 0x8000);
 				}
 				else {
 
 					dRally_Sound_pushEffect(1, SFX_BUMMER, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-					s_6c[D(___1a1ef8h)].loanshark_counter = -1;
-					s_6c[D(___1a1ef8h)].loanshark_type = -1;
-					s_6c[D(___1a1ef8h)].money -= payback;
+					career_loan_pay();
 					D(___185a38h_delay) = 0x136;
 					___2d6a0h();
 					___25330h();
@@ -102,13 +87,11 @@ void underground___2e350h(void){
 		}
 		break;
 	case 1: // MINES
-		if((D(___1a0a50h) == 1)&&(___28ab4h_cdecl(___1a0170h_PriceMines) == 0)){
+		if((career_market_state(CAREER_MARKET_MINES) == 1)&&(___28ab4h_cdecl(career_market_price(CAREER_MARKET_MINES)) == 0)){
 
 			dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-			D(___1a0a50h) = 0;
-			s_6c[D(___1a1ef8h)].money -= ___1a0170h_PriceMines;
+			career_market_buy(CAREER_MARKET_MINES);
 			___2d728h();
-			s_6c[D(___1a1ef8h)].mines = 8;
 			___2d0ech_cdecl(0);
 			D(___185a38h_delay) = 0x136;
 			___25330h();
@@ -120,13 +103,11 @@ void underground___2e350h(void){
 		}
 		break;
 	case 2: // SPIKED BUMPERS
-		if((D(___1a0a50h+4) == 1)&&(___28ab4h_cdecl(___1a0174h_PriceSpikedBumpers) == 0)){
+		if((career_market_state(CAREER_MARKET_SPIKES) == 1)&&(___28ab4h_cdecl(career_market_price(CAREER_MARKET_SPIKES)) == 0)){
 
 			dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-			D(___1a0a50h+4) = 0;
-			s_6c[D(___1a1ef8h)].money -= ___1a0174h_PriceSpikedBumpers;
+			career_market_buy(CAREER_MARKET_SPIKES);
 			___2d898h();
-			s_6c[D(___1a1ef8h)].spikes = 1;
 			___2d0ech_cdecl(1);
 			D(___185a38h_delay) = 0x136;
 			___25330h();
@@ -138,13 +119,11 @@ void underground___2e350h(void){
 		}
 		break;
 	case 3: // ROCKET FUEL
-		if((D(___1a0a50h+8) == 1)&&(___28ab4h_cdecl(___1a0178h_PriceRocketFuel) == 0)){
+		if((career_market_state(CAREER_MARKET_FUEL) == 1)&&(___28ab4h_cdecl(career_market_price(CAREER_MARKET_FUEL)) == 0)){
 
 			dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-			D(___1a0a50h+8) = 0;
-			s_6c[D(___1a1ef8h)].money -= ___1a0178h_PriceRocketFuel;
+			career_market_buy(CAREER_MARKET_FUEL);
 			___2da10h();
-			s_6c[D(___1a1ef8h)].rocket_fuel = 1;
 			___2d0ech_cdecl(2);
 			D(___185a38h_delay) = 0x136;
 			___25330h();
@@ -156,13 +135,11 @@ void underground___2e350h(void){
 		}
 		break;
 	case 4: // SABOTAGE
-		if((D(___1a0a50h+0xc) == 1)&&(___28ab4h_cdecl(___1a017ch_PriceSabotage) == 0)){
+		if((career_market_state(CAREER_MARKET_SABOTAGE) == 1)&&(___28ab4h_cdecl(career_market_price(CAREER_MARKET_SABOTAGE)) == 0)){
 
 			dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-			D(___1a0a50h+0xc) = 0;
-			s_6c[D(___1a1ef8h)].money -= ___1a017ch_PriceSabotage;
+			career_market_buy(CAREER_MARKET_SABOTAGE);
 			___2db88h();
-			s_6c[D(___1a1ef8h)].sabotage = 1;
 			___2d0ech_cdecl(3);
 			D(___185a38h_delay) = 0x136;
 			___25330h();

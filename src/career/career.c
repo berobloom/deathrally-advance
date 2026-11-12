@@ -1145,3 +1145,153 @@ int career_shop_broke(void){
 
 	return ((int)(me->money+trade_in(2)) < 1000)&&(repair > me->money)&&((int)me->damage > 95);
 }
+
+// --- the underground market: what underground___2e350h() changes, and the
+// loan shark's collecting (___168b4h()) and sabotage (___32230h()) that
+// follow from it. Each item but the loan is available once between races,
+// ___1a0a50h's flags: 1 on sale, 0 bought or out of stock, -1 held
+
+	extern __DWORD__ ___1a0170h_PriceMines;
+	extern __DWORD__ ___1a0174h_PriceSpikedBumpers;
+	extern __DWORD__ ___1a0178h_PriceRocketFuel;
+	extern __DWORD__ ___1a017ch_PriceSabotage;
+	extern __BYTE__ ___1a0a50h[];
+
+void srand_watcom106(__DWORD__ seed);
+__DWORD__ underground___28c1ch(void);
+
+// the market's opening, as underground_main() does it: its prices for your
+// car, and no sabotage once you lead
+void career_market_open(void){
+
+	underground___28c1ch();
+	if(career_leading()) D(___1a0a50h+0xc) = 0;
+}
+
+// an item's flag, CAREER_MARKET_MINES to _SABOTAGE
+int career_market_state(int item){
+
+	return (int)D(___1a0a50h+4*(item-1));
+}
+
+int career_market_price(int item){
+
+	switch(item){
+	case CAREER_MARKET_MINES: return ___1a0170h_PriceMines;
+	case CAREER_MARKET_SPIKES: return ___1a0174h_PriceSpikedBumpers;
+	case CAREER_MARKET_FUEL: return ___1a0178h_PriceRocketFuel;
+	case CAREER_MARKET_SABOTAGE: return ___1a017ch_PriceSabotage;
+	default: return 0;
+	}
+}
+
+// buy it, whether you have the money or not; check the flag and the price first
+void career_market_buy(int item){
+
+	racer_t * 	me = career_me();
+
+	me->money -= career_market_price(item);
+	D(___1a0a50h+4*(item-1)) = 0;
+	switch(item){
+	case CAREER_MARKET_MINES: me->mines = 8; break;
+	case CAREER_MARKET_SPIKES: me->spikes = 1; break;
+	case CAREER_MARKET_FUEL: me->rocket_fuel = 1; break;
+	case CAREER_MARKET_SABOTAGE: me->sabotage = 1; break;
+	}
+}
+
+// the loan shark's loan for your car, 0 for a Vagabond's driver: the
+// cheaper the car, the less
+static const int loans[5] = { 12000, 9000, 6000, 3000, 1500 };
+
+int career_loan_amount(void){
+
+	racer_t * 	me = career_me();
+
+	return (me->car == 0) ? 0 : loans[5-me->car];
+}
+
+void career_loan_take(void){
+
+	racer_t * 	me = career_me();
+
+	me->loanshark_counter = 1;
+	me->loanshark_type = 5-me->car;
+	me->money += loans[me->loanshark_type];
+}
+
+// what paying back costs now, 0 with no loan: the loan and a sixth more
+// for each race since, the counter going 1, 2, 3 and at 4 he collects
+int career_loan_owed(void){
+
+	racer_t * 	me = career_me();
+	int 		base;
+
+	if(me->loanshark_counter == (__DWORD__)-1) return 0;
+	base = loans[me->loanshark_type];
+
+	return base-base/6+base/6*(int)me->loanshark_counter;
+}
+
+static void loan_clear(void){
+
+	racer_t * 	me = career_me();
+
+	me->loanshark_counter = -1;
+	me->loanshark_type = -1;
+}
+
+void career_loan_pay(void){
+
+	career_me()->money -= career_loan_owed();
+	loan_clear();
+}
+
+// his collecting, ___168b4h(), once the counter reaches 4: half again the
+// loan, or if you haven't got it, an engine upgrade or half your money.
+// 1 if you paid. The loan is left for shop_main() to clear, or clear set
+int career_loan_collect(int clear){
+
+	racer_t * 	me = career_me();
+	int 		due = loans[me->loanshark_type]*3/2, paid = (int)me->money >= due;
+
+	if(paid) me->money -= due;
+	else if(me->engine > 0) me->engine--;
+	else me->money /= 2;
+	if(clear) loan_clear();
+
+	return paid;
+}
+
+int career_loan_due(void){
+
+	return career_me()->loanshark_counter == 4;
+}
+
+// after the sign-up has ordered the grids, as ___32230h() does it: the
+// others' damage repaired, and if you bought sabotage, don't lead and race
+// with weapons, the best placed of your rivals damaged 25-49%, the random
+// numbers started from seed. Who, or -1
+int career_signup_sabotage(__DWORD__ seed){
+
+	racer_t * 	s_6c = (racer_t *)___1a01e0h;
+	racer_t * 	me = career_me();
+	__BYTE__ 	grid[4];
+	int 		n, best = -1;
+
+	for(n = 0; n < 0x14; n++) if(n != (int)D(___1a1ef8h)) s_6c[n].damage = 0;
+	if(career_leading()||(D(___185a14h_UseWeapons) == 0)||(me->sabotage != 1)) return -1;
+
+	memcpy(grid, ___1a0ef8h+4*D(___1a1028h), 4);
+	// the best rank on the grid that isn't yours
+	for(n = 0; n < 4; n++){
+
+		if(s_6c[grid[n]].rank == me->rank) continue;
+		if((best < 0)||((int)s_6c[grid[n]].rank < (int)s_6c[grid[best]].rank)) best = n;
+	}
+	if(best < 0) return -1;
+	srand_watcom106(seed);
+	s_6c[grid[best]].damage = (rand_watcom106()%0x19)+0x19;
+
+	return grid[best];
+}

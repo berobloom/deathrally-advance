@@ -395,6 +395,9 @@ static int career(char * argv[]){
 		career_signup(0);
 		while(!career_signup_full()) ___3079ch_cdecl(3);
 		career_signup_order();
+		// the others repaired, as gba/race does it; never sabotage, which
+		// the benchmark doesn't buy, so the seed doesn't matter
+		career_signup_sabotage(0);
 		if(career_race(4)) break;
 	}
 

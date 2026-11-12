@@ -1,30 +1,22 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a1e58h;
 
-__DWORD__ ___14c50h(void);
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
 
 __DWORD__ ___168b4h(void){
 
-	__DWORD__ 	ebp;
 	__BYTE__ 	esp[0x54];
 	int 		i, j;
-	racer_t * 	s_6c;
 
-
-	s_6c = (racer_t *)___1a01e0h;
-	D(esp+0x50) = 0;
-	if((s_6c[D(___1a1ef8h)].loanshark_type == 0)&&((int)s_6c[D(___1a1ef8h)].money < 18000)) D(esp+0x50) = 1;
-	if((s_6c[D(___1a1ef8h)].loanshark_type == 1)&&((int)s_6c[D(___1a1ef8h)].money < 13500)) D(esp+0x50) = 1;
-	if((s_6c[D(___1a1ef8h)].loanshark_type == 2)&&((int)s_6c[D(___1a1ef8h)].money < 9000)) D(esp+0x50) = 1;
-	if((s_6c[D(___1a1ef8h)].loanshark_type == 3)&&((int)s_6c[D(___1a1ef8h)].money < 4500)) D(esp+0x50) = 1;
-	if((s_6c[D(___1a1ef8h)].loanshark_type == 4)&&((int)s_6c[D(___1a1ef8h)].money < 2250)) D(esp+0x50) = 1;
+	// he collects, see career.c; the loan stays for shop_main() to clear
+	D(esp+0x50) = !career_loan_collect(0);
 	___13248h_cdecl(0x21, 0x83, 0x1e2, 0xe6, 1);
 
 	j = -1;
@@ -46,14 +38,6 @@ __DWORD__ ___168b4h(void){
 		VESA101_16X16_FORMAT_PRINT("     Nothing personal, but [I got to hurt", 128, 248);
 		VESA101_16X16_FORMAT_PRINT("     [you some now.{ Hurt 'im, boyz.",      128, 264);
 		VESA101_16X16_FORMAT_PRINT("",                                          128, 280);
-
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 0) ebp = 18000;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 1) ebp = 13500;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 2) ebp = 9000;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 3) ebp = 4500;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 4) ebp = 2250;
-
-		___14c50h();
 	}
 	else {
 
@@ -67,12 +51,6 @@ __DWORD__ ___168b4h(void){
 		VESA101_16X16_FORMAT_PRINT("     [business with you{, thunderboy.{",    128, 248);
 		VESA101_16X16_FORMAT_PRINT("     Thanks, and good racing riddance.",    128, 264);
 		VESA101_16X16_FORMAT_PRINT("",                                          128, 280);
-
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 0) s_6c[D(___1a1ef8h)].money -= 18000;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 1) s_6c[D(___1a1ef8h)].money -= 13500;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 2) s_6c[D(___1a1ef8h)].money -= 9000;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 3) s_6c[D(___1a1ef8h)].money -= 4500;
-		if(s_6c[D(___1a1ef8h)].loanshark_type == 4) s_6c[D(___1a1ef8h)].money -= 2250;
 	}
 
 	___12e78h_v3(___1a10cch___185ba9h, "CONTINUE", 192, 316);

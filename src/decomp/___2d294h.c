@@ -1,57 +1,15 @@
 #include "drally.h"
+#include "drally_shop.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
 #include "watcom106.h"
 
-typedef char char40[40];
 
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
 
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
 
-static const char40 ___1923c0h[5][6] = {
-	[0] = {
-		[0] = "[Borrow $12,000 - Pay $18,000",
-		[1] = "",
-		[2] = "With better gear you'd already be",
-		[3] = "on the top, eh? So how does a",
-		[4] = "short-term loan of [$12,000{ sound?",
-		[5] = ""
-	},
-	[1] = {
-		[0] = "[Borrow $9,000 - Pay $13,500",
-		[1] = "",
-		[2] = "With better gear you'd already be",
-		[3] = "on the top, eh? So how does a",
-		[4] = "short-term loan of [$9,000{ sound?",
-		[5] = ""
-	},
-	[2] = {
-		[0] = "[Borrow $6,000 - Pay $9,000",
-		[1] = "",
-		[2] = "With better gear you'd already be",
-		[3] = "on the top, eh? So how does a",
-		[4] = "short-term loan of [$6,000{ sound?",
-		[5] = ""
-	},
-	[3] = {
-		[0] = "[Borrow $3,000 - Pay $4,500",
-		[1] = "",
-		[2] = "With better gear you'd already be",
-		[3] = "on the top, eh? So how does a",
-		[4] = "short-term loan of [$3,000{ sound?",
-		[5] = ""
-	},
-	[4] = {
-		[0] = "[Borrow $1,500 - Pay $2,250",
-		[1] = "",
-		[2] = "With better gear you'd already be",
-		[3] = "on the top, eh? So how does a",
-		[4] = "short-term loan of [$1,500{ sound?",
-		[5] = ""
-	}
-};
 
 // LOANSHARK STUFF
 void ___2d294h(void){

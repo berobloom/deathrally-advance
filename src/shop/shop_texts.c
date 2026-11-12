@@ -1,7 +1,9 @@
-// The shop's texts, which the desktop's shop draws (___26650h.c,
-// ___269e4h.c) and the GBA's shows: what each upgrade does, once on show
-// and once bought, and what the repairs cost you in words. The engines'
-// on show are each car's own, in car_data.c's txt_engine_upgrades.
+// The shop's and the underground market's texts, which the desktop's
+// menus draw (___26650h.c, ___269e4h.c, ___2d054h.c, ___2d0ech.c,
+// ___2d294h.c, ___26fach.c) and the GBA's show: what each upgrade and
+// item does, once on show and once bought, what the repairs cost you in
+// words, and the loan shark's offers. The engines on show are each car's
+// own, in car_data.c's txt_engine_upgrades.
 
 #include "drally.h"
 #include "drally_shop.h"
@@ -311,5 +313,165 @@ const char40 ___194170h[12][6] = {
 		[3] = "broken, can't be fixed. Come back",
 		[4] = "after you've taken in some.",
 		[5] = ""
+	}
+};
+
+// the market's items on show: mines, spiked bumpers, rocket fuel, sabotage
+const char40 ___193720h[4][6] = {
+	[0] = {
+		[0] = "[Mines",
+		[1] = "",
+		[2] = "Sow these seeds of destruction",
+		[3] = "after a blind bend where headlight",
+		[4] = "eyes are tire-smoke tired.",
+		[5] = ""
+	},
+	[1] = {
+		[0] = "[Spiked Bumpers",
+		[1] = "",
+		[2] = "Nothing wakes you up like an enemy",
+		[3] = "car, closing in to give you",
+		[4] = "a sharp kiss with spiked bumpers.",
+		[5] = ""
+	},
+	[2] = {
+		[0] = "[Rocket Fuel",
+		[1] = "",
+		[2] = "This nectar in the veins of your",
+		[3] = "vehicle takes you right into",
+		[4] = "orbit, real speedy like.",
+		[5] = ""
+	},
+	[3] = {
+		[0] = "[Sabotage",
+		[1] = "",
+		[2] = "Do you have bad luck always riding",
+		[3] = "shotgun? Time for that golden",
+		[4] = "racer boy to get some. Right?",
+		[5] = ""
+	}
+};
+
+// the market's items bought
+const char40 ___193db0h[4][6] = {
+	[0] = {
+		[0] = "[8 Mines loaded into your car",
+		[1] = "",
+		[2] = "Now those rival wheels will reap",
+		[3] = "only burning engine death, and",
+		[4] = "that road will be all yours.",
+		[5] = ""
+	},
+	[1] = {
+		[0] = "[Spiked bumpers installed",
+		[1] = "",
+		[2] = "Now you are saying: 'Stay back or",
+		[3] = "you sorry, you dead.' Now that's",
+		[4] = "the attitude.",
+		[5] = ""
+	},
+	[2] = {
+		[0] = "[Rocket Fuel bought",
+		[1] = "",
+		[2] = "Warning! We're talking 'bout a",
+		[3] = "backdraft barbecue party here.",
+		[4] = "[Using the fuel causes damage!{",
+		[5] = ""
+	},
+	[3] = {
+		[0] = "[Sabotage in progress",
+		[1] = "",
+		[2] = "Sweet deal. Now your arch-racing-",
+		[3] = "rival will tailslide down that",
+		[4] = "vile road to wreckhood oblivion.",
+		[5] = ""
+	}
+};
+
+// the loan shark's offer, by 5 less your car: the Deliverator's first
+const char40 ___1923c0h[5][6] = {
+	[0] = {
+		[0] = "[Borrow $12,000 - Pay $18,000",
+		[1] = "",
+		[2] = "With better gear you'd already be",
+		[3] = "on the top, eh? So how does a",
+		[4] = "short-term loan of [$12,000{ sound?",
+		[5] = ""
+	},
+	[1] = {
+		[0] = "[Borrow $9,000 - Pay $13,500",
+		[1] = "",
+		[2] = "With better gear you'd already be",
+		[3] = "on the top, eh? So how does a",
+		[4] = "short-term loan of [$9,000{ sound?",
+		[5] = ""
+	},
+	[2] = {
+		[0] = "[Borrow $6,000 - Pay $9,000",
+		[1] = "",
+		[2] = "With better gear you'd already be",
+		[3] = "on the top, eh? So how does a",
+		[4] = "short-term loan of [$6,000{ sound?",
+		[5] = ""
+	},
+	[3] = {
+		[0] = "[Borrow $3,000 - Pay $4,500",
+		[1] = "",
+		[2] = "With better gear you'd already be",
+		[3] = "on the top, eh? So how does a",
+		[4] = "short-term loan of [$3,000{ sound?",
+		[5] = ""
+	},
+	[4] = {
+		[0] = "[Borrow $1,500 - Pay $2,250",
+		[1] = "",
+		[2] = "With better gear you'd already be",
+		[3] = "on the top, eh? So how does a",
+		[4] = "short-term loan of [$1,500{ sound?",
+		[5] = ""
+	}
+};
+
+// the loan granted, the same way
+const char40 ___192870h[5][6] = {
+	[0] = {
+		[0] = "[Loan of $12,000 granted.",
+		[1] = "",
+		[2] = "You have 3 races to pay me back the",
+		[3] = "[$18,000{. Fair is fair [<GRIN>{.",
+		[4] = "",
+		[5] = "Press [ESC{ to go back to the shop."
+	},
+	[1] = {
+		[0] = "[Loan of $9,000 granted.",
+		[1] = "",
+		[2] = "You have 3 races to pay me back the",
+		[3] = "[$13,500{. Fair is fair [<GRIN>{.",
+		[4] = "",
+		[5] = "Press [ESC{ to go back to the shop."
+	},
+	[2] = {
+		[0] = "[Loan of $6,000 granted.",
+		[1] = "",
+		[2] = "You have 3 races to pay me back the",
+		[3] = "[$9,000{. Fair is fair [<GRIN>{.",
+		[4] = "",
+		[5] = "Press [ESC{ to go back to the shop."
+	},
+	[3] = {
+		[0] = "[Loan of $3,000 granted.",
+		[1] = "",
+		[2] = "You have 3 races to pay me back the",
+		[3] = "[$4,500{. Fair is fair [<GRIN>{.",
+		[4] = "",
+		[5] = "Press [ESC{ to go back to the shop."
+	},
+	[4] = {
+		[0] = "[Loan of $1,500 granted.",
+		[1] = "",
+		[2] = "You have 3 races to pay me back the",
+		[3] = "[$2,250{. Fair is fair [<GRIN>{.",
+		[4] = "",
+		[5] = "Press [ESC{ to go back to the shop."
 	}
 };
