@@ -18,6 +18,7 @@
 #include <gba_interrupt.h>
 #include <gba_systemcalls.h>
 #include <gba_dma.h>
+#include <gba_compression.h>
 #include <gba_timers.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -60,6 +61,7 @@ extern const u8 setup_obst_rev[];
 _Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE");
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
+extern const u32 shop_lz[];		// the shop's animations, see gbabake
 extern const u16 lamps_dtl[];		// a u16 for each frame's 96 tiles, then the tiles, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -1187,7 +1189,8 @@ u32 gba_cycles(void){ return cycles(); }
 
 static int shown_model = -1;	// gba_show_car()'s
 // gba_show_part()'s: its frames, how many, and whether it goes back and forth
-static const u8 * shown_part;
+static const u32 * shown_part;		// its frames' places in shop_lz
+static int shown_part_frame;
 static int part_frames, part_bounce;
 
 // the HUD's glyphs on black, and nothing else
@@ -1280,10 +1283,10 @@ void gba_car_color(int r, int g, int b){
 	}
 }
 
-// one of the shop's animations (gbabake's shop.obj) in the car's place,
+// one of the shop's animations (gbabake's shop.lz) in the car's place,
 // n frames of 48x32 from frames on, or none for 0; bounce plays them
 // forward and back, as the armor's go. gba_turn_car() moves it on
-void gba_show_part(const u8 * frames, int n, int bounce, int x, int y){
+void gba_show_part(const u32 * frames, int n, int bounce, int x, int y){
 
 	extern const u8 menu_pal[];
 
@@ -1296,6 +1299,7 @@ void gba_show_part(const u8 * frames, int n, int bounce, int x, int y){
 	if(!shown_part) copy32(SPRITE_PALETTE, menu_pal, 512);
 	shown_model = -1;
 	shown_part = frames;
+	shown_part_frame = -1;
 	part_frames = n;
 	part_bounce = bounce;
 	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
@@ -1305,13 +1309,9 @@ void gba_show_part(const u8 * frames, int n, int bounce, int x, int y){
 	gba_turn_car();
 }
 
-#define PART_TILES_W		6	// a frame's 48 pixels, of the OBJ's 64
-#define PART_BYTES		(48*32)
-
 void gba_turn_car(void){
 
 	const u8 * 	frames;
-	int 		n;
 
 	if(shown_part){
 
@@ -1319,15 +1319,9 @@ void gba_turn_car(void){
 		int 	f = (vblanks/2)%(part_bounce ? 2*part_frames-2 : part_frames);
 
 		if(f >= part_frames) f = 2*part_frames-2-f;
-		frames = shown_part+f*PART_BYTES;
-		for(n = 0; n < 4; n++){
-
-			u32 	* blank = (u32 *)((u8 *)SPRITE_GFX+(n*8+PART_TILES_W)*64);
-			int 	k;
-
-			copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*PART_TILES_W*64, PART_TILES_W*64);
-			for(k = 0; k < (8-PART_TILES_W)*16; k++) blank[k] = 0;
-		}
+		// the OBJ's tiles, from the BIOS, in 16 bits for VRAM
+		if(f != shown_part_frame) LZ77UnCompVram((const u8 *)shop_lz+shown_part[f], SPRITE_GFX);
+		shown_part_frame = f;
 		return;
 	}
 	if(shown_model < 0) return;

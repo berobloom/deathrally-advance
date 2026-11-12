@@ -59,7 +59,8 @@ static racer_t * racer(int n){ return (racer_t *)___1a01e0h+n; }
 
 // the menus' pictures (gbabake's pictures.obj), the drivers' faces and
 // the shop's animations
-extern const u8 pictures_obj[], faces_obj[], shop_obj[];
+extern const u8 pictures_obj[], faces_obj[];
+extern const u32 shop_lz[];
 #define PIC_SPONSOR		0
 #define PIC_REAPER		1
 #define PIC_HIT			2
@@ -911,14 +912,14 @@ static void shop_draw(int row){
 }
 
 // the car on show turning: the one you'd buy on its row, else yours
-// shop.obj's animations, 48x32 a frame: each engine's 24, each tires'
+// shop.lz's animations, 48x32 a frame: each engine's 24, each tires'
 // 12, each armor's 16, repair's 24 and continue's 23
 #define PART_ENGINE(n)		(24*(n))
 #define PART_TIRES(n)		(96+12*(n))
 #define PART_ARMOR(n)		(144+16*(n))
 #define PART_REPAIR		208
 #define PART_DONE		232
-#define PART(f)			(shop_obj+48*32*(f))
+#define PART(f)			(shop_lz+(f))
 #define PART_X			180	// over the car's place
 #define PART_Y			4
 

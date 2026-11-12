@@ -710,11 +710,52 @@ static void halve(__BYTE__ * px, int pw, const __BYTE__ * img, int w, int h){
 	}
 }
 
+// n bytes as the GBA BIOS's LZ77UnCompVram() reads them, padded to 4
+// bytes, into out, which has room for n*9/8+8: the length it takes. No
+// copy is from the byte before, which writing 16 bits at a time can't do
+static unsigned lz77_vram(__BYTE__ * out, const __BYTE__ * in, unsigned n){
+
+	unsigned 	o = 4, i = 0, flags = 0, bit = 0;
+
+	out[0] = 0x10; out[1] = n; out[2] = n >> 8; out[3] = n >> 16;
+	while(i < n){
+
+		unsigned 	best = 0, at = 0, d, k;
+
+		if(bit == 0){
+
+			flags = o++;
+			out[flags] = 0;
+			bit = 0x80;
+		}
+		for(d = 2; (d <= 4096)&&(d <= i); d++){
+
+			for(k = 0; (k < 18)&&(i+k < n)&&(in[i+k] == in[i+k-d]); k++);
+			if(k > best){ best = k; at = d; }
+		}
+		if(best >= 3){
+
+			out[flags] |= bit;
+			out[o++] = ((best-3) << 4)|((at-1) >> 8);
+			out[o++] = at-1;
+			i += best;
+		}
+		else out[o++] = in[i++];
+		bit >>= 1;
+	}
+	while(o&3) out[o++] = 0;
+
+	return o;
+}
+
 // the shop's animations (shop_main()), each frame 96x64 and its own bpk,
 // one after another: the engines', the tires', the armor's, repair's and
-// continue's. Halved, as 48x32: 6x4 8bpp tiles, the left 6 of a 64x32 OBJ's
+// continue's. Halved, as 48x32, in the left 6 of the 8x4 tiles of a 64x32
+// OBJ. shop.lz is a u32 for each frame and one after them, where in it its
+// tiles are, LZ77 compressed for LZ77UnCompVram(), which follow
 #define SHOP_PART_W		48
 #define SHOP_PART_H		32
+#define SHOP_PARTS		255
 static void bake_shop_parts(const char * outdir){
 
 	static const struct { const char * name; int frames; const __DWORD__ * size; } anims[] = {
@@ -726,10 +767,11 @@ static void bake_shop_parts(const char * outdir){
 		{ "armor3.bpk", 16, ___1864fch[2] }, { "armor4.bpk", 16, ___1864fch[3] },
 		{ "repaani.bpk", 24, ___186658h }, { "contani.bpk", 23, ___1865fch },
 	};
-	__BYTE__ 	img[96*64], px[64*64], tiles[SHOP_PART_W*SHOP_PART_H];
+	__BYTE__ 	img[96*64], px[64*64], tiles[64*SHOP_PART_H], * lz = malloc(SHOP_PARTS*(64*SHOP_PART_H*9/8+8));
+	__DWORD__ 	offs[SHOP_PARTS+1];
 	__POINTER__ 	src;
-	unsigned 	i, f, at, x, y;
-	FILE * 		fd = out(outdir, "shop.obj");
+	unsigned 	i, f, at, x, y, n = 0, size = 0;
+	FILE * 		fd = out(outdir, "shop.lz");
 
 	for(i = 0; i < sizeof(anims)/sizeof(anims[0]); i++){
 
@@ -739,15 +781,22 @@ static void bake_shop_parts(const char * outdir){
 			bpk_decode2(img, src+at);
 			at += anims[i].size[f];
 			halve(px, 64, img, 96, 64);
+			memset(tiles, 0, sizeof(tiles));
 			for(y = 0; y < SHOP_PART_H; y++) for(x = 0; x < SHOP_PART_W; x++){
 
-				tiles[64*((y/8)*(SHOP_PART_W/8)+x/8)+8*(y%8)+x%8] = px[64*y+x];
+				tiles[64*((y/8)*8+x/8)+8*(y%8)+x%8] = px[64*y+x];
 			}
-			fwrite(tiles, 1, sizeof(tiles), fd);
+			offs[n++] = 4*(SHOP_PARTS+1)+size;
+			size += lz77_vram(lz+size, tiles, sizeof(tiles));
 		}
 		free(src);
 	}
+	if(n != SHOP_PARTS){ fprintf(stderr, "shop.lz: %u frames\n", n); exit(1); }
+	offs[n] = 4*(SHOP_PARTS+1)+size;
+	for(i = 0; i <= n; i++) put32(fd, offs[i]);
+	fwrite(lz, 1, size, fd);
 	fclose(fd);
+	free(lz);
 }
 
 static void bake_menu_pictures(const char * outdir){
