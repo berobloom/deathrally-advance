@@ -14,6 +14,7 @@ void gba_text_clear(int y, int h);
 int gba_big_width(const char * s);
 void gba_print_big(int x, int y, const char * s);
 void gba_cursor(int x, int y);
+void gba_box(int col, int row, int w, int h);
 void gba_panel(int x, int y);
 void gba_panel_image(const u8 * px, int w, int h, int x, int y);
 void gba_panel_fill(int x, int y, int w, int h, int c);

@@ -67,6 +67,7 @@ extern const u32 menufont_bin[];	// and their fonts
 extern const u32 cursor_bin[];		// and cursor
 extern const u8 menu_pal[];
 extern const u8 panel_bin[];		// the side panel, see gbabake's bake_panel()
+extern const u32 box_bin[];		// the menus' box, see gbabake's bake_box()
 extern const u16 lamps_dtl[];		// a u16 for each frame's 96 tiles, then the tiles, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -1214,10 +1215,14 @@ static int part_frames, part_bounce;
 // puts its layers back
 #define MENU_BG_MAP		((u16 *)SCREEN_BASE_BLOCK(19))
 #define MENU_TEXT_MAP		((u16 *)SCREEN_BASE_BLOCK(20))
-#define MENU_TEXT_TILE0		320		// from charblock 2, after the maps
+#define MENU_BOX_MAP		((u16 *)SCREEN_BASE_BLOCK(21))
+#define MENU_TEXT_TILE0		384		// from charblock 2, after the maps
 #define MENU_TEXT		((u32 *)CHAR_BASE_BLOCK(2)+8*MENU_TEXT_TILE0)
 #define MENU_BLANK_TILE		(MENU_TEXT_TILE0+30*20)
-#define MENU_DISPCNT		(MODE_0 | BG1_ON | BG3_ON | OBJ_ON | OBJ_1D_MAP)
+// the boxes' tiles (gbabake's box.bin) after the blank one, from charblock 3
+#define MENU_BOX_TILE0		((32*(MENU_BLANK_TILE+1)-0x4000)/32)
+#define MENU_BOX_BANK		15
+#define MENU_DISPCNT		(MODE_0 | BG1_ON | BG2_ON | BG3_ON | OBJ_ON | OBJ_1D_MAP)
 #define FONT_SMALL		menufont_bin
 #define FONT_BIG		(menufont_bin+96*8)
 #define FONT_WIDTHS		((const u8 *)(menufont_bin+96*8+96*32))
@@ -1327,9 +1332,15 @@ void gba_text_screen(void){
 	shown_part = 0;
 	cursor_x = -1;
 	REG_BG1CNT = BG_16_COLOR | CHAR_BASE(2) | SCREEN_BASE(20) | BG_SIZE_0 | BG_PRIORITY(1);
+	REG_BG2CNT = BG_16_COLOR | CHAR_BASE(3) | SCREEN_BASE(21) | BG_SIZE_0 | BG_PRIORITY(2);
 	REG_BG3CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(19) | BG_SIZE_0 | BG_PRIORITY(3);
-	REG_BG1HOFS = REG_BG1VOFS = REG_BG3HOFS = REG_BG3VOFS = 0;
+	REG_BG1HOFS = REG_BG1VOFS = REG_BG2HOFS = REG_BG2VOFS = REG_BG3HOFS = REG_BG3VOFS = 0;
 	copy32(BG_PALETTE, menu_pal, 512);
+	// the boxes' colors: 0xc4, then the grey ramp, in a bank nothing else uses
+	BG_PALETTE[16*MENU_BOX_BANK+1] = ((const u16 *)menu_pal)[0xc4];
+	for(n = 2; n < 16; n++) BG_PALETTE[16*MENU_BOX_BANK+n] = ((const u16 *)menu_pal)[n];
+	copy32((u32 *)CHAR_BASE_BLOCK(3)+8*MENU_BOX_TILE0, box_bin, 22*32);
+	for(n = 0; n < 32*32; n++) MENU_BOX_MAP[n] = MENU_BOX_TILE0;
 	// gbabake's menubg.dtl: the map, then the tiles
 	copy32((void *)CHAR_BASE_BLOCK(0), menubg_dtl+30*20, 0x9800);
 	for(n = 0; n < 32*32; n++) MENU_BG_MAP[n] = ((n&31) < 30)&&(n < 32*20) ? menubg_dtl[30*(n >> 5)+(n&31)] : 0;
@@ -1632,6 +1643,26 @@ void gba_print_big(int x, int y, const char * s){
 			text_glyph_row(x+8, y+r, FONT_BIG[32*c+2*r+1]);
 		}
 		x += FONT_WIDTHS[96+c];
+	}
+}
+
+// the desktop's box (___13248h_cdecl()), w x h cells from col, row on, at
+// least 4 x 4, under the text: its corners, edges and inside
+void gba_box(int col, int row, int w, int h){
+
+	int 	x, y;
+
+	for(y = 0; y < h; y++) for(x = 0; x < w; x++){
+
+		int 	t, cx = (x < 2) ? x : (x >= w-2) ? x-w+4 : -1, cy = (y < 2) ? y : (y >= h-2) ? y-h+4 : -1;
+
+		if((cx >= 0)&&(cy >= 0)) t = 1+4*((cx >= 2)+2*(cy >= 2))+2*(cy&1)+(cx&1);
+		else if(y == 0) t = 17;
+		else if(y == h-1) t = 18;
+		else if(x == 0) t = 19;
+		else if(x == w-1) t = 20;
+		else t = 21;
+		if((col+x >= 0)&&(col+x < 32)&&(row+y >= 0)&&(row+y < 32)) MENU_BOX_MAP[32*(row+y)+col+x] = (MENU_BOX_TILE0+t)|(MENU_BOX_BANK << 12);
 	}
 }
 

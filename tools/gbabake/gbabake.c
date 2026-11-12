@@ -50,6 +50,7 @@
 //   faces.obj    the drivers' faces, 64x64, the same way
 //   tracks.obj   the sign-up's pictures of the tracks, halved, the same way
 //   panel.bin    the side panel with your car and its upgrades, see bake_panel()
+//   box.bin      the menus' box, see bake_box()
 //   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
 //                cursor, see bake_menu_screen()
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
@@ -805,6 +806,7 @@ static void bake_shop_parts(const char * outdir){
 
 static void bake_menu_screen(const char * outdir);
 static void bake_panel(const char * outdir);
+static void bake_box(const char * outdir);
 
 static void bake_menu_pictures(const char * outdir){
 
@@ -863,6 +865,7 @@ static void bake_menu_pictures(const char * outdir){
 	bake_menu_screen(outdir);
 
 	bake_panel(outdir);
+	bake_box(outdir);
 
 	// the sign-up's pictures of the tracks, TRSNAP2M's first 19 of
 	// 128x112, as ___30df8h() shows them: TR0, TR1-TR9, TR1-TR9 reversed
@@ -1101,6 +1104,71 @@ static void bake_panel(const char * outdir){
 	}
 	fclose(fd);
 	free(img);
+}
+
+// box.bin, the menus' box (___13248h_cdecl()'s, the active one), halved,
+// as the tiles a box of any size in 8x8 cells is made of: an empty one,
+// the 2x2 of each corner (top left, top right, bottom left, bottom right),
+// the top, bottom, left and right edges, and the inside, 4bpp, in colors
+// 1 for 0xc4, the fill, and 2-15 the grey ramp's
+static void bake_box(const char * outdir){
+
+	enum { W = 96, H = 96 };	// the desktop's, 48x48 halved
+	__BYTE__ 	* corn = calloc(1, 0xa00+0x10000), big[W*H], half[48*48], tiles[22][64];
+	__POINTER__ 	src = read_entry("MENU.BPA", "corn3a.bpk");
+	int 		x, y, k, t, i, j;
+	static const int at[22][2] = {
+		{ -1, -1 },
+		{ 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 },		// top left
+		{ 4, 0 }, { 5, 0 }, { 4, 1 }, { 5, 1 },		// top right
+		{ 0, 4 }, { 1, 4 }, { 0, 5 }, { 1, 5 },		// bottom left
+		{ 4, 4 }, { 5, 4 }, { 4, 5 }, { 5, 5 },		// bottom right
+		{ 2, 0 }, { 2, 5 }, { 0, 2 }, { 5, 2 },		// top, bottom, left, right
+		{ 2, 2 }					// inside
+	};
+	FILE * 		fd;
+
+	bpk_decode2(corn, src);
+	free(src);
+	// as ___13248h_cdecl(0, 0, W, H, 1) draws it
+	memset(big, 0, sizeof(big));
+	for(y = 0; y < H-8; y++) memset(big+W*(2+y)+2, 0xc4, W-6);
+	for(k = 0; k < 4; k++){
+
+		int 	ox = (k&1) ? W-0x20 : 0, oy = (k&2) ? H-0x14 : 0;
+
+		for(j = 0; j < 0x14; j++) for(i = 0; i < 0x20; i++) if(corn[0x280*k+0x20*j+i]) big[W*(oy+j)+ox+i] = corn[0x280*k+0x20*j+i];
+	}
+	for(i = 0; i < W-0x40; i++) big[W+0x20+i] = big[W*(H-7)+0x20+i] = 7;
+	for(j = 0; j < H-0x28; j++) big[W*(0x14+j)+1] = big[W*(0x14+j)+W-5] = 7;
+	// halved: of each four the kind most are, see-through, the fill or
+	// grey, see-through only if most are
+	for(y = 0; y < H/2; y++) for(x = 0; x < W/2; x++){
+
+		int 	n[3] = { 0, 0, 0 }, grey = 0;
+
+		for(k = 0; k < 4; k++){
+
+			__BYTE__ 	p = big[W*(2*y+k/2)+2*x+k%2];
+
+			if(!p) n[0]++;
+			else if(p == 0xc4) n[1]++;
+			else { n[2]++; grey += p&15; }
+		}
+		half[48*y+x] = (n[2]&&(n[2] >= n[1])&&(n[2]+n[1] >= n[0])) ? (grey+n[2]/2)/n[2] : (n[1]&&(n[1]+n[2] >= n[0])) ? 1 : 0;
+		if(half[48*y+x] == 1) half[48*y+x] = (n[2] > n[1]) ? 2 : 1;
+	}
+	memset(tiles, 0, sizeof(tiles));
+	for(t = 1; t < 22; t++) for(y = 0; y < 8; y++) for(x = 0; x < 8; x++){
+
+		int 	v = half[48*(8*at[t][1]+y)+8*at[t][0]+x];
+
+		tiles[t][4*y+x/2] |= v << (4*(x&1));
+	}
+	fd = out(outdir, "box.bin");
+	for(t = 0; t < 22; t++) fwrite(tiles[t], 1, 32, fd);
+	fclose(fd);
+	free(corn);
 }
 
 static void bake_sound(int track, const char * outdir){

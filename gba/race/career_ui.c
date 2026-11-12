@@ -204,6 +204,7 @@ static int wait_key(int b){
 static void message(const char * a, const char * b){
 
 	gba_text_screen();
+	gba_box(2, 6, 26, 7);
 	center(8, a);
 	if(b) center(10, b);
 	center(17, "PRESS A");
@@ -247,6 +248,7 @@ static void hall_of_fame(int you){
 	sound_menu_music(0x51);		// its own music, as menu___22a80h()'s
 	gba_text_screen();
 	center(3, "HALL OF FAME");
+	gba_box(0, 4, 30, 13);
 	gba_text_color(0, 11);
 	gba_print(4, 5, "NAME        RACES");
 	for(n = 0; n < 10; n++){
@@ -273,6 +275,7 @@ int gba_title(void){
 		int 	drawn = -1;
 
 		gba_text_screen();
+		gba_box(2, 7, 22, 9);
 		center(17, "PRESS A");
 		for(;;){
 
@@ -313,6 +316,7 @@ static int new_game(void){
 #endif
 	gba_text_screen();
 	center(3, "DEATH RALLY DRIVER");
+	gba_box(0, 5, 22, 12);
 	for(;;){
 
 		static const int 	rows[4] = { 6, 9, 12, 15 };
@@ -506,6 +510,7 @@ static void standings(const int * gained){
 
 		gba_text_screen();
 		center(3, "STANDINGS");
+		gba_box(0, 4, 30, 13);
 		gba_text_color(0, 11);
 		print(1, 5, "RANK NAME        POINTS");
 		for(n = 10*page; n < 10*page+10; n++){
@@ -553,6 +558,7 @@ static int race(int num_cars){
 	career_race_track(grid);
 	gba_text_screen();
 	center(3, "PREPARE TO RACE");
+	gba_box(0, 4, 30, 14);
 	print(2, 5, "TRACK   %s", track_name(D(___1a1028h), buf));
 	print(2, 6, "LAPS    %d", NUM_OF_LAPS);
 	if((int)D(___1a1028h) < 3) print(2, 7, "PRIZE   $%d", prizes[D(___1a1028h)]);
@@ -583,6 +589,7 @@ static int race(int num_cars){
 	// how it went
 	gba_text_screen();
 	center(3, "RACE RESULTS");
+	gba_box(0, 4, 30, 13);
 	for(place = 1; place <= num_cars; place++){
 
 		for(n = 0; (n < num_cars)&&(D(___1de7d0h+0x54*n+0x40) != (__DWORD__)place); n++);
@@ -699,6 +706,7 @@ static void offer(void){
 	voice(SFX_SPECIAL_OFFER);
 	gba_picture(0, PICTURE((ev == CAREER_EVENT_HITMAN) ? PIC_HIT : PIC_DRUGS), PICTURE_X, PICTURE_Y);
 	center(3, "SPECIAL OFFER");
+	gba_box(0, 4, 30, 13);
 	text_narrow = PICTURE_ROWS;
 	text_lines(5, 11, t, 8);
 	text_narrow = 0;
@@ -797,6 +805,7 @@ static int signup(void){
 static int adversary(void){
 
 	gba_text_screen();
+	gba_box(1, 3, 28, 8);
 	center(5, "THE ADVERSARY CHALLENGES YOU");
 	center(8, "TR0, 9 LAPS, FOR GLORY");
 	center(16, "A ACCEPT");
@@ -819,8 +828,8 @@ static int adversary(void){
 // the shop as shop_main() has it, in rows: the car on show, the engine,
 // tires and armor, the repairs, and out. career.c does the sums
 #define SHOP_ROW0		8	// the items' first row
-#define SHOP_TEXT		14	// the game's words about the item, rows 14-18
-#define SHOP_TEXT_ROWS		5
+#define SHOP_TEXT		15	// the game's words about the item, rows 15-18
+#define SHOP_TEXT_ROWS		4
 #define SHOP_BACK		5
 #define SHOP_CAR_X		184	// the car on show, turning top right
 #define SHOP_CAR_Y		24
@@ -908,6 +917,7 @@ static void shop_text(const char40 * t){
 static void speech(const char40 * t, int n_lines){
 
 	gba_text_screen();
+	gba_box(0, 3, 30, 15);
 	if(picture){
 
 		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
@@ -925,6 +935,7 @@ static void speech(const char40 * t, int n_lines){
 static void speech_lines(const char * const * t, int n_lines){
 
 	gba_text_screen();
+	gba_box(0, 3, 30, 15);
 	if(picture){
 
 		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
@@ -1114,6 +1125,7 @@ static void shop(void){
 	gba_text_screen();
 	my_color();
 	center(3, "THE SHOP");
+	gba_box(0, 7, 30, 8);
 	shop_car(row);
 	shop_about(row);
 	for(;;){
@@ -1339,6 +1351,7 @@ static void market(void){
 	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
 	center(3, "THE UNDERGROUND MARKET");
+	gba_box(0, 7, 30, 8);
 	// the words narrower beside the picture, a row longer
 	text_narrow = 0;
 	market_about(row);
@@ -1502,6 +1515,7 @@ static int continue_or_new(void){
 	me = &sg.racers[sg.me];
 	gba_text_screen();
 	center(3, "CAREER");
+	gba_box(1, 4, 28, 12);
 	print(6, 7, "%s", me->name);
 	print(6, 8, "RANK %d, %d POINTS", (int)me->rank, (int)me->points);
 	print(6, 9, "$%d, %s", (int)me->money, car_names[me->car]);
@@ -1529,7 +1543,8 @@ static int continue_or_new(void){
 
 // --- the hub ---------------------------------------------------------------------------
 
-#define HUB_Y			86	// the first of its five rows, under the face
+#define HUB_Y			92	// the first of its five rows, in the box under the face
+#define HUB_STEP		12
 
 void career_play(void){
 
@@ -1586,6 +1601,7 @@ void career_play(void){
 		gba_text_screen();
 		gba_picture(0, FACE(me->face), 120, 24);
 		panel();
+		gba_box(1, 11, 23, 9);
 		gba_text_color(3, 15);
 		print(1, 3, "%s", me->name);
 		gba_text_color(0, 15);
@@ -1614,11 +1630,11 @@ void career_play(void){
 
 			if(n != row){
 
-				item_at(HUB_Y+14*0, row == 0, career_leading() ? "THE ADVERSARY" : "RACE");
-				item_at(HUB_Y+14*1, row == 1, "SHOP");
-				item_at(HUB_Y+14*2, row == 2, "MARKET");
-				item_at(HUB_Y+14*3, row == 3, "STANDINGS");
-				item_at(HUB_Y+14*4, row == 4, "QUIT");
+				item_at(HUB_Y+HUB_STEP*0, row == 0, career_leading() ? "THE ADVERSARY" : "RACE");
+				item_at(HUB_Y+HUB_STEP*1, row == 1, "SHOP");
+				item_at(HUB_Y+HUB_STEP*2, row == 2, "MARKET");
+				item_at(HUB_Y+HUB_STEP*3, row == 3, "STANDINGS");
+				item_at(HUB_Y+HUB_STEP*4, row == 4, "QUIT");
 				n = row;
 			}
 			k = menu_frame();
