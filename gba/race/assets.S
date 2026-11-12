@@ -41,6 +41,7 @@
 	asset	menu_pal, menu.pal
 	asset	pictures_obj, pictures.obj
 	asset	faces_obj, faces.obj
+	asset	shop_obj, shop.obj
 	asset	sfx_bin, sfx.bin
 	asset	men_bin, men.bin
 	asset	soundbank_bin, soundbank.bin

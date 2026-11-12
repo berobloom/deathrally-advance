@@ -57,13 +57,15 @@ void ___3079ch_cdecl(__DWORD__);
 
 static racer_t * racer(int n){ return (racer_t *)___1a01e0h+n; }
 
-// the menus' pictures (gbabake's pictures.obj), and the drivers' faces
-extern const u8 pictures_obj[], faces_obj[];
+// the menus' pictures (gbabake's pictures.obj), the drivers' faces and
+// the shop's animations
+extern const u8 pictures_obj[], faces_obj[], shop_obj[];
 #define PIC_SPONSOR		0
 #define PIC_REAPER		1
 #define PIC_HIT			2
 #define PIC_DRUGS		3
 #define PIC_LOANSHARK		4
+#define PIC_MARKET		5	// the 4 items on sale, then held, then sold out
 #define PICTURE(n)		(pictures_obj+64*64*(n))
 #define FACE(n)			(faces_obj+64*64*(n))	// 20: nobody's
 #define PICTURE_X		176	// top right, beside the words
@@ -803,9 +805,11 @@ static void text_at(int row0, int rows, const char40 * t, int n_lines){
 }
 
 // the game's 6 lines of 40 under the shop's or the market's items
+static int 	shop_rows = SHOP_TEXT_ROWS;	// the market's, beside its picture, one more
+
 static void shop_text(const char40 * t){
 
-	text_at(SHOP_TEXT, SHOP_TEXT_ROWS, t, 6);
+	text_at(SHOP_TEXT, shop_rows, t, 6);
 }
 
 // a screen of the game's words, until A
@@ -907,9 +911,38 @@ static void shop_draw(int row){
 }
 
 // the car on show turning: the one you'd buy on its row, else yours
+// shop.obj's animations, 48x32 a frame: each engine's 24, each tires'
+// 12, each armor's 16, repair's 24 and continue's 23
+#define PART_ENGINE(n)		(24*(n))
+#define PART_TIRES(n)		(96+12*(n))
+#define PART_ARMOR(n)		(144+16*(n))
+#define PART_REPAIR		208
+#define PART_DONE		232
+#define PART(f)			(shop_obj+48*32*(f))
+#define PART_X			180	// over the car's place
+#define PART_Y			4
+
+static void my_color(void);
+
+// what's on show top right (shop_main()): on the car's row the car you'd
+// buy turning, on the others the upgrade on offer, the repair or the way
+// out, or nothing when there are no more
 static void shop_car(int row){
 
-	gba_show_car((row == CAREER_SHOP_CAR) ? (int)D(___1a1ee4h) : (int)racer(ME)->car, SHOP_CAR_X, SHOP_CAR_Y);
+	int 	n = career_shop_level(row), more = (row < SHOP_BACK)&&(n < career_shop_most(row));
+
+	switch(row){
+	case CAREER_SHOP_CAR:
+		gba_show_car(D(___1a1ee4h), SHOP_CAR_X, SHOP_CAR_Y);
+		my_color();
+		break;
+	case CAREER_SHOP_ENGINE: if(more){ gba_show_part(PART(PART_ENGINE(n)), 24, 0, PART_X, PART_Y); return; } break;
+	case CAREER_SHOP_TIRES: if(more){ gba_show_part(PART(PART_TIRES(n)), 12, 0, PART_X, PART_Y); return; } break;
+	case CAREER_SHOP_ARMOR: if(more){ gba_show_part(PART(PART_ARMOR(n)), 16, 1, PART_X, PART_Y); return; } break;
+	case CAREER_SHOP_REPAIR: gba_show_part(PART(PART_REPAIR), 24, 0, PART_X, PART_Y); return;
+	default: gba_show_part(PART(PART_DONE), 23, 0, PART_X, PART_Y); return;
+	}
+	if(row != CAREER_SHOP_CAR) gba_show_car(-1, 0, 0);
 }
 
 // shop___28e40h()'s yes or no for a new car: 1 for yes
@@ -1043,6 +1076,7 @@ static void shop(void){
 			// the installed words go by the level it was
 			n = career_shop_level(row);
 			career_shop_buy(row);
+			shop_car(row);
 			shop_text((row == CAREER_SHOP_ENGINE) ? ___191100h[n] : (row == CAREER_SHOP_TIRES) ? ___191880h[n] : ___192000h[n]);
 			break;
 		}
@@ -1065,11 +1099,38 @@ static const char40 market_denied[6] = { "[Loan denied, Vagabond driver.", "", "
 static const char40 market_paid[6] = { "[Loan paid back.", "", "It's all here. I knew right from", "the start that I could trust you.", "Let's do this again anytime.", "" };
 static const char40 market_done[6] = { "[DONE", "", "Out of the Underground Market,", "back to the garage.", "", "" };
 
+// the market's picture beside its words, rows 12 to 17 on the right: the
+// loan shark, an item as on sale, held or sold out (___2d728h() and the
+// others), or the way out turning
+#define MARKET_PIC_X		188
+#define MARKET_PIC_Y		(8*SHOP_TEXT)
+
+static void market_picture(int item){
+
+	int 	state;
+
+	if(item == MARKET_DONE){
+
+		gba_picture(0, 0, 0, 0);
+		gba_show_part(PART(PART_DONE), 23, 0, MARKET_PIC_X, MARKET_PIC_Y+8);
+		return;
+	}
+	gba_show_part(0, 0, 0, 0, 0);
+	if(item == CAREER_MARKET_LOAN){
+
+		gba_picture(0, PICTURE(PIC_LOANSHARK), MARKET_PIC_X, MARKET_PIC_Y);
+		return;
+	}
+	state = career_market_state(item);
+	gba_picture(0, PICTURE(PIC_MARKET+item-1+((state == 1) ? 0 : (state == 0) ? 8 : 4)), MARKET_PIC_X, MARKET_PIC_Y);
+}
+
 static void market_about(int item){
 
 	racer_t * 	me = racer(ME);
 	char40 		t[6] = { "", "", "", "", "", "" };
 
+	market_picture(item);
 	switch(item){
 	case CAREER_MARKET_LOAN:
 		// ___2d294h(): his offer, the smallest to a Vagabond's driver,
@@ -1178,6 +1239,9 @@ static void market(void){
 	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
 	center(0, "THE UNDERGROUND MARKET");
+	// the words narrower beside the picture, a row longer
+	text_narrow = ROWS;
+	shop_rows = SHOP_TEXT_ROWS+1;
 	market_about(row);
 	for(;;){
 
@@ -1185,6 +1249,7 @@ static void market(void){
 
 		market_draw(row);
 		k = menu_frame();
+		gba_turn_car();
 		if(k&KEY_B) break;
 		if(k&(KEY_UP|KEY_DOWN)){
 
@@ -1195,7 +1260,12 @@ static void market(void){
 		if(!(k&(KEY_A|KEY_START))) continue;
 		if(row == MARKET_DONE) break;
 		market_buy(row);
+		market_picture(row);
 	}
+	text_narrow = 0;
+	shop_rows = SHOP_TEXT_ROWS;
+	gba_picture(0, 0, 0, 0);
+	gba_show_part(0, 0, 0, 0, 0);
 	sound_menu_music(back);
 }
 

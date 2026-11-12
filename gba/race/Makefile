@@ -106,7 +106,8 @@ $(BUILD)/bake-tr%/.done: $(BAKETOOL)
 	$(BAKETOOL) $(GAME) $* $(@D)
 	touch $@
 
-$(BAKETOOL): ../../tools/gbabake/gbabake.c ../../src/data/bpa.c ../../src/data/bpk.c ../../src/race/race_car_shapes.c
+$(BAKETOOL): ../../tools/gbabake/gbabake.c ../../src/data/bpa.c ../../src/data/bpk.c ../../src/race/race_car_shapes.c \
+		../../src/data/car_data.c ../../src/menu/menu_data.c
 	$(MAKE) -C ../../tools/gbabake
 
 .PHONY: all clean FORCE

@@ -1158,6 +1158,9 @@ static void draw_view(void){
 u32 gba_cycles(void){ return cycles(); }
 
 static int shown_model = -1;	// gba_show_car()'s
+// gba_show_part()'s: its frames, how many, and whether it goes back and forth
+static const u8 * shown_part;
+static int part_frames, part_bounce;
 
 // the HUD's glyphs on black, and nothing else
 void gba_text_screen(void){
@@ -1171,6 +1174,7 @@ void gba_text_screen(void){
 	REG_BG1VOFS = 0;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
 	shown_model = -1;
+	shown_part = 0;
 	for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
 	BG_PALETTE[0] = 0;
 	// the track's colors for the sprites again, which gba_picture() changes
@@ -1205,6 +1209,18 @@ void gba_picture(int slot, const u8 * obj, int x, int y){
 
 void gba_show_car(int model, int x, int y){
 
+	int 	n;
+
+	// the car's colors and its OBJ's empty tiles, after a part's; -1
+	// hides either
+	if(shown_part&&(model >= 0)){
+
+		u32 	* t = (u32 *)SPRITE_GFX;
+
+		copy32(SPRITE_PALETTE, BG_PALETTE, 512);
+		for(n = 0; n < 4*8*16; n++) t[n] = 0;
+	}
+	shown_part = 0;
 	shown_model = model;
 	if(model < 0){
 
@@ -1236,11 +1252,56 @@ void gba_car_color(int r, int g, int b){
 	}
 }
 
+// one of the shop's animations (gbabake's shop.obj) in the car's place,
+// n frames of 48x32 from frames on, or none for 0; bounce plays them
+// forward and back, as the armor's go. gba_turn_car() moves it on
+void gba_show_part(const u8 * frames, int n, int bounce, int x, int y){
+
+	extern const u8 menu_pal[];
+
+	if(!frames){
+
+		if(shown_part&&(shown_model < 0)) OAM[0].attr0 = OBJ_DISABLE;
+		shown_part = 0;
+		return;
+	}
+	if(!shown_part) copy32(SPRITE_PALETTE, menu_pal, 512);
+	shown_model = -1;
+	shown_part = frames;
+	part_frames = n;
+	part_bounce = bounce;
+	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	OAM[0].attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_WIDE;
+	OAM[0].attr1 = OBJ_X(x) | OBJ_SIZE(3);		// 64x32
+	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
+	gba_turn_car();
+}
+
+#define PART_TILES_W		6	// a frame's 48 pixels, of the OBJ's 64
+#define PART_BYTES		(48*32)
+
 void gba_turn_car(void){
 
 	const u8 * 	frames;
 	int 		n;
 
+	if(shown_part){
+
+		// about the 35 frames a second the desktop's shop shows them at
+		int 	f = (vblanks/2)%(part_bounce ? 2*part_frames-2 : part_frames);
+
+		if(f >= part_frames) f = 2*part_frames-2-f;
+		frames = shown_part+f*PART_BYTES;
+		for(n = 0; n < 4; n++){
+
+			u32 	* blank = (u32 *)((u8 *)SPRITE_GFX+(n*8+PART_TILES_W)*64);
+			int 	k;
+
+			copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*PART_TILES_W*64, PART_TILES_W*64);
+			for(k = 0; k < (8-PART_TILES_W)*16; k++) blank[k] = 0;
+		}
+		return;
+	}
 	if(shown_model < 0) return;
 	frames = cars_obj+shown_model*NUM_CARS*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
 	for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);

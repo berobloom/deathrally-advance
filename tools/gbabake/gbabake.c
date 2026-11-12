@@ -84,6 +84,9 @@ __DWORD__ XM_getPeriod(int Note, int FineTune);
 
 void bpk_decode2(__POINTER__ dst, __POINTER__ src);
 void bpk_decode4(__DWORD__ size, __DWORD__ offset, __POINTER__ dst, __POINTER__ src);
+// each frame's size in the shop's animations (src/data/car_data.c,
+// src/menu/menu_data.c)
+extern const __DWORD__ ___1862bch[][0x18], ___18643ch[][0xc], ___1864fch[][0x10], ___186658h[], ___1865fch[];
 
 #define CAR_FRAMES	96
 #define CAR_W		40
@@ -591,6 +594,68 @@ static void put_obj64(FILE * fd, const __BYTE__ * px){
 	fwrite(obj, 1, sizeof(obj), fd);
 }
 
+// px, w pixels a row, the w x h image img at half its size: each pixel
+// the average of four, or none if most of them are
+static void halve(__BYTE__ * px, int pw, const __BYTE__ * img, int w, int h){
+
+	int 	x, y, k;
+
+	memset(px, 0, pw*pw);
+	for(y = 0; y < h/2; y++) for(x = 0; x < w/2; x++){
+
+		int 	r = 0, g = 0, b = 0, m = 0;
+
+		for(k = 0; k < 4; k++){
+
+			__BYTE__ 	c = img[w*(2*y+k/2)+2*x+k%2];
+
+			if(!c) continue;
+			r += menu_pal[3*c]; g += menu_pal[3*c+1]; b += menu_pal[3*c+2]; m++;
+		}
+		if(m >= 2) px[pw*y+x] = nearest_menu_color(r/m, g/m, b/m);
+	}
+}
+
+// the shop's animations (shop_main()), each frame 96x64 and its own bpk,
+// one after another: the engines', the tires', the armor's, repair's and
+// continue's. Halved, as 48x32: 6x4 8bpp tiles, the left 6 of a 64x32 OBJ's
+#define SHOP_PART_W		48
+#define SHOP_PART_H		32
+static void bake_shop_parts(const char * outdir){
+
+	static const struct { const char * name; int frames; const __DWORD__ * size; } anims[] = {
+		{ "engi1.bpk", 24, ___1862bch[0] }, { "engi2.bpk", 24, ___1862bch[1] },
+		{ "engi3.bpk", 24, ___1862bch[2] }, { "engi4.bpk", 24, ___1862bch[3] },
+		{ "tire1.bpk", 12, ___18643ch[0] }, { "tire2.bpk", 12, ___18643ch[1] },
+		{ "tire3.bpk", 12, ___18643ch[2] }, { "tire4.bpk", 12, ___18643ch[3] },
+		{ "armor1.bpk", 16, ___1864fch[0] }, { "armor2.bpk", 16, ___1864fch[1] },
+		{ "armor3.bpk", 16, ___1864fch[2] }, { "armor4.bpk", 16, ___1864fch[3] },
+		{ "repaani.bpk", 24, ___186658h }, { "contani.bpk", 23, ___1865fch },
+	};
+	__BYTE__ 	img[96*64], px[64*64], tiles[SHOP_PART_W*SHOP_PART_H];
+	__POINTER__ 	src;
+	unsigned 	i, f, at, x, y;
+	FILE * 		fd = out(outdir, "shop.obj");
+
+	for(i = 0; i < sizeof(anims)/sizeof(anims[0]); i++){
+
+		src = read_entry("MENU.BPA", anims[i].name);
+		for(f = at = 0; f < (unsigned)anims[i].frames; f++){
+
+			bpk_decode2(img, src+at);
+			at += anims[i].size[f];
+			halve(px, 64, img, 96, 64);
+			for(y = 0; y < SHOP_PART_H; y++) for(x = 0; x < SHOP_PART_W; x++){
+
+				tiles[64*((y/8)*(SHOP_PART_W/8)+x/8)+8*(y%8)+x%8] = px[64*y+x];
+			}
+			fwrite(tiles, 1, sizeof(tiles), fd);
+		}
+		free(src);
+	}
+	fclose(fd);
+}
+
 static void bake_menu_pictures(const char * outdir){
 
 	static const struct { const char * name; int w, h; } pics[] = {
@@ -625,27 +690,26 @@ static void bake_menu_pictures(const char * outdir){
 		src = read_entry("MENU.BPA", pics[i].name);
 		img = calloc(1, pics[i].w*pics[i].h);
 		bpk_decode2(img, src);
-		memset(px, 0, sizeof(px));
-		for(y = 0; y < (unsigned)pics[i].h/2; y++){
-			for(x = 0; x < (unsigned)pics[i].w/2; x++){
-
-				int 	r = 0, g = 0, b = 0, m = 0;
-
-				for(k = 0; k < 4; k++){
-
-					__BYTE__ 	c = img[pics[i].w*(2*y+k/2)+2*x+k%2];
-
-					if(!c) continue;
-					r += pal[3*c]; g += pal[3*c+1]; b += pal[3*c+2]; m++;
-				}
-				if(m >= 2) px[64*y+x] = nearest_menu_color(r/m, g/m, b/m);
-			}
-		}
+		halve(px, 64, img, pics[i].w, pics[i].h);
 		put_obj64(fd, px);
 		free(img);
 		free(src);
 	}
+	// the underground market's items, 96x96 each in market1e: mines,
+	// spikes, rocket fuel and sabotage on sale, then held, then sold out
+	src = read_entry("MENU.BPA", "market1e.bpk");
+	img = calloc(1, 12*96*96);
+	bpk_decode2(img, src);
+	for(i = 0; i < 12; i++){
+
+		halve(px, 64, img+i*96*96, 96, 96);
+		put_obj64(fd, px);
+	}
+	free(img);
+	free(src);
 	fclose(fd);
+
+	bake_shop_parts(outdir);
 
 	// the drivers' faces as they are, 64x64, then facexx, nobody's
 	fd = out(outdir, "faces.obj");
