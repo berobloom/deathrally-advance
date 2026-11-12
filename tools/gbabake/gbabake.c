@@ -27,8 +27,9 @@
 //   ohi.dat
 //   sprites.bin  the race's pictures drawn over the track: race_sprite_files[]
 //                decoded, one after the other
-//   lamps.obj    the start lights' 3 frames and the finish flag's 64 in it, as
-//                the tiles of a 64x64 and a 32x64 sprite, 6 KB a frame
+//   lamps.dtl    the start lights' 3 frames and the finish flag's 64 in it, as
+//                the 96 tiles of a 64x64 and a 32x64 sprite, each different
+//                tile once after a u16 for each frame's, its number
 //   hud.bin      the HUD box's pictures from IBFILES.BPA, RACE_HUD_* in
 //                drally_race.h
 //   trN.s3m      the track's music, TRn-MUS.CMF decoded, for mmutil
@@ -257,47 +258,59 @@ static void write_mbk(const char * dir, const __BYTE__ * mas, int w, int h){
 	free(blocks);
 }
 
-// track.dtl: track.tiles with each different tile once, after a u16 for
-// each of the track's, its number among them, padded to 4 bytes; see
-// src/race/race_ima.c
-static void write_dtl(const char * dir, const __BYTE__ * ima, int w, int h, int tw, int th){
+// n 8x8 8bpp tiles with each different one once, after a u16 for each of
+// the n, its number among them, padded to 4 bytes: see track.dtl and
+// lamps.dtl
+static void write_tiles_once(const char * dir, const char * name, const __BYTE__ * in, int n){
 
-	__WORD__ * 	map = malloc(2*tw*th);
-	__BYTE__ * 	tiles = malloc(64*tw*th), t[64];
-	int 		*hash = malloc(sizeof(int)*65536), *next = malloc(sizeof(int)*tw*th);
-	int 		n = 0, tx, ty, x, y, k;
+	__WORD__ * 	map = malloc(2*n);
+	__BYTE__ * 	tiles = malloc(64*n);
+	int 		* hash = malloc(sizeof(int)*65536), * next = malloc(sizeof(int)*n);
+	int 		u = 0, t, k;
 	FILE * 		fd;
 
 	for(k = 0; k < 65536; k++) hash[k] = -1;
-	for(ty = 0; ty < th; ty++) for(tx = 0; tx < tw; tx++){
+	for(t = 0; t < n; t++){
 
-		unsigned 	hv = 0;
+		const __BYTE__ * 	p = in+64*t;
+		unsigned 		hv = 0;
 
-		for(y = 0; y < 8; y++) for(x = 0; x < 8; x++){
-
-			int 	px = 8*tx+x, py = 8*ty+y;
-
-			t[8*y+x] = ((px < w)&&(py < h)) ? ima[py*w+px] : 0;
-			hv = 31*hv+t[8*y+x];
-		}
+		for(k = 0; k < 64; k++) hv = 31*hv+p[k];
 		hv &= 0xffff;
-		for(k = hash[hv]; (k >= 0)&&memcmp(tiles+64*k, t, 64); k = next[k]);
+		for(k = hash[hv]; (k >= 0)&&memcmp(tiles+64*k, p, 64); k = next[k]);
 		if(k < 0){
 
-			k = n++;
-			memcpy(tiles+64*k, t, 64);
+			k = u++;
+			memcpy(tiles+64*k, p, 64);
 			next[k] = hash[hv];
 			hash[hv] = k;
 		}
-		if(k > 0xffff){ fprintf(stderr, "track.dtl: too many tiles\n"); exit(1); }
-		map[tw*ty+tx] = k;
+		if(k > 0xffff){ fprintf(stderr, "%s: too many tiles\n", name); exit(1); }
+		map[t] = k;
 	}
-	fd = out(dir, "track.dtl");
-	fwrite(map, 2, tw*th, fd);
-	if((tw*th)&1) fputc(0, fd), fputc(0, fd);
-	fwrite(tiles, 64, n, fd);
+	fd = out(dir, name);
+	fwrite(map, 2, n, fd);
+	if(n&1) fputc(0, fd), fputc(0, fd);
+	fwrite(tiles, 64, u, fd);
 	fclose(fd);
 	free(map); free(tiles); free(hash); free(next);
+}
+
+// track.dtl: track.tiles with each different tile once; see
+// src/race/race_ima.c
+static void write_dtl(const char * dir, const __BYTE__ * ima, int w, int h, int tw, int th){
+
+	__BYTE__ * 	tiles = malloc(64*tw*th);
+	int 		tx, ty, x, y;
+
+	for(ty = 0; ty < th; ty++) for(tx = 0; tx < tw; tx++) for(y = 0; y < 8; y++) for(x = 0; x < 8; x++){
+
+		int 	px = 8*tx+x, py = 8*ty+y;
+
+		tiles[64*(tw*ty+tx)+8*y+x] = ((px < w)&&(py < h)) ? ima[py*w+px] : 0;
+	}
+	write_tiles_once(dir, "track.dtl", tiles, tw*th);
+	free(tiles);
 }
 
 static void write_reversed(const char * dir, const char * name, const __BYTE__ * p, unsigned size){
@@ -435,18 +448,17 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 		// show them
 		{
 			const __BYTE__ * 	lamps = buf+size-0x4b000-0x3840;
+			__BYTE__ * 		obj = calloc(67, 96*64), * o = obj;
 			unsigned 		f, k, tx, ty, r;
 
-			fd = out(outdir, "lamps.obj");
-			for(f = 0; f < 67; f++) for(k = 0; k < 2; k++) for(ty = 0; ty < 8; ty++) for(tx = 0; tx < (k ? 4u : 8u); tx++) for(r = 0; r < 8; r++){
+			for(f = 0; f < 67; f++) for(k = 0; k < 2; k++) for(ty = 0; ty < 8; ty++) for(tx = 0; tx < (k ? 4u : 8u); tx++) for(r = 0; r < 8; r++, o += 8){
 
 				unsigned 	x = 8*(tx+8*k), y = 8*ty+r;
-				__BYTE__ 	row[8] = { 0 };
 
-				if((y < 0x3c)&&(x < 0x50)) memcpy(row, lamps+0x12c0*f+0x50*y+x, 8);
-				fwrite(row, 1, 8, fd);
+				if((y < 0x3c)&&(x < 0x50)) memcpy(o, lamps+0x12c0*f+0x50*y+x, 8);
 			}
-			fclose(fd);
+			write_tiles_once(outdir, "lamps.dtl", obj, 67*96);
+			free(obj);
 		}
 		free(buf);
 	}

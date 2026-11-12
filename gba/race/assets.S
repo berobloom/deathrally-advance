@@ -11,6 +11,7 @@
 
 #define RACE_GBA_CARS		7	// main.c's GBA_CAR_IMAGES
 #define RACE_SHAPES_SIZE	8064	// sizeof(race_car_shapes_t), which main.c checks
+#define RACE_SPRITES_SIZE	369024	// race_sprite_files[]' sizes added up, which main.c checks
 
 @ the first n bytes of file: the GBA's cars are the 7 models, the
 @ Adversary's last, without the spiked ones, which race the models' images
@@ -32,9 +33,12 @@
 	asset_part	cars_rev_img, cars-rev.img, RACE_GBA_CARS*96*40*40
 	asset_part	cars_rev_shp, cars-rev.shp, RACE_GBA_CARS*RACE_SHAPES_SIZE
 	asset	setup_obst_rev, obst-rev.bin
-	asset	sprites_bin, sprites.bin
+	@ without the last two, GEN-LAM.BPK's start lights and GEN-FLA.BPK's
+	@ finish flags, which the race only points at: the GBA shows them
+	@ from lamps.obj, and only the desktop draws them (race_draw)
+	asset_part	sprites_bin, sprites.bin, RACE_SPRITES_SIZE-0x3840-0x4b000
 	asset	hud_bin, hud.bin
-	asset	lamps_obj, lamps.obj
+	asset	lamps_dtl, lamps.dtl
 	asset	carcol_pal, carcol.pal
 	asset	copper_pal, copper.pal
 	asset	menu_pal, menu.pal

@@ -60,7 +60,7 @@ extern const u8 setup_obst_rev[];
 _Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE");
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
-extern const u8 lamps_obj[];		// 6 KB a frame, see gbabake
+extern const u16 lamps_dtl[];		// a u16 for each frame's 96 tiles, then the tiles, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
 #endif
@@ -406,7 +406,7 @@ typedef struct {
 	int 	position, lap, over;
 	int 	nspr, cars_at;			// sprites, and how many of them are under the cars
 	sprite_t 	spr[MAX_SPRITES];		// in the order the race drew them
-	const u8 * 	lamp;			// the start lights or the finish flag, or 0
+	const u16 * 	lamp;			// the start lights or the finish flag, its tiles in lamps_dtl, or 0
 	int 	lamp_x;				// on the screen
 	u32 	box_seq;			// the HUD box, in boxes[box_seq&1]
 } view_t;
@@ -424,8 +424,9 @@ static int drawn_n, drawn_cars;
 static int light_bank;			// its palette, make_light()'s
 static int track_lit;			// whether the track's -LIT.TAB lightens anything
 #define LAMP_TILE0		(LIGHT_TILE0+64)	// a 64x64 OBJ and a 32x64 one
-#define LAMP_OBJ_BYTES		(64*64+32*64)	// a frame of them in lamps_obj
-static const u8 * drawn_lamp;
+#define LAMP_FRAMES		67
+#define LAMP_TILES		96		// a frame's, in the 2 OBJs
+static const u16 * drawn_lamp;		// its tiles in lamps_dtl
 static int drawn_lamp_x;
 
 static void on_sprite(const __BYTE__ * img, int w, int h, int x, int y){
@@ -437,7 +438,7 @@ static void on_sprite(const __BYTE__ * img, int w, int h, int x, int y){
 		int 	f = ((img >= GEN_LAM_BPK)&&(img < GEN_LAM_BPK+3*0x12c0)) ? (img-GEN_LAM_BPK)/0x12c0 : 3+(img-GEN_FLA_BPK)/0x12c0;
 
 		// on the game's 320 pixel wide screen, at its right edge on ours
-		drawn_lamp = lamps_obj+LAMP_OBJ_BYTES*f;
+		drawn_lamp = lamps_dtl+LAMP_TILES*f;
 		drawn_lamp_x = x-TRX_VIEWPORT_TL_X+CURRENT_VIEWPORT_X-(320-SCREEN_W);
 		return;
 	}
@@ -614,12 +615,15 @@ static void place_sprite(int o, int k, const sprite_t * s){
 // the start lights as a 64x64 OBJ and a 32x64 one, over everything
 static int place_lamp(const view_t * v){
 
-	static const u8 * 	shown;
+	static const u16 * 	shown;
 
 	if(!v->lamp||(v->lamp_x >= SCREEN_W)) return 0;
 	if(shown != v->lamp){
 
-		copy32((u8 *)SPRITE_GFX+32*LAMP_TILE0, v->lamp, LAMP_OBJ_BYTES);
+		const u8 	* tiles = (const u8 *)(lamps_dtl+LAMP_FRAMES*LAMP_TILES);
+		int 		k;
+
+		for(k = 0; k < LAMP_TILES; k++) copy32((u8 *)SPRITE_GFX+32*LAMP_TILE0+64*k, tiles+64*v->lamp[k], 64);
 		shown = v->lamp;
 	}
 	OAM[0].attr0 = OBJ_Y(0) | OBJ_256_COLOR | OBJ_SQUARE;
@@ -1584,6 +1588,13 @@ int main(void){
 	REG_WAITCNT = 0x4017;		// ROM at 3/1 wait states with prefetch, works on flash carts
 	REG_DEBUG_ENABLE = 0xC0DE;
 	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
+	{
+		// assets.S leaves the last two of sprites.bin out
+		unsigned 	i, size = 0;
+
+		for(i = 0; i < RACE_SPRITE_FILES; i++) size += race_sprite_files[i].size;
+		if((size != 369024)||(race_sprite_files[14].size != 0x3840)||(race_sprite_files[15].size != 0x4b000)) say("sprites.bin isn't as assets.S has it");
+	}
 
 	sound_init();			// before the vblank handler, which mixes
 	irqInit();
