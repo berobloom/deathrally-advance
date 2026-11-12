@@ -169,7 +169,7 @@ void race___4b62ch(int idx){
 	}
 	else {
 
-		ebx = B(TRX_VAI+((int)s_35e[idx].XLocation>>0x2)+TRX_WIDTH_QTR*((int)s_35e[idx].YLocation>>0x2));
+		ebx = race_vai(((int)s_35e[idx].XLocation>>0x2)+TRX_WIDTH_QTR*((int)s_35e[idx].YLocation>>0x2));
 
 		if((0.0f < s_94[idx].__4)||(s_35e[idx].__b0 > 0.5f)){
 
@@ -178,11 +178,11 @@ void race___4b62ch(int idx){
 
 			i = helper00(TRX_WIDTH-1, (int)(s_35e[idx].XLocation-dRMath_fixf(40*(dRMath_sin_i(a26) >> 4), 24)));
 			j = helper00(TRX_HEIGHT-1, (int)(s_35e[idx].YLocation-dRMath_fixf(40*(dRMath_cos_i(a26) >> 4), 24)));
-			b1 = 0x10-B(TRX_LR1+TRX_WIDTH_QTR*j+i);
+			b1 = 0x10-race_lr1(TRX_WIDTH_QTR*j+i);
 			
 			i = helper00(TRX_WIDTH-1, (int)(s_35e[idx].XLocation+dRMath_fixf(40*(dRMath_sin_i(a154) >> 4), 24)));
 			j = helper00(TRX_HEIGHT-1, (int)(s_35e[idx].YLocation+dRMath_fixf(40*(dRMath_cos_i(a154) >> 4), 24)));
-			b2 = 0x10-B(TRX_LR1+TRX_WIDTH_QTR*j+i);
+			b2 = 0x10-race_lr1(TRX_WIDTH_QTR*j+i);
 
 			if(s_35e[idx].__186 != 0){
 

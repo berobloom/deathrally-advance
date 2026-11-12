@@ -8,6 +8,8 @@
 	extern int NUM_OF_CARS;
 	extern int TRX_WIDTH;
 	extern int TRX_HEIGHT;
+	extern int TRX_WIDTH_QTR;
+	extern int TRX_HEIGHT_QTR;
 	extern __POINTER__ TRX_IMA;
 	extern __POINTER__ TRX_MAS;
 	extern __POINTER__ TRX_VAI;
@@ -79,6 +81,7 @@ static void baked_alloc(void){
 #endif
 	TRX_VAI = (__POINTER__)race_baked->vai;
 	TRX_LR1 = (__POINTER__)race_baked->lr1;
+	race_qtr_last = 0;
 	RACE_OBSTACLE_BPK = race_baked->obstacles;
 	RACE_MINES1A_BPK = (__POINTER__)race_baked->mines1a;
 	RACE_BLOWI_BPK = (__POINTER__)race_baked->blowi;
@@ -155,8 +158,12 @@ static void baked_scene(void){
 #else
 	TRX_MAS = (__POINTER__)race_baked->rev_mas;
 #endif
-	TRX_VAI = (__POINTER__)race_baked->rev_vai;
-	TRX_LR1 = (__POINTER__)race_baked->rev_lr1;
+	if(race_baked->rev_vai){
+
+		TRX_VAI = (__POINTER__)race_baked->rev_vai;
+		TRX_LR1 = (__POINTER__)race_baked->rev_lr1;
+	}
+	else race_qtr_last = TRX_WIDTH_QTR*TRX_HEIGHT_QTR-1;
 	race_ima_reverse();
 	for(n = 0; n < 4; n++){
 

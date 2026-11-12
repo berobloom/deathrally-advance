@@ -42,7 +42,8 @@ typedef struct {
 	const u8 * 	tiles, * mas, * setup_inf, * vai, * lr1;
 	const u8 * 	ski, * blo, * lit, * varjo, * drv, * ohi;
 	// reversed: rev_pal's size, 0 if the game doesn't reverse it, and the
-	// colors and maps turned round
+	// colors and maps turned round; rev_vai and rev_lr1 are 0, the race
+	// reads vai and lr1 turned round (race_qtr_last)
 	u32 		reversible;
 	const u16 * 	rev_pal;
 	const u8 * 	rev_mas, * rev_vai, * rev_lr1;

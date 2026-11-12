@@ -66,8 +66,6 @@
 	@ reversed, or empty if the game doesn't reverse it
 	asset	tr\n\()_rev_pal, bake-tr\n/track-rev.pal
 tr\n\()_rev_pal_end:
-	asset	tr\n\()_rev_vai, bake-tr\n/rev.vai
-	asset	tr\n\()_rev_lr1, bake-tr\n/rev.lr1
 	.endr
 
 @ race_track_t race_tracks[race_tracks_n]: the track's number, then its files
@@ -77,7 +75,7 @@ race_tracks:
 	.irp	n, TRACKS
 	.word	\n, tr\n\()_pal, tr\n\()_inf, tr\n\()_tiles, tr\n\()_mas, tr\n\()_setup_inf, tr\n\()_vai, tr\n\()_lr1
 	.word	tr\n\()_ski, tr\n\()_blo, tr\n\()_lit, tr\n\()_varjo, tr\n\()_drv, tr\n\()_ohi
-	.word	tr\n\()_rev_pal_end-tr\n\()_rev_pal, tr\n\()_rev_pal, tr\n\()_mas, tr\n\()_rev_vai, tr\n\()_rev_lr1
+	.word	tr\n\()_rev_pal_end-tr\n\()_rev_pal, tr\n\()_rev_pal, tr\n\()_mas, 0, 0
 	.endr
 	.global	race_tracks_n
 race_tracks_n:

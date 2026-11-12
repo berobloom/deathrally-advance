@@ -87,6 +87,16 @@ int race_ima_dirty(void);
 void race_ima_stats(unsigned * used, unsigned * max, unsigned * dropped);
 #endif
 
+// byte i of TRX_VAI and TRX_LR1, the track's quarter-size maps of the
+// way round and of left and right. A reversed track's are them turned
+// round, byte n-1-i, which the GBA reads from the forward ones: it sets
+// race_qtr_last to n-1. Otherwise it's 0
+extern __POINTER__ 	TRX_VAI;
+extern __POINTER__ 	TRX_LR1;
+extern int 		race_qtr_last;
+static inline __BYTE__ race_vai(int i){ return TRX_VAI[race_qtr_last ? race_qtr_last-i : i]; }
+static inline __BYTE__ race_lr1(int i){ return TRX_LR1[race_qtr_last ? race_qtr_last-i : i]; }
+
 // the track's mask, TRX_MAS, as the race code reads it: the low 4 bits of
 // the byte under (x, y), below 4 a wall, 0xf nothing; one pixel, or n of a
 // row from x on. An x past a row's end runs on into the next or previous

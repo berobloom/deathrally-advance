@@ -1,4 +1,5 @@
 #include "drally.h"
+#include "drally_race.h"
 #include "sfx.h"
 #include "drally_structs_free.h"
 
@@ -52,7 +53,7 @@ void race___55ae0h(void){
     n = -1;
     while(++n < NUM_OF_CARS){
 
-        ecx = B(TRX_VAI+TRX_WIDTH_QTR*((int)s_35e[n].Y1__112>>0x2)+((int)s_35e[n].X1__10e>>0x2));
+        ecx = race_vai(TRX_WIDTH_QTR*((int)s_35e[n].Y1__112>>0x2)+((int)s_35e[n].X1__10e>>0x2));
         ebx = s_35e[n].__0+1;
 
         if(ecx == ebx){
@@ -61,11 +62,11 @@ void race___55ae0h(void){
         }
         else {
 
-            edx = B(TRX_VAI+TRX_WIDTH_QTR*((int)s_35e[n].Y2__122>>0x2)+((int)s_35e[n].X2__11e>>0x2));
+            edx = race_vai(TRX_WIDTH_QTR*((int)s_35e[n].Y2__122>>0x2)+((int)s_35e[n].X2__11e>>0x2));
             if(edx == ebx) s_35e[n].__0++;
         }
 
-        D(esp+0x4) = B(TRX_VAI+TRX_WIDTH_QTR*((int)s_35e[n].YLocation>>0x2)+((int)s_35e[n].XLocation>>0x2));
+        D(esp+0x4) = race_vai(TRX_WIDTH_QTR*((int)s_35e[n].YLocation>>0x2)+((int)s_35e[n].XLocation>>0x2));
 
         if(D(esp+0x4) == D(___243cech)){
             
