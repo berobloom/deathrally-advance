@@ -110,6 +110,8 @@ The results screens' functions also hand out the points. Built with `DR_CAREER_N
 
 On the GBA, `gba/race/career_ui.c` draws its own text screens around them: a new game, the hub with your rank, points, money, car and damage, the shop, the sign-up with the three races filling up, PREPARE TO RACE, the race, its results, and the standings with what each driver scored in the round. The shop shows the car on sale, or yours, turning in the corner, from the race's car frames, with the game's own words for each car, upgrade and repair (`src/shop/shop_texts.c` and `car_data.c`). The racers' car colors come from MENU.BPA's `CARCOL.PAL` and `COPPER.PAL`, which `tools/gbabake` bakes. A career's races follow one another without resetting the race's globals, as on the desktop.
 
+`tools/gbarun` runs a ROM headless in mGBA's library: it presses buttons, writes and reads memory, and saves screenshots at the frames a script gives, and prints what the ROM logs. `tools/gbarun/shop.txt` walks a new career into the shop. It needs mGBA's library and headers (`libmgba-dev`).
+
 `tools/replay --career BAKES SEED ROUNDS` plays a career on the desktop as `gba/race`'s career benchmark does (`RACE_CFLAGS="-DRACE_BENCH -DCAREER_BENCH=n -DRACE_SEED=s"`): always the easy race, with the AI driving your car. It prints a hash of the race's globals after each race and of the 20 racers after each round. Four rounds match the GBA's, and so do three races against the Adversary (`CAREER_LEAD=1`, and `-DCAREER_LEAD` on the GBA, give you the lead from the start). In one of those, the engine sound's pitch at the end differs, which nothing else reads.
 
 ### Speed

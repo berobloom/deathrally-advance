@@ -28,3 +28,5 @@ TICKLOG.BIN
 /tools/replay/replay-tiles
 /gba/race/build/
 *.sav
+/tools/gbarun/gbarun
+/tools/gbarun/*.png

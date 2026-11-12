@@ -1,0 +1,22 @@
+# gba/race's career, into the shop: gbarun ../../gba/race/drrace.gba 460 shop.txt
+# money: ___1a01e0h (racer_t, 0x6c each) + 19*0x6c + 0x30, from drrace.map
+60 A			# the title: CAREER
+80 D
+90 D
+100 D
+110 A			# the new game: START
+140 poke32 020111d4=50000
+150 shot hub.png
+150 D
+160 A			# the hub: SHOP
+200 shot shop.png
+210 R			# the next car
+230 A			# buy it
+250 shot confirm.png
+260 A			# yes
+280 shot bought.png
+290 D			# the engine
+300 A
+320 shot engine.png
+330 B			# out
+360 shot hub2.png
