@@ -1683,6 +1683,8 @@ void gba_cursor(int x, int y){
 
 	int 	r;
 
+	// where it is already: drawn over, it'd be gone until it turns again
+	if((x == cursor_x)&&((x < 0)||(y == cursor_y))) return;
 	if(cursor_x >= 0) for(r = 0; r < 10; r++){
 
 		text_put(cursor_x, cursor_y+r, 0, 0xffffffff);

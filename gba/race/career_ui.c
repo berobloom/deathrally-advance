@@ -324,6 +324,8 @@ static int new_game(void){
 
 		for(n = strlen(name); n < NAME_LEN; n++) name[n] = ' ';
 		name[NAME_LEN] = 0;
+		// the chosen row white, the others grey, as the desktop's menus
+		gba_text_color(0, (row == 0) ? 15 : 9);
 		gba_print(4, 6, "NAME");
 		// a letter a cell, under the one being changed a line
 		for(n = 0; n < NAME_LEN; n++){
@@ -333,14 +335,17 @@ static int new_game(void){
 			gba_print(11+n, 6, buf);
 			gba_print(11+n, 7, (edit&&(n == cur)) ? "-" : " ");
 		}
+		gba_text_color(0, (row == 1) ? 15 : 9);
 		gba_print(4, 9, "FACE");
 		print(11, 9, "%-11s", name_list[face]);
 		if(face != shown) gba_picture(0, FACE(face), 176, 28);
 		shown = face;
+		gba_text_color(0, (row == 2) ? 15 : 9);
 		gba_print(4, 12, "DIFFICULTY");
 		print(4, 13, "%-22s", difficulty_names[difficulty]);
+		gba_text_color(0, (row == 3) ? 15 : 9);
 		gba_print(4, 15, "START");
-		gba_cursor(14, 8*rows[row]-1);
+		gba_cursor(16, 8*rows[row]-1);
 		gba_text_color(0, 11);
 		gba_print(2, 18, edit ? "UP/DOWN LETTER, A DONE " : "A CHOOSE, B BACK       ");
 		gba_text_color(0, 15);
@@ -1008,7 +1013,7 @@ static void shop_draw(int row){
 		else if(item == CAREER_SHOP_REPAIR) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "NONE" : "10%% OFF");
 		else if(item < SHOP_BACK) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "ALL %d" : "%d OF %d", n, career_shop_most(item));
 		if(p != CAREER_SHOP_NONE) snprintf(price, sizeof(price), (p < 0) ? "+$%d" : "$%d", (p < 0) ? -p : p);
-		gba_text_color(0, (item == row) ? 15 : 11);
+		gba_text_color(0, (item == row) ? 15 : 9);
 		print(2, SHOP_ROW0+item, "%-6s  %-13s%8s", shop_items[item], detail, price);
 	}
 	gba_cursor(4, 8*(SHOP_ROW0+row)-1);
@@ -1287,7 +1292,7 @@ static void market_draw(int row){
 			if(career_market_state(item) == 1) snprintf(price, sizeof(price), "$%d", career_market_price(item));
 			else snprintf(price, sizeof(price), "SOLD");
 		}
-		gba_text_color(0, (item == row) ? 15 : 11);
+		gba_text_color(0, (item == row) ? 15 : 9);
 		print(2, SHOP_ROW0+item, "%-19s%8s", market_items[item], price);
 	}
 	gba_cursor(4, 8*(SHOP_ROW0+row)-1);
