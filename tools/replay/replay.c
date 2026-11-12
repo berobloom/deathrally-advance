@@ -282,7 +282,6 @@ static void career_race_run(int my_index, int num_cars){
 
 		snprintf(dir, sizeof(dir), "%s/bake-tr%d", career_bakes, track);
 		baked[track] = (race_baked_t *)race_baked_read(dir);
-		baked[track]->variants = 7;	// gba/race's: no spiked cars
 	}
 	race_baked = baked[track];
 	timer_ticks = 0;

@@ -9,12 +9,11 @@
 	.incbin	"\file"
 	.endm
 
-#define RACE_GBA_CARS		7	// main.c's GBA_CAR_IMAGES
+#define RACE_GBA_CARS		13	// main.c's GBA_CAR_IMAGES
 #define RACE_SHAPES_SIZE	8064	// sizeof(race_car_shapes_t), which main.c checks
 #define RACE_SPRITES_SIZE	369024	// race_sprite_files[]' sizes added up, which main.c checks
 
-@ the first n bytes of file: the GBA's cars are the 7 models, the
-@ Adversary's last, without the spiked ones, which race the models' images
+@ the first n bytes of file
 	.macro	asset_part name, file, n
 	.align	4
 	.global	\name

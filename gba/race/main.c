@@ -121,8 +121,8 @@ void race___400ech(void);
 #define CAR_FRAME_BYTES		(CAR_W*CAR_W)		// a frame in cars_img
 #define NUM_CARS		4
 // the car images in the ROM, assets.S's RACE_GBA_CARS: the 7 models,
-// the Adversary's last, without the spiked ones (see race_baked_t)
-#define GBA_CAR_IMAGES		7
+// the Adversary's last, then the first 6's spiked ones (RACE_CAR_VARIANTS)
+#define GBA_CAR_IMAGES		13
 // the game's timer runs at 70 Hz, 7 ticks every 6 frames. Each tick runs
 // race_logic() and race_render() once, as the game did on its 70 Hz VGA
 // screen, and the vblank interrupt draws the last finished one, so a tick
