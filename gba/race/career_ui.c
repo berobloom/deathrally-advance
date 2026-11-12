@@ -569,6 +569,7 @@ static void signup_draw(int chosen){
 
 static void speech(const char40 * t, int n_lines);
 static void text_lines(int row0, int rows, const char * const * t, int n_lines);
+static void speech_lines(const char * const * t, int n_lines);
 
 // after the grids are ordered (___32230h()): the others' cars repaired,
 // and the sabotage you paid for done
@@ -660,7 +661,17 @@ static int signup(void){
 			click((r == 0) ? SFX_SIGNUP_BRAKES : SFX_BUMMER);
 			if(r == CAREER_NEEDS_CAR){
 
-				message("A FASTER CAR WOULD DO BETTER", "PRESS A AGAIN TO RACE ANYWAY");
+				// ___3174ch_cdecl()'s, the medium race's or the hard's;
+				// A again signs up anyway
+				// (no heading: one line)
+				static const char * const 	reins[2] = {
+					"[Hold on to your reins{, you mad, motorized berserker! They would mow you dead out there. "
+					"[Sign up here only when you have a Sentinel or something even wilder under your tail.",
+					"[Hold on to your reins{, you mad, motorized berserker! They would mow you dead out there. "
+					"[Sign up here only when you have a Wraith or something even wilder under your tail." };
+
+				sound_menu(1, SFX_LAUGHTER, 0x24500);
+				speech_lines(&reins[chosen == 2], 1);
 				gba_text_screen();
 				center(0, "SIGN UP FOR A RACE");
 				gba_print(1, 18, "LEFT/RIGHT CHOOSE");
@@ -1411,7 +1422,13 @@ void career_play(void){
 		// can't pay to repair
 		if(career_shop_broke()){
 
-			message("END OF THE ROAD, DRIVER", "A WRECK AND NO MONEY TO FIX IT");
+			static const char * const 	end[8] = { "[End of the road, driver.", "",
+				"[This then is how it ends{, not with a bang, but", "with a whimper. You had your shot at glory",
+				"road, but [you blew it{. Life is hard and all", "that. In [Death Rally{, you get only one go, only",
+				"the best can make it. But look at the bright", "side, at least you lived to tell the tale." };
+
+			// ___165ach()'s, a wreck you can't pay to repair
+			speech_lines(end, 8);
 			career_forget();
 			return;
 		}

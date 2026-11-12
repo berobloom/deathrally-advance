@@ -181,7 +181,6 @@ Not done yet:
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
-* The sound effects starting partway through, which Maxmod can't do.
 * Testing on real hardware.
 
 ## Desktop
