@@ -4,6 +4,7 @@
 #include "drally_structs_fixed.h"
 #include "drmemory.h"
 #include "drally_net.h"
+#include "drally_career.h"
 
 #define STANDARD_COM1       0
 #define STANDARD_COM2       1
@@ -320,42 +321,9 @@ void CONFIG_WRITE(void){
     dRMemory_free((__POINTER__)cfg);
 }
 
-static const __BYTE__ default_records[18][6][2] = {
-/*
-** TRACK         ** VAGABO  DERVIS  SENTIN  SHRIEK  WRAITH  DELIVE **
-** **************** ******  ******  ******  ******  ******  ****** **
-** SUBURBIA      */ 15,55,  14,49,  14,13,  13,89,  13,22,  11,36, /*
-** DOWNTOWN      */ 18,16,  17, 8,  16,23,  15,52,  14,51,  13,36, /*
-** UTOPIA        */ 27,89,  25,85,  24,58,  24, 2,  22,15,  20,38, /*
-** ROCK ZONE     */ 12,83,  12,21,  11,95,  11,88,  11, 2,  10,42, /*
-** SNAKE ALLEY   */ 26,79,  26,42,  37,55,  24,82,  21,80,  19,91, /*
-** OASIS         */ 13,42,  12,81,  12, 1,  11,66,  10,96,   9,66, /*
-** VELODROME     */ 15,90,  14,89,  14, 0,  13,12,  12, 5,  10,86, /*
-** HOLOCAUST     */ 27,80,  26,96,  24,50,  22,78,  21,30,  19,58, /*
-** BOGOTA        */ 17,57,  16,72,  15,62,  14,15,  13,85,  13, 1, /*
-** WEST END      */ 15,42,  14,63,  14, 1,  13,76,  13,14,  11,48, /*
-** NEWARK        */ 18, 0,  16,98,  16,11,  15,62,  14,52,  13,31, /*
-** COMPLEX       */ 27,49,  25,63,  24,22,  23,76,  21,91,  20,25, /*
-** HELL MOUNTAIN */ 12,68,  12,11,  11,98,  11,71,  11,14,  10,31, /*
-** DESERT RUN    */ 26,82,  26,37,  25,61,  24,96,  21,91,  19,69, /*
-** PALM SIDE     */ 13,36,  12,62,  12,24,  11,71,  11, 8,   9,81, /*
-** EIDOLON       */ 16, 8,  14,67,  14,24,  13, 1,  11,85,  10,78, /*
-** TOXIC DUMP    */ 27,98,  26,82,  24,62,  22,57,  21,33,  19,47, /*
-** BORNEO        */ 17,42,  16,86,  15,45,  13,98,  13,79,  12,94  /*
-** **************** ******  ******  ******  ******  ******  ****** **
-*/
-};
-
-static const char hof_default_names[10][12] = {
-
-    "SAM SPEED ", "JANE HONDA", "DUKE NUKEM", "NASTY NICK", "MOTOR MARY",
-    "MAD MAC   ", "MATT MILER", "CLINT WEST", "LEE VICE  ", "DARK RYDER"
-};
-
 static void CONFIG_DEFAULT(void){
 
     __DWORD__       eax, ebx, ecx, edx, esi, edi, ebp;
-    __DWORD__       track, car, n;
 
     ___24cc54h_sfx_volume = 0xc000;
     ___24cc58h_msx_volume = 0x8000;
@@ -369,18 +337,7 @@ static void CONFIG_DEFAULT(void){
     strcpy(___1a201ah_modem_dial_number, "");
     strcpy(___1a1ffch_modem_init_string, "atz");
 
-    car = -1;
-    while(++car < 6){
-
-        track = -1;
-        while(++track < 0x12){
-
-            strcpy(___19f750h[car][track].name, "Remedy");
-            ___19f750h[car][track].min = 0;
-            ___19f750h[car][track].sec = default_records[track][car][0];
-            ___19f750h[car][track].sec100 = default_records[track][car][1];
-        }
-    }
+    career_records_default();
 
     ___1a1110h_gp_steer_left = B(___199f3eh);
     ___1a1130h_gp_steer_right = B(___199f3fh);
@@ -397,14 +354,6 @@ static void CONFIG_DEFAULT(void){
     ___1a1140h.drop_mine = DR_SCAN_LALT;
     ___1a1140h.accelerate = DR_SCAN_A;
     ___1a1140h.machine_gun = DR_SCAN_LCTRL;
-
-    n = -1;
-    while(++n < 10){
-
-        strcpy(___1a0e28h[n].name, hof_default_names[n]);
-        ___1a0e28h[n].races = n*0x10+0x32;
-        ___1a0e28h[n].difficulty = I_LIVE_TO_RIDE;
-    }
 
     CONFIG_WRITE();
 }

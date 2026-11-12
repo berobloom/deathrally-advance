@@ -28,6 +28,8 @@
 	extern __BYTE__ ___1a1f64h[];
 	extern __BYTE__ ___1a0ef8h[];
 	extern __BYTE__ ___1a1ff1h[];
+	extern record_t ___19f750h[6][18];
+	extern hof_entry_t ___1a0e28h[10];
 	extern __BYTE__ ___1de7d0h[];
 	extern __BYTE__ ___196aech[];
 	extern __BYTE__ ___196af0h[];
@@ -138,24 +140,57 @@ static u32 racers_hash(void){
 }
 #endif
 
+static void records_load(void);
+
+// --- the hall of fame ----------------------------------------------------------------
+
+static const char * const 	difficulty_short[3] = { "DIZZY", "RIDE", "PETROL" };
+
+// the ten who beat the Adversary in the fewest races (menu___22a80h()),
+// you marked at place you if you're one. Until A or B
+static void hall_of_fame(int you){
+
+	int 	n;
+
+	gba_text_screen();
+	center(1, "HALL OF FAME");
+	gba_print(4, 3, "NAME        RACES");
+	for(n = 0; n < 10; n++){
+
+		print(1, 5+n, "%2d. %-11.11s %4d %s", n+1, ___1a0e28h[n].name, (int)___1a0e28h[n].races,
+			difficulty_short[___1a0e28h[n].difficulty%3]);
+		if(n == you) gba_print(0, 5+n, ">");
+	}
+	center(18, "PRESS A");
+	wait_key(1);
+}
+
 // --- the title and a new game ----------------------------------------------------
 
 int gba_title(void){
 
-	int 	row = 9;
+	static int 	row = 0;
 
-	gba_text_screen();
-	center(4, "DEATH RALLY ADVANCE");
-	center(17, "PRESS A");
 	for(;;){
 
-		u16 	k;
+		gba_text_screen();
+		center(4, "DEATH RALLY ADVANCE");
+		center(17, "PRESS A");
+		for(;;){
 
-		item(9, row, "CAREER");
-		item(11, row, "QUICK RACE");
-		k = gba_frame();
-		if(k&(KEY_UP|KEY_DOWN)) row = 20-row;
-		if(k&(KEY_A|KEY_START)) return row != 9;
+			u16 	k;
+
+			item(9, 9+2*row, "CAREER");
+			item(11, 9+2*row, "QUICK RACE");
+			item(13, 9+2*row, "HALL OF FAME");
+			k = gba_frame();
+			if(k&KEY_UP) row = (row+2)%3;
+			if(k&KEY_DOWN) row = (row+1)%3;
+			if(k&(KEY_A|KEY_START)) break;
+		}
+		if(row < 2) return row;
+		records_load();
+		hall_of_fame(-1);
 	}
 }
 
@@ -238,9 +273,13 @@ static int new_game(void){
 #define CAREER_SAVE		0x0000
 #define CAREER_MAGIC		0x31535244	// "DRS1"
 #define RECORDS_SAVE		0x1000
-#define RECORDS_MAGIC		0x31525244	// "DRR1"
+#define RECORDS_MAGIC		0x32525244	// "DRR2"
 
-	extern record_t ___19f750h[6][18];
+// the lap records and the hall of fame, as one
+typedef struct {
+	record_t 	records[6][18];
+	hof_entry_t 	hall[10];
+} records_t;
 
 // for the emulators and flash carts that look for it to know the save type
 __attribute__((used)) static const char sram_id[] = "SRAM_V113";
@@ -291,6 +330,34 @@ static int block_load(int at, u32 magic, void * dst, int n){
 	return sram_sum(dst, n) == head[1];
 }
 
+EWRAM_BSS static records_t 	records;
+static int 			records_ready;
+
+// the lap records and the hall of fame saved, or a new DR.CFG's, once.
+// Not in the benchmark, which starts from none as tools/replay does
+static void records_load(void){
+
+#if defined(CAREER_BENCH)
+	(void)records_ready;
+#else
+	if(records_ready) return;
+	records_ready = 1;
+	if(block_load(RECORDS_SAVE, RECORDS_MAGIC, &records, sizeof(records))){
+
+		memcpy(___19f750h, records.records, sizeof(records.records));
+		memcpy(___1a0e28h, records.hall, sizeof(records.hall));
+	}
+	else career_records_default();
+#endif
+}
+
+static void records_store(void){
+
+	memcpy(records.records, ___19f750h, sizeof(records.records));
+	memcpy(records.hall, ___1a0e28h, sizeof(records.hall));
+	block_save(RECORDS_SAVE, RECORDS_MAGIC, &records, sizeof(records));
+}
+
 // the career as it stands, and the lap records with it
 static void career_store(void){
 
@@ -298,7 +365,7 @@ static void career_store(void){
 
 	career_save(&sg, racer(ME)->name);
 	block_save(CAREER_SAVE, CAREER_MAGIC, &sg, sizeof(sg));
-	block_save(RECORDS_SAVE, RECORDS_MAGIC, ___19f750h, sizeof(record_t)*6*18);
+	records_store();
 }
 
 // the game over: no career to go on with
@@ -307,15 +374,11 @@ static void career_forget(void){
 	u32 	none = 0;
 
 	sram_put(CAREER_SAVE, &none, 4);
-	block_save(RECORDS_SAVE, RECORDS_MAGIC, ___19f750h, sizeof(record_t)*6*18);
+	records_store();
 }
 
-// the saved career, if there's one, and the lap records. 1 if there was
+// the saved career, if there's one. 1 if there was
 static int career_restore(saved_game_t * sg){
-
-	EWRAM_BSS static record_t 	rec[6][18];
-
-	if(block_load(RECORDS_SAVE, RECORDS_MAGIC, rec, sizeof(rec))) memcpy(___19f750h, rec, sizeof(rec));
 
 	return block_load(CAREER_SAVE, CAREER_MAGIC, sg, sizeof(*sg));
 }
@@ -379,6 +442,12 @@ static int race(int num_cars){
 	print(2, 5, "LAPS   %d", NUM_OF_LAPS);
 	if((int)D(___1a1028h) < 3) print(2, 6, "PRIZE  $%d", prizes[D(___1a1028h)]);
 	else gba_print(2, 6, "PRIZE  GLORY");
+	// the track's lap record for your car, as ___36adch() shows it
+	{
+		const record_t 	* r = &___19f750h[racer(ME)->car][B(___1a1f64h+D(___1a1028h))];
+
+		if(r->min+r->sec+r->sec100) print(2, 7, "RECORD %d:%02d.%02d %.11s", (int)r->min, (int)r->sec, (int)r->sec100, r->name);
+	}
 	for(n = 0; n < num_cars; n++){
 
 		racer_t * 	r = racer(grid[n]);
@@ -415,6 +484,9 @@ static int race(int num_cars){
 		if(career_leader_round()){
 
 			message("YOU BEAT THE ADVERSARY!", "THE DEATH RALLY IS YOURS");
+			// the end (___22808h()), and you in the hall of fame
+			records_load();
+			hall_of_fame(career_hall_of_fame());
 			return 1;
 		}
 		results(0);
@@ -1192,6 +1264,7 @@ void career_play(void){
 #else
 	srand_watcom106(gba_cycles());
 #endif
+	records_load();
 	n = continue_or_new();
 	if(n < 0) return;
 	if(n == 0){

@@ -1,6 +1,7 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_career.h"
 
 	extern __POINTER__ ___1a1138h__VESA101_BACKGROUND;
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
@@ -58,49 +59,10 @@ void ___223c4h(void){
 		}
 	}
 
-	n = s_6c[D(___1a1ef8h)].races;
-	D(esp+0x2c) = -1;
-	eax = 0;
-	edx = 0;
-
-	if(n >= (int)D(___1a0e28h+0xc)){
-
-		while(1){
-			
-			edx += 0x14;
-			eax++;
-
-			if((int)edx >= 0xc8) break;
-			if(n < (int)D(___1a0e28h+edx+0xc)){
-			
-				D(esp+0x2c) = eax;
-				break;
-			}
-		}
-	}
-	else {
-
-		D(esp+0x2c) = 0;
-	}
-
+	// you, by fewest races
+	D(esp+0x2c) = career_hall_of_fame();
 	if((int)D(esp+0x2c) >= 0){
 
-		if((int)D(esp+0x2c) < 9){
-
-			n = 9;
-			while(1){
-
-				memcpy(___1a0e28h+0x14*n, ___1a0e28h+0x14*(n-1), 0x14);
-
-				n--;
-				if(n <= (int)D(esp+0x2c)) break;
-			}
-		}
-
-		strcpy(___1a0e28h+0x14*D(esp+0x2c), s_6c[D(___1a1ef8h)].name);
-		strupr_watcom106(___1a0e28h+0x14*D(esp+0x2c));
-		D(___1a0e28h+0x14*D(esp+0x2c)+0xc) = s_6c[D(___1a1ef8h)].races;
-		D(___1a0e28h+0x14*D(esp+0x2c)+0x10) = ___196a94h_difficulty;
 		___27d24h_cdecl(0x11, 0x16*D(esp+0x2c)+0x8a, 0x25b, 0x18);
 		CONFIG_WRITE();
 	}

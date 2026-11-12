@@ -98,4 +98,8 @@ struct saved_game_s;
 void career_save(struct saved_game_s * sg, const char * name);
 void career_load(const struct saved_game_s * sg);
 
+// the lap records and hall of fame
+void career_records_default(void);
+int career_hall_of_fame(void);
+
 #endif // __DRALLY_CAREER_H
