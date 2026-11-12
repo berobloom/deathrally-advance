@@ -34,31 +34,6 @@ int rand_watcom106(void);
 // mask pixels read 4 at a time, which the GBA reads from ROM about as fast as one
 typedef __DWORD__ __attribute__((may_alias)) px4_t;
 
-static __DWORD__ helper00(int i){
-
-	__DWORD__	edx, rslt;
-
-	if(i < 0){
-
-		rslt = 0xf;
-	}
-	else {
-
-		edx = TRX_WIDTH*TRX_HEIGHT;
-
-		if(i >= (int)edx){
-
-			rslt = 0xf;
-		}
-		else {
-
-			rslt = B(TRX_MAS+i)&0xf;
-		}
-	}
-
-	return rslt;
-}
-
 // the first of the car's 40x40 pixels, row by row, that is solid in its
 // image (img) and a wall in the mask under it (mas, the pixel under the
 // image's first): the wall's mask value, with its column and row in
@@ -90,7 +65,11 @@ DR_HOT static __DWORD__ helper02(__BYTE__ * img, const __BYTE__ * rows, __BYTE__
 
 			for(; j < end; j++){
 
+#if defined(DR_MAS_BLOCKS)
+				const __BYTE__ * 	m = 0;
+#else
 				const __BYTE__ * 	m = mas+w*j;
+#endif
 				const px4_t * 		q;
 				unsigned long 		e;
 				__DWORD__ 		px;
@@ -101,6 +80,27 @@ DR_HOT static __DWORD__ helper02(__BYTE__ * img, const __BYTE__ * rows, __BYTE__
 				if(i0 < c0) i0 = c0;
 				if(i1 > c1) i1 = c1;
 				if(i0 >= i1) continue;
+
+#if defined(DR_MAS_BLOCKS)
+				// the row's pixels from the blocks, then one at a time
+				{
+					__BYTE__ 	buf[0x28];
+
+					(void)m; (void)q; (void)e; (void)px;
+					race_mas_row(x+i0, y+j, i1-i0, buf);
+					for(i = i0; i < i1; i++){
+
+						if((buf[i-i0] < 4)&&(full||((signed char)img[0x28*j+i] > 3))){
+
+							D(___243cb0h) = i;
+							D(___243cb4h) = j;
+
+							return buf[i-i0];
+						}
+					}
+					continue;
+				}
+#endif
 
 				// 4 pixels at a time where the words read are in the mask
 				if((w&3)||((unsigned long)TRX_MAS&3)||(m+i0 < TRX_MAS)||(m+i1 > TRX_MAS+w*TRX_HEIGHT)){
@@ -354,38 +354,42 @@ void race___4c434h(void){
 
 	edx = (int)(car->YLocation+car->__f8);
 	D(esp+0x5c) = (int)(car->XLocation+car->__f4);
-	D(esp+0x2c) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x2c) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__c8);
 	D(esp+0x5c) = (int)(car->XLocation+car->__c4);
-	D(esp+0x50) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x50) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__d0);
 	D(esp+0x5c) = (int)(car->XLocation+car->__cc);
-	D(esp+0x48) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x48) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__d8);
 	D(esp+0x5c) = (int)(car->XLocation+car->__d4);
-	D(esp+0x4c) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x4c) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__e0);
 	D(esp+0x5c) = (int)(car->XLocation+car->__dc);
-	D(esp+0x54) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x54) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__e8);
 	D(esp+0x5c) = (int)(car->XLocation+car->__e4);
-	D(esp+0x40) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x40) = race_mas(D(esp+0x5c), edx);
 
 	edx = (int)(car->YLocation+car->__f0);
 	D(esp+0x5c) = (int)(car->XLocation+car->__ec);
-	D(esp+0x44) = helper00(edx*TRX_WIDTH+D(esp+0x5c));
+	D(esp+0x44) = race_mas(D(esp+0x5c), edx);
 
 	// 96 images, 3.75 degrees each
 	car->ImgIndex = ((a_d&0xffffff)*96) >> 24;
 	car->ImgOffset = 0x25800*D(___243c60h)+0x640*car->ImgIndex;
 	ecx = (int)(car->__15e+car->YLocation-20.0f);
 	ebxp = race_car_img(car->ImgOffset);
+#if defined(DR_MAS_BLOCKS)
+	edip = 0;
+#else
 	edip = TRX_MAS+(int)car->XLocation-0x14+TRX_WIDTH*(int)ecx+(int)car->__15a;
+#endif
 	esi = helper02(ebxp, race_car_rows(car->ImgOffset), edip, (int)car->XLocation-0x14+(int)car->__15a, ecx);
 
 	car->__14 = esi;
@@ -445,7 +449,11 @@ void race___4c434h(void){
 				D(esp+0x5c) = (int)(car->YLocation+car->__15e-20.0f);
 				edi = TRX_WIDTH*D(esp+0x5c);
 				car->XLocation += car->__162;
+#if defined(DR_MAS_BLOCKS)
+				edip = 0;
+#else
 				edip = TRX_MAS+(int)car->XLocation+(int)edi-0x14+(int)car->__15a;
+#endif
 				ebxp = race_car_img(car->ImgOffset);
 				esi = helper02(ebxp, race_car_rows(car->ImgOffset), edip, (int)car->XLocation-0x14+(int)car->__15a, D(esp+0x5c));
 

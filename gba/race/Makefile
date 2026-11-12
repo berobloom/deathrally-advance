@@ -39,9 +39,11 @@ include ../game.mk
 
 # DR_IMA_TILES: the track image the race draws into is the track's tiles
 # in ROM, with the ones drawn into in EWRAM, see src/race/race_ima.c
+# DR_MAS_BLOCKS: the track's mask is gbabake's track.mbk, in 8x8 blocks of
+# 4 bits, forward and reversed, see src/race/race_mas.c
 # DR_CAREER_NODRAW: the career's menu functions without their drawing, see
 # drally_career.h; career_ui.c draws its own screens
-CFLAGS += -DDR_RACE_NODRAW -DDR_IMA_TILES -DDR_CAREER_NODRAW $(RACE_CFLAGS)
+CFLAGS += -DDR_RACE_NODRAW -DDR_IMA_TILES -DDR_MAS_BLOCKS -DDR_CAREER_NODRAW $(RACE_CFLAGS)
 ifdef TICKS
 CFLAGS += -DTICKS_PER_SEC=$(TICKS)
 endif

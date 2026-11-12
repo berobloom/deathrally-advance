@@ -98,7 +98,7 @@ DR_HOT static void helper01(int me, int ox, int oy, int dx, int dy, int * cx, in
 
 			if(((int)edx >= 0)&&((int)edx < TRX_WIDTH)){
 
-				if((B(TRX_MAS+edx+eax*TRX_WIDTH)&0xf) < 4){
+				if(race_mas(edx, eax) < 4){
 
 					D(___2432c0h) = D(___2432b0h)+sx;
 					D(___2432c4h) = D(___2432b4h)+sy;

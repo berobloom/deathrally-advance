@@ -87,6 +87,19 @@ int race_ima_dirty(void);
 void race_ima_stats(unsigned * used, unsigned * max, unsigned * dropped);
 #endif
 
+// the track's mask, TRX_MAS, as the race code reads it: the low 4 bits of
+// the byte under (x, y), below 4 a wall, 0xf nothing; one pixel, or n of a
+// row from x on. An x past a row's end runs on into the next or previous
+// row, and pixels off the track are 0xf. Built with DR_MAS_BLOCKS (the GBA)
+// it is gbabake's track.mbk, see race_mas.c
+int race_mas(int x, int y);
+void race_mas_row(int x, int y, int n, __BYTE__ * dst);
+#if defined(DR_MAS_BLOCKS)
+void race_mas_blocks(const __BYTE__ * mbk);
+void race_mas_reverse(void);
+int race_mas_wall_block(int bx, int by);
+#endif
+
 // car n's 96 rotation frames, 40x40 each, start at race_car_slot[n]. The
 // desktop has the 4 one after the other at ___243d74h; the GBA points
 // each into its ROM. A car's ImgOffset is 0x25800*n+0x640*frame

@@ -205,6 +205,60 @@ static int reversible;
 
 // a map turned round by 180 degrees: its bytes in the opposite order, or
 // nothing for a track that isn't reversed
+static void put32(FILE * fd, __DWORD__ v);
+
+// track.mbk: the mask as src/race/race_mas.c reads it with DR_MAS_BLOCKS,
+// its low 4 bits in 8x8 blocks, the same ones once, and where in them the
+// walls are; past the track's edges 0xf, nothing
+static void write_mbk(const char * dir, const __BYTE__ * mas, int w, int h){
+
+	int 		bw = (w+7) >> 3, bh = (h+7) >> 3, bx, by, x, y, n = 0, k;
+	__WORD__ * 	map = malloc(2*bw*bh);
+	__BYTE__ * 	blocks = malloc(32*bw*bh), b[32];
+	FILE * 		fd;
+
+	for(by = 0; by < bh; by++) for(bx = 0; bx < bw; bx++){
+
+		int 	first = -1, same = 1;
+
+		memset(b, 0, sizeof(b));
+		for(y = 0; y < 8; y++) for(x = 0; x < 8; x++){
+
+			int 	px = 0xf;
+
+			if((8*bx+x < w)&&(8*by+y < h)) px = mas[w*(8*by+y)+8*bx+x]&0xf;
+			if(first < 0) first = px;
+			if(px != first) same = 0;
+			b[4*y+x/2] |= px << (4*(x&1));
+		}
+		if(same){
+
+			map[bw*by+bx] = 0x8000|first;
+			continue;
+		}
+		for(k = 0; (k < n)&&memcmp(blocks+32*k, b, 32); k++);
+		if(k == n) memcpy(blocks+32*n++, b, 32);
+		if(k >= 0x8000){ fprintf(stderr, "track.mbk: too many blocks\n"); exit(1); }
+		map[bw*by+bx] = k;
+	}
+	fd = out(dir, "track.mbk");
+	put32(fd, bw); put32(fd, bh); put32(fd, n);
+	fwrite(map, 2, bw*bh, fd);
+	if((bw*bh)&1) fputc(0, fd), fputc(0, fd);
+	fwrite(blocks, 32, n, fd);
+	// then each one's walls, below 4: a byte a row, bit k pixel k
+	for(k = 0; k < n; k++) for(y = 0; y < 8; y++){
+
+		int 	bits = 0;
+
+		for(x = 0; x < 8; x++) if(((blocks[32*k+4*y+x/2] >> (4*(x&1)))&0xf) < 4) bits |= 1 << x;
+		fputc(bits, fd);
+	}
+	fclose(fd);
+	free(map);
+	free(blocks);
+}
+
 static void write_reversed(const char * dir, const char * name, const __BYTE__ * p, unsigned size){
 
 	__BYTE__ * 	r = malloc(size);
@@ -824,6 +878,7 @@ int main(int argc, char * argv[]){
 	fwrite(mas, 1, w*h, fd);
 	fclose(fd);
 	write_reversed(outdir, "rev.mas", mas, w*h);
+	write_mbk(outdir, mas, w, h);
 
 	fd = out(outdir, "track.inf");
 	put32(fd, tw); put32(fd, th); put32(fd, w); put32(fd, h);

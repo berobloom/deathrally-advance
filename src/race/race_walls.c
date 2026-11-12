@@ -61,6 +61,12 @@ void race_walls_build(void){
 	free(walls);
 	walls = calloc(walls_w*walls_h, 1);
 
+#if defined(DR_MAS_BLOCKS)
+	// from the mask's blocks, which are the same 8x8
+	(void)mas; (void)row;
+	for(y = 0; y < walls_h; y++) for(x = 0; x < walls_w; x++) walls[ww*y+x] = race_mas_wall_block(x, y);
+	return;
+#endif
 	mas = TRX_MAS;
 	for(y = 0; y < h; y++){
 

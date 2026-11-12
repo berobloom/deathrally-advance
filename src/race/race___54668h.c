@@ -44,7 +44,7 @@ static void helper11(float fval1, float fval2, __BYTE__ * bp){
 	i = helper00(fval1);
 	j = helper00(fval2);
 
-	if((B(TRX_MAS+TRX_WIDTH*j+i)&0xf) == 0xf) race_ima_lookup(i, j, 2, 2, bp);
+	if(race_mas(i, j) == 0xf) race_ima_lookup(i, j, 2, 2, bp);
 }
 
 // a mark of len points from (x, y) in steps of (dx, dy). The marks of a

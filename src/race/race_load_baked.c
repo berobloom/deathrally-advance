@@ -74,6 +74,9 @@ static void baked_alloc(void){
 	TRX_IMA = race_baked->ima;
 #endif
 	TRX_MAS = (__POINTER__)race_baked->mas;
+#if defined(DR_MAS_BLOCKS)
+	race_mas_blocks(race_baked->mas);
+#endif
 	TRX_VAI = (__POINTER__)race_baked->vai;
 	TRX_LR1 = (__POINTER__)race_baked->lr1;
 	RACE_OBSTACLE_BPK = race_baked->obstacles;
@@ -147,7 +150,11 @@ static void baked_scene(void){
 	int 	n;
 
 	if((D(___196dach) == 0)||!race_baked->rev_mas) return;
+#if defined(DR_MAS_BLOCKS)
+	race_mas_reverse();
+#else
 	TRX_MAS = (__POINTER__)race_baked->rev_mas;
+#endif
 	TRX_VAI = (__POINTER__)race_baked->rev_vai;
 	TRX_LR1 = (__POINTER__)race_baked->rev_lr1;
 	race_ima_reverse();

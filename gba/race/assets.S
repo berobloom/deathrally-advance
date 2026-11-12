@@ -54,7 +54,7 @@
 	asset	tr\n\()_pal, bake-tr\n/track.pal
 	asset	tr\n\()_inf, bake-tr\n/track.inf
 	asset	tr\n\()_tiles, bake-tr\n/track.tiles
-	asset	tr\n\()_mas, bake-tr\n/track.mas
+	asset	tr\n\()_mas, bake-tr\n/track.mbk	@ DR_MAS_BLOCKS, forward and reversed
 	asset	tr\n\()_setup_inf, bake-tr\n/inf.bin
 	asset	tr\n\()_vai, bake-tr\n/vai.bin
 	asset	tr\n\()_lr1, bake-tr\n/lr1.bin
@@ -67,7 +67,6 @@
 	@ reversed, or empty if the game doesn't reverse it
 	asset	tr\n\()_rev_pal, bake-tr\n/track-rev.pal
 tr\n\()_rev_pal_end:
-	asset	tr\n\()_rev_mas, bake-tr\n/rev.mas
 	asset	tr\n\()_rev_vai, bake-tr\n/rev.vai
 	asset	tr\n\()_rev_lr1, bake-tr\n/rev.lr1
 	.endr
@@ -79,7 +78,7 @@ race_tracks:
 	.irp	n, TRACKS
 	.word	\n, tr\n\()_pal, tr\n\()_inf, tr\n\()_tiles, tr\n\()_mas, tr\n\()_setup_inf, tr\n\()_vai, tr\n\()_lr1
 	.word	tr\n\()_ski, tr\n\()_blo, tr\n\()_lit, tr\n\()_varjo, tr\n\()_drv, tr\n\()_ohi
-	.word	tr\n\()_rev_pal_end-tr\n\()_rev_pal, tr\n\()_rev_pal, tr\n\()_rev_mas, tr\n\()_rev_vai, tr\n\()_rev_lr1
+	.word	tr\n\()_rev_pal_end-tr\n\()_rev_pal, tr\n\()_rev_pal, tr\n\()_mas, tr\n\()_rev_vai, tr\n\()_rev_lr1
 	.endr
 	.global	race_tracks_n
 race_tracks_n:
