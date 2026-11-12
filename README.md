@@ -104,10 +104,11 @@ The game keeps a career's state between races in its menus' functions, mixed in 
 * `career_race_track()`, `_fill()` and `_after()`: the race's track, laps and grid, the racers into the race's inputs (`___1de7d0h`), and after the race the prize money, the kill bonuses, the damage and the wins.
 * `career_results()`: the round's points, the racers sorted and ranked on them, and your lap record.
 * `career_leader_round()` and `career_adversary_*()`: once you lead, the race against the Adversary, or chickening out.
+* `career_shop_*()`: the shop's prices, what your car and upgrades fetch towards a new one, buying a car, an engine, tires, armor or a repair, and the end of the road when your car is a wreck you can't pay to fix. The desktop's shop (`shop___28e40h()`) calls them too.
 
 The results screens' functions also hand out the points. Built with `DR_CAREER_NODRAW` they leave their drawing out and keep the rest, and `career_results()` calls them.
 
-On the GBA, `gba/race/career_ui.c` draws its own text screens around them: a new game, the hub with your rank, points, money, car and damage, the sign-up with the three races filling up, PREPARE TO RACE, the race, its results, and the standings with what each driver scored in the round. The racers' car colors come from MENU.BPA's `CARCOL.PAL` and `COPPER.PAL`, which `tools/gbabake` bakes. A career's races follow one another without resetting the race's globals, as on the desktop.
+On the GBA, `gba/race/career_ui.c` draws its own text screens around them: a new game, the hub with your rank, points, money, car and damage, the shop, the sign-up with the three races filling up, PREPARE TO RACE, the race, its results, and the standings with what each driver scored in the round. The shop shows the car on sale, or yours, turning in the corner, from the race's car frames, with the game's own words for each car, upgrade and repair (`src/shop/shop_texts.c` and `car_data.c`). The racers' car colors come from MENU.BPA's `CARCOL.PAL` and `COPPER.PAL`, which `tools/gbabake` bakes. A career's races follow one another without resetting the race's globals, as on the desktop.
 
 `tools/replay --career BAKES SEED ROUNDS` plays a career on the desktop as `gba/race`'s career benchmark does (`RACE_CFLAGS="-DRACE_BENCH -DCAREER_BENCH=n -DRACE_SEED=s"`): always the easy race, with the AI driving your car. It prints a hash of the race's globals after each race and of the 20 racers after each round. Four rounds match the GBA's, and so do three races against the Adversary (`CAREER_LEAD=1`, and `-DCAREER_LEAD` on the GBA, give you the lead from the start). In one of those, the engine sound's pitch at the end differs, which nothing else reads.
 
@@ -169,7 +170,7 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 
 Not done yet:
 
-* In the career: the shop (cars, upgrades and repairs), the underground market, the loan shark, sabotage and the random events, the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
+* In the career: choosing a new car's color, the shop's sounds (the menus' effects aren't in the soundbank), the underground market, the loan shark, sabotage and the random events, the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.

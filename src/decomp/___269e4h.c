@@ -1,8 +1,8 @@
 #include "drally.h"
 #include "drally_fonts.h"
 #include "drally_structs_fixed.h"
+#include "drally_shop.h"
 
-typedef char char40[40];
 
 	extern __POINTER__ ___1a112ch__VESA101_ACTIVESCREEN_PTR;
 	extern __POINTER__ ___1a1e98h;
@@ -25,104 +25,6 @@ int ___25180h_cdecl(const char * A1);
 void ___12f60h_cdecl(const char * A1, __DWORD__ A2);
 void ___13248h_cdecl(__DWORD__, __DWORD__ ,__DWORD__, __DWORD__, __DWORD__);
 
-static const char40 ___194170h[12][6] = {
-	[0] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "This used to be a car, huh? Carry",
-		[3] = "the rest of it in here & we'll see",
-		[4] = "what can be done.",
-		[5] = ""
-	},
-	[1] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Sorry, this vehicle is gone for",
-		[3] = "good... Just kidding. Medic, fast!",
-		[4] = "We've got a driver in shock.",
-		[5] = ""
-	},
-	[2] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Don't tell me. You parked your car",
-		[3] = "in a nuclear test zone? These",
-		[4] = "holes need some gum, start chewing.",
-		[5] = ""
-	},
-	[3] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Who helped you tow this piece of",
-		[3] = "junk over the finish line? No",
-		[4] = "sweat, this can be fixed.",
-		[5] = ""
-	},
-	[4] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "So. Your car's sorry ass got blown",
-		[3] = "clean off. Acme glue will fix your",
-		[4] = "mishap-ridden day at the races.",
-		[5] = ""
-	},
-	[5] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "As Mr. Nukem sometimes puts it:",
-		[3] = "'Uh-oh, that's gotta hurt.' This",
-		[4] = "calls for a screwdriver & aspirin.",
-		[5] = ""
-	},
-	[6] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Your conveyance's methylated",
-		[3] = "spirit receptacle has developed a",
-		[4] = "chronic hernia, or something...",
-		[5] = ""
-	},
-	[7] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "This is no time to rest in pieces.",
-		[3] = "The race awaits! She'll be back on",
-		[4] = "her wheels in no time.",
-		[5] = ""
-	},
-	[8] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Take five, driver. A straight &",
-		[3] = "simple sledgehammer job here.",
-		[4] = "These percussions, gotta love 'em.",
-		[5] = ""
-	},
-	[9] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Nothing a fresh paint-job can't",
-		[3] = "fix. You'll be back on the track",
-		[4] = "in a pit-stop minute.",
-		[5] = ""
-	},
-	[10] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Got your wax coat scratched? Want",
-		[3] = "to be your shining best? Hey, what-",
-		[4] = "ever lights up your dashboard.",
-		[5] = ""
-	},
-	[11] = {
-		[0] = "[Repair",
-		[1] = "",
-		[2] = "Perfect is perfect. What ain't",
-		[3] = "broken, can't be fixed. Come back",
-		[4] = "after you've taken in some.",
-		[5] = ""
-	}
-};
 
 // SHOP REPAIR
 void ___269e4h(void){

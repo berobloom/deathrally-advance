@@ -36,4 +36,20 @@ void career_adversary_decline(void);
 void career_adversary_declined(void);
 void career_adversary_accept(void);
 
+// the shop's items, as shop_main() numbers them in D(___1a1ec4h)
+#define CAREER_SHOP_CAR 	0	// the one on show, D(___1a1ee4h)
+#define CAREER_SHOP_ENGINE 	1
+#define CAREER_SHOP_TIRES 	2
+#define CAREER_SHOP_ARMOR 	3
+#define CAREER_SHOP_REPAIR 	4
+#define CAREER_SHOP_NONE 	(-0x7fffffff)	// career_shop_price(): none to buy
+
+int career_shop_trade_in(void);
+int career_shop_level(int item);
+int career_shop_most(int item);
+int career_shop_price(int item);
+void career_shop_buy(int item);
+int career_shop_can_race(void);
+int career_shop_broke(void);
+
 #endif // __DRALLY_CAREER_H

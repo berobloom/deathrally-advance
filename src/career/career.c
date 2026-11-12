@@ -10,6 +10,7 @@
 
 #include "drally.h"
 #include "drally_structs_fixed.h"
+#include "drally_structs_free.h"
 #include "drally_career.h"
 #if defined(DR_MULTIPLAYER)
 #include "drally_net.h"
@@ -58,6 +59,8 @@
 	extern __DWORD__ ___243d44h;
 	extern __BYTE__ ___196af0h[];
 	extern __BYTE__ ___196aech[];
+	extern __BYTE__ ___1a1ee4h[];
+	extern const cardata_t ___18e298h[6];
 #if defined(DR_MULTIPLAYER)
 	extern __DWORD__ ___19bd60h;
 	extern __DWORD__ MP_MONEY;
@@ -1009,4 +1012,136 @@ void career_adversary_accept(void){
 	D(___1a103ch) = 1;
 	D(___196af0h) = 0;
 	D(___196aech) = 0;
+}
+
+// --- the shop: what shop___28e40h() (SHOP ENTER) changes, and what it
+// and shop_main() check before. D(___1a1ee4h) is the car on show
+
+
+static racer_t * career_me(void){ return (racer_t *)___1a01e0h+D(___1a1ef8h); }
+
+// a quarter of what you paid for the car and its upgrades, less the
+// damage, which with weapons counts for 1/div of its repair price
+static int trade_in(int div){
+
+	racer_t * 	me = career_me();
+	int 		v, damage;
+
+	v = (me->refund+3)/4;
+	damage = me->damage*(___18e298h[me->car].price_repair/10);
+	if(D(___185a14h_UseWeapons) != 0) damage /= div;
+	v -= damage;
+
+	return (v < 0) ? 0 : v;
+}
+
+// what your car and its upgrades fetch towards a new one, as
+// shop___28e40h() reckons it: rounded down to tens
+int career_shop_trade_in(void){
+
+	int 	v = trade_in(4);
+
+	return v-v%10;
+}
+
+// how many of the item you have, and the most the car takes
+int career_shop_level(int item){
+
+	racer_t * 	me = career_me();
+
+	switch(item){
+	case CAREER_SHOP_ENGINE: return me->engine;
+	case CAREER_SHOP_TIRES: return me->tires;
+	case CAREER_SHOP_ARMOR: return me->armor;
+	default: return 0;
+	}
+}
+
+int career_shop_most(int item){
+
+	const cardata_t * 	c = &___18e298h[career_me()->car];
+
+	switch(item){
+	case CAREER_SHOP_ENGINE: return c->n_engine_upgrades;
+	case CAREER_SHOP_TIRES: return c->n_tire_upgrades;
+	case CAREER_SHOP_ARMOR: return c->n_armor_upgrades;
+	default: return 0;
+	}
+}
+
+// what the item costs you, the car on show less the trade-in, which can
+// be less than nothing; CAREER_SHOP_NONE if there's none to buy
+int career_shop_price(int item){
+
+	racer_t * 		me = career_me();
+	const cardata_t * 	c = &___18e298h[me->car];
+	int 			n = career_shop_level(item), price;
+
+	switch(item){
+	case CAREER_SHOP_CAR:
+		return ___18e298h[D(___1a1ee4h)].price-career_shop_trade_in();
+	case CAREER_SHOP_ENGINE:
+	case CAREER_SHOP_TIRES:
+	case CAREER_SHOP_ARMOR:
+		if(n >= career_shop_most(item)) return CAREER_SHOP_NONE;
+		if(item == CAREER_SHOP_ENGINE) return c->price_engine_upgrades[n];
+		if(item == CAREER_SHOP_TIRES) return c->price_tire_upgrades[n];
+		return c->price_armor_upgrades[n];
+	case CAREER_SHOP_REPAIR:
+		// 10% of the damage at a time
+		if((int)me->damage <= 0) return CAREER_SHOP_NONE;
+		price = c->price_repair;
+		if((int)me->damage < 10) price = me->damage*price/10;
+		if(D(___185a14h_UseWeapons) != 0) price /= 2;
+		return price;
+	default:
+		return CAREER_SHOP_NONE;
+	}
+}
+
+// buy it, whether you have the money or not: check career_shop_price()
+// against your money first, as ___28ab4h_cdecl() does
+void career_shop_buy(int item){
+
+	racer_t * 	me = career_me();
+	int 		price = career_shop_price(item);
+
+	if(price == CAREER_SHOP_NONE) return;
+	switch(item){
+	case CAREER_SHOP_CAR:
+		me->money -= price;
+		me->car = D(___1a1ee4h);
+		me->damage = 0;
+		me->engine = 0;
+		me->tires = 0;
+		me->armor = 0;
+		me->refund = ___18e298h[me->car].price;
+		// the next car on show
+		D(___1a1ee4h) = ((int)me->car >= 5) ? 5 : me->car+1;
+		return;
+	case CAREER_SHOP_ENGINE: me->engine++; break;
+	case CAREER_SHOP_TIRES: me->tires++; break;
+	case CAREER_SHOP_ARMOR: me->armor++; break;
+	case CAREER_SHOP_REPAIR:
+		me->damage = ((int)me->damage < 10) ? 0 : me->damage-10;
+		break;
+	}
+	me->money -= price;
+	me->refund += price;
+}
+
+// CONTINUE's check: a wreck can't race without weapons
+int career_shop_can_race(void){
+
+	return (career_me()->damage != 100)||(D(___185a14h_UseWeapons) != 0);
+}
+
+// shop_main()'s end of the road: a wreck, no money to repair it, and
+// not $1,000 with what the car would fetch
+int career_shop_broke(void){
+
+	racer_t * 	me = career_me();
+	int 		repair = ___18e298h[me->car].price_repair/(1+!!D(___185a14h_UseWeapons));
+
+	return ((int)(me->money+trade_in(2)) < 1000)&&(repair > me->money)&&((int)me->damage > 95);
 }

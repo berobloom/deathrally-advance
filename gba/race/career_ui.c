@@ -18,6 +18,7 @@
 #include "drally.h"
 #include "drally_structs_fixed.h"
 #include "drally_career.h"
+#include "drally_shop.h"
 #include "gba.h"
 
 	extern __BYTE__ ___1a01e0h[];
@@ -36,6 +37,9 @@
 	extern __POINTER__ ___1a0fb8h;
 	extern const char name_list[0x14][0xb];
 	extern const char ___106cbh[19][4];
+	extern const cardata_t ___18e298h[6];
+	extern __BYTE__ ___1a1ee4h[];
+	extern __BYTE__ ___185a14h_UseWeapons[];
 
 extern const u8 carcol_pal[], copper_pal[];	// baked from MENU.BPA, see assets.S
 void srand_watcom106(__DWORD__ seed);
@@ -432,6 +436,227 @@ static int adversary(void){
 	return race(2);
 }
 
+// --- the shop ------------------------------------------------------------------------
+
+// the shop as shop_main() has it, in rows: the car on show, the engine,
+// tires and armor, the repairs, and out. career.c does the sums
+#define SHOP_ROW0		5	// the items' first row
+#define SHOP_TEXT		12	// the game's words about the item, rows 12-17
+#define SHOP_TEXT_ROWS		6
+#define SHOP_BACK		5
+#define SHOP_CAR_X		184	// the car on show, turning top right
+#define SHOP_CAR_Y		0
+
+static const char * const shop_items[6] = { "CAR", "ENGINE", "TIRES", "ARMOR", "REPAIR", "DONE" };
+
+// the game's 6 lines of 40 in rows SHOP_TEXT on, without its colour
+// marks ([ and {): the first line by itself, the rest run on, word-wrapped
+static void shop_text(const char40 * t){
+
+	char 	para[6*40+8], * w;
+	int 	row = SHOP_TEXT, n, len, i;
+
+	for(n = 0; n < SHOP_TEXT_ROWS; n++) gba_print(1, SHOP_TEXT+n, "                            ");
+	para[0] = 0;
+	for(n = 0; n < 6; n++){
+
+		len = strlen(para);
+		for(i = 0; (i < 40)&&t[n][i]&&(len < (int)sizeof(para)-2); i++){
+
+			if((t[n][i] != '[')&&(t[n][i] != '{')) para[len++] = t[n][i];
+		}
+		// a line by itself after the first, the rest run together, a
+		// word broken with a hyphen joined up again
+		if(n == 0) para[len++] = '\n';
+		else if((len > 0)&&(para[len-1] != '-')&&(para[len-1] != ' ')) para[len++] = ' ';
+		para[len] = 0;
+	}
+	for(w = para; *w&&(row < SHOP_TEXT+SHOP_TEXT_ROWS); row++){
+
+		char 	line[29];
+
+		while(*w == ' ') w++;
+		// as much as fits, broken at a space or a line's end
+		for(len = 0; w[len]&&(w[len] != '\n')&&(len < 28); len++);
+		if(w[len]&&(w[len] != '\n')&&(w[len] != ' ')){
+
+			for(i = len; (i > 0)&&(w[i] != ' '); i--);
+			if(i > 0) len = i;
+		}
+		memcpy(line, w, len);
+		line[len] = 0;
+		gba_print(1, row, line);
+		w += len;
+		if(*w == '\n') w++;
+	}
+}
+
+// what to say of the item when it's chosen, as the shop's own panels do
+static void shop_about(int item){
+
+	racer_t * 		me = racer(ME);
+	const cardata_t * 	c = &___18e298h[me->car];
+	int 			n = career_shop_level(item), most = career_shop_most(item);
+	static const char40 	done[6] = { "[DONE", "", "Out of the shop, back to the", "garage.", "", "" };
+	int 			d = me->damage, k;
+
+	switch(item){
+	case CAREER_SHOP_CAR:
+		shop_text(D(___185a14h_UseWeapons) ? ___18e298h[D(___1a1ee4h)].txt_winfo : ___18e298h[D(___1a1ee4h)].txt_info);
+		break;
+	case CAREER_SHOP_ENGINE: shop_text((n < most) ? c->txt_engine_upgrades[n] : MaxUpgrades[0]); break;
+	case CAREER_SHOP_TIRES: shop_text((n < most) ? ___1914c0h[n] : MaxUpgrades[1]); break;
+	case CAREER_SHOP_ARMOR: shop_text((n < most) ? ___191c40h[n] : MaxUpgrades[2]); break;
+	case CAREER_SHOP_REPAIR:
+		// ___269e4h()'s: 0 for a wreck, up to 11 for none
+		k = (d == 0) ? 11 : (d >= 100) ? 0 : 10-d/10;
+		shop_text(___194170h[k]);
+		break;
+	default: shop_text(done); break;
+	}
+}
+
+// ___28ab4h_cdecl()'s words when you're short: 0 if you aren't
+static int shop_short(int price){
+
+	char40 		t[6] = { "", "", "", "", "", "" };
+	racer_t * 	me = racer(ME);
+
+	if(price <= me->money) return 0;
+	snprintf(t[2], 40, "No dough, no go, bro. No money,");
+	snprintf(t[3], 40, "honey. You are $%d short.", price-me->money);
+	snprintf(t[4], 40, "Gotta earn it. Go do it already.");
+	shop_text(t);
+
+	return 1;
+}
+
+static void shop_draw(int row){
+
+	racer_t * 	me = racer(ME);
+	char 		detail[16], price[12];
+	int 		item, p, n;
+
+	print(1, 1, "MONEY   $%-8d", me->money);
+	print(1, 2, "DAMAGE  %d%%  ", me->damage);
+	print(1, 3, "TRADE-IN $%-7d", career_shop_trade_in());
+	for(item = 0; item < 6; item++){
+
+		p = (item < SHOP_BACK) ? career_shop_price(item) : CAREER_SHOP_NONE;
+		n = career_shop_level(item);
+		detail[0] = price[0] = 0;
+		if(item == CAREER_SHOP_CAR) snprintf(detail, sizeof(detail), "<%s>", car_names[D(___1a1ee4h)]);
+		else if(item == CAREER_SHOP_REPAIR) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "NONE" : "10%% OFF");
+		else if(item < SHOP_BACK) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "ALL %d" : "%d OF %d", n, career_shop_most(item));
+		if(p != CAREER_SHOP_NONE) snprintf(price, sizeof(price), (p < 0) ? "+$%d" : "$%d", (p < 0) ? -p : p);
+		print(0, SHOP_ROW0+item, "%c %-6s %-13s%8s", (item == row) ? '>' : ' ', shop_items[item], detail, price);
+	}
+	gba_print(1, 19, (row == CAREER_SHOP_CAR) ? "LEFT/RIGHT CAR  A BUY  B OUT" : "A BUY  B OUT                ");
+}
+
+// the car on show turning: the one you'd buy on its row, else yours
+static void shop_car(int row){
+
+	gba_show_car((row == CAREER_SHOP_CAR) ? (int)D(___1a1ee4h) : (int)racer(ME)->car, SHOP_CAR_X, SHOP_CAR_Y);
+}
+
+// shop___28e40h()'s yes or no for a new car: 1 for yes
+static int shop_confirm_car(void){
+
+	char40 		t[6] = { "", "", "", "", "", "" };
+	const cardata_t * 	c = &___18e298h[D(___1a1ee4h)];
+	int 		refund = career_shop_trade_in(), cost = career_shop_price(CAREER_SHOP_CAR);
+
+	snprintf(t[0], 40, "You would get a $%d refund", refund);
+	snprintf(t[2], 40, "from your old car and upgrades.");
+	if(cost >= 0) snprintf(t[3], 40, "%s would cost $%d.", c->name, cost);
+	else snprintf(t[3], 40, "Money returned: $%d.", -cost);
+	snprintf(t[4], 40, (cost >= 0) ? "Purchase it?" : "Buy a %s?", c->name);
+	shop_text(t);
+	gba_print(1, 19, "A YES  B NO                 ");
+	for(;;){
+
+		u16 	k = gba_frame();
+
+		gba_turn_car();
+		if(k&(KEY_A|KEY_START)) return 1;
+		if(k&KEY_B) return 0;
+	}
+}
+
+// the shop (shop_main()), until DONE or B. Buying shows what was bought
+// until another row is chosen
+static void shop(void){
+
+	racer_t * 	me = racer(ME);
+	int 		row = CAREER_SHOP_CAR, n, p;
+
+	// the car after yours on show, as ___24548h() starts it
+	D(___1a1ee4h) = ((int)me->car >= 5) ? 5 : me->car+1;
+	gba_text_screen();
+	center(0, "THE SHOP");
+	shop_car(row);
+	shop_about(row);
+	for(;;){
+
+		u16 	k;
+
+		shop_draw(row);
+		k = gba_frame();
+		gba_turn_car();
+		if(k&KEY_B) break;
+		if(k&(KEY_UP|KEY_DOWN)){
+
+			row = (row+((k&KEY_UP) ? 5 : 1))%6;
+			shop_car(row);
+			shop_about(row);
+			continue;
+		}
+		if((row == CAREER_SHOP_CAR)&&(k&(KEY_LEFT|KEY_RIGHT))){
+
+			D(___1a1ee4h) = (D(___1a1ee4h)+((k&KEY_LEFT) ? 5 : 1))%6;
+			shop_car(row);
+			shop_about(row);
+			continue;
+		}
+		if(!(k&(KEY_A|KEY_START))) continue;
+		if(row == SHOP_BACK) break;
+
+		p = career_shop_price(row);
+		if(p == CAREER_SHOP_NONE){
+
+			shop_about(row);
+			continue;
+		}
+		if(shop_short(p)) continue;
+		switch(row){
+		case CAREER_SHOP_CAR:
+			if(!shop_confirm_car()){
+
+				shop_about(row);
+				break;
+			}
+			career_shop_buy(row);
+			// shown as ___27078h() does it, the new car's own words,
+			// and turning until another row or car is chosen
+			shop_text(___18e298h[me->car].txt_bought);
+			gba_show_car(me->car, SHOP_CAR_X, SHOP_CAR_Y);
+			break;
+		case CAREER_SHOP_REPAIR:
+			career_shop_buy(row);
+			shop_about(row);
+			break;
+		default:
+			// the installed words go by the level it was
+			n = career_shop_level(row);
+			career_shop_buy(row);
+			shop_text((row == CAREER_SHOP_ENGINE) ? ___191100h[n] : (row == CAREER_SHOP_TIRES) ? ___191880h[n] : ___192000h[n]);
+			break;
+		}
+	}
+	gba_show_car(-1, 0, 0);
+}
+
 // --- the hub ---------------------------------------------------------------------------
 
 void career_play(void){
@@ -475,22 +700,32 @@ void career_play(void){
 		print(1, 5, "MONEY   $%d", me->money);
 		print(1, 6, "CAR     %s", car_names[me->car]);
 		print(1, 7, "DAMAGE  %d%%", me->damage);
+		// shop_main()'s end of the road: a wreck you can't pay to repair
+		if(career_shop_broke()){
+
+			message("END OF THE ROAD, DRIVER", "A WRECK AND NO MONEY TO FIX IT");
+			return;
+		}
 		for(;;){
 
 			item(11, 11+2*row, career_leading() ? "FACE THE ADVERSARY" : "RACE");
-			item(13, 11+2*row, "STANDINGS");
-			item(15, 11+2*row, "QUIT");
-			for(n = 0; n < 3; n++) gba_print(2, 11+2*n, (n == row) ? ">" : " ");
+			item(13, 11+2*row, "SHOP");
+			item(15, 11+2*row, "STANDINGS");
+			item(17, 11+2*row, "QUIT");
+			for(n = 0; n < 4; n++) gba_print(2, 11+2*n, (n == row) ? ">" : " ");
 			k = gba_frame();
-			if(k&KEY_UP) row = (row+2)%3;
-			if(k&KEY_DOWN) row = (row+1)%3;
+			if(k&KEY_UP) row = (row+3)%4;
+			if(k&KEY_DOWN) row = (row+1)%4;
 			if(k&(KEY_A|KEY_START)) break;
 		}
 		if(row == 0){
 
-			if(career_leading() ? adversary() : signup()) return;
+			// CONTINUE's check
+			if(!career_shop_can_race()) message("REPAIR YOUR CAR FIRST", "R-E-P-A-I-R");
+			else if(career_leading() ? adversary() : signup()) return;
 		}
-		else if(row == 1) standings(0);
+		else if(row == 1) shop();
+		else if(row == 2) standings(0);
 		else return;
 	}
 }

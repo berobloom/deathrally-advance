@@ -291,7 +291,7 @@ static void update_track(int cam_x, int cam_y){
 // --- HUD -------------------------------------------------------------------
 
 // 5x7 glyphs, one byte per row, bit 4 is the leftmost pixel
-static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMBWJQYZ.$:-+!?',( ";
+static const char hud_chars[] = "0123456789FPSCU%GXLAREOV/TKNID<>HMBWJQYZ.$:-+!?',(&; ";
 static const u8 hud_font[][7] = {
 	{14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31}, {31,2,4,2,1,17,14},
 	{2,6,10,18,31,2,2}, {31,16,30,1,1,17,14}, {6,8,16,30,17,17,14}, {31,1,2,4,8,8,8},
@@ -305,7 +305,7 @@ static const u8 hud_font[][7] = {
 	{7,2,2,2,2,18,12}, {14,17,17,17,21,18,13}, {17,17,10,4,4,4,4}, {31,1,2,4,8,16,31},
 	{0,0,0,0,0,12,12}, {4,15,20,14,5,30,4}, {0,12,12,0,12,12,0}, {0,0,0,31,0,0,0},
 	{0,4,4,31,4,4,0}, {4,4,4,4,4,0,4}, {14,17,1,2,4,0,4}, {4,4,8,0,0,0,0},
-	{0,0,0,0,12,4,8}, {2,4,8,8,8,4,2},
+	{0,0,0,0,12,4,8}, {2,4,8,8,8,4,2}, {12,18,20,8,21,18,13}, {0,12,12,0,12,4,8},
 	{0,0,0,0,0,0,0}
 };
 
@@ -1029,6 +1029,8 @@ static void draw_view(void){
 
 u32 gba_cycles(void){ return cycles(); }
 
+static int shown_model = -1;	// gba_show_car()'s
+
 // the HUD's glyphs on black, and nothing else
 void gba_text_screen(void){
 
@@ -1040,8 +1042,37 @@ void gba_text_screen(void){
 	REG_BG1HOFS = 0;
 	REG_BG1VOFS = 0;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	shown_model = -1;
 	for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
 	BG_PALETTE[0] = 0;
+}
+
+// a car turning on the text screen, its top left at x, y; model -1 hides
+// it. gba_turn_car() shows its next frame, once a frame
+
+void gba_show_car(int model, int x, int y){
+
+	shown_model = model;
+	if(model < 0){
+
+		OAM[0].attr0 = OBJ_DISABLE;
+		return;
+	}
+	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	OAM[0].attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_SQUARE;
+	OAM[0].attr1 = OBJ_X(x) | OBJ_SIZE(3);
+	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
+	gba_turn_car();
+}
+
+void gba_turn_car(void){
+
+	const u8 * 	frames;
+	int 		n;
+
+	if(shown_model < 0) return;
+	frames = cars_obj+shown_model*NUM_CARS*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+	for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
 }
 
 void gba_print(int col, int row, const char * s){

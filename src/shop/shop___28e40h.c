@@ -5,6 +5,7 @@
 #include "drally_structs_free.h"
 #include "sfx.h"
 #include "drally_display.h"
+#include "drally_career.h"
 
 	extern __BYTE__ ___1a1ef8h[];
 	extern __BYTE__ ___1a01e0h[];
@@ -76,23 +77,12 @@ void shop___28e40h(void){
 	cdp = (cardata_t *)___18e298h;
 
 
-	D(esp+0x50) = (s_6c[D(___1a1ef8h)].refund+3)/4;
-	eax = (int)cdp[s_6c[D(___1a1ef8h)].car].price_repair/10;
-	esi = s_6c[D(___1a1ef8h)].damage*eax;
-
-	if(D(___185a14h_UseWeapons) != 0) esi = (int)esi/4;
-
-	D(esp+0x50) -= esi;
-	if((int)D(esp+0x50) < 0) D(esp+0x50) = 0;
-
-	itoa_watcom106(D(esp+0x50), esp+0x3c, 10);
-	B(esp+strlen(esp+0x3c)+0x3b) = 0x30;
-	ebp = atoi(esp+0x3c);
-	D(esp+0x50) = ebp;
+	// the trade-in, see career.c
+	ebp = career_shop_trade_in();
 
 	switch(D(___1a1ec4h)){
 	case 0:	// BUY NEW CAR
-		if(___28ab4h_cdecl(cdp[D(___1a1ee4h)].price-ebp) == 0){
+		if(___28ab4h_cdecl(career_shop_price(CAREER_SHOP_CAR)) == 0){
 
 			dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
 			___13248h_cdecl(0x90, 0x72, 0x180, 0x77, 1);
@@ -200,13 +190,10 @@ void shop___28e40h(void){
 			else {
 
 				dRally_Sound_pushEffect(5, SFX_NEW_CAR_BOUGHT, 0, ___24cc54h_sfx_volume, 0x24000, 0x8000);
-				s_6c[D(___1a1ef8h)].car = D(___1a1ee4h);
-				s_6c[D(___1a1ef8h)].damage = 0;
-				s_6c[D(___1a1ef8h)].engine = 0;
-				s_6c[D(___1a1ef8h)].tires = 0;
-				s_6c[D(___1a1ef8h)].armor = 0;
-				s_6c[D(___1a1ef8h)].money -= cdp[D(___1a1ee4h)].price-D(esp+0x50);
-				s_6c[D(___1a1ef8h)].refund = cdp[D(___1a1ee4h)].price;
+				// it sets the next car on show, which the menu sets again below
+				eax = D(___1a1ee4h);
+				career_shop_buy(CAREER_SHOP_CAR);
+				D(___1a1ee4h) = eax;
 				___25330h();
 				___25e40h();
 				___26650h();
@@ -315,92 +302,72 @@ void shop___28e40h(void){
 		}
 		break;
 	case 1:	// BUY ENGINE
-		if((int)s_6c[D(___1a1ef8h)].engine >= (int)cdp[s_6c[D(___1a1ef8h)].car].n_engine_upgrades){
+		if((int)career_shop_price(CAREER_SHOP_ENGINE) == CAREER_SHOP_NONE){
 
 			___25e40h();
 			___12cb8h__VESA101_PRESENTSCREEN();
 		}
 		else {
 
-			if(___28ab4h_cdecl(cdp[s_6c[D(___1a1ef8h)].car].price_engine_upgrades[s_6c[D(___1a1ef8h)].engine]) == 0){
+			if(___28ab4h_cdecl(career_shop_price(CAREER_SHOP_ENGINE)) == 0){
 				
 				dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-				s_6c[D(___1a1ef8h)].money -= cdp[s_6c[D(___1a1ef8h)].car].price_engine_upgrades[s_6c[D(___1a1ef8h)].engine];
-				s_6c[D(___1a1ef8h)].refund += cdp[s_6c[D(___1a1ef8h)].car].price_engine_upgrades[s_6c[D(___1a1ef8h)].engine];
+				// the installed text goes by the level before
 				___273d8h();
 				D(___185a38h_delay) = 0x136;
-				s_6c[D(___1a1ef8h)].engine++;
+				career_shop_buy(CAREER_SHOP_ENGINE);
 				___25330h();
 				___12cb8h__VESA101_PRESENTSCREEN();
 			}
 		}
 		break;
 	case 2:	// BUY TIRES
-		if((int)s_6c[D(___1a1ef8h)].tires >= (int)cdp[s_6c[D(___1a1ef8h)].car].n_tire_upgrades){
+		if((int)career_shop_price(CAREER_SHOP_TIRES) == CAREER_SHOP_NONE){
 
 			___262b4h();
 			___12cb8h__VESA101_PRESENTSCREEN();
 		}
 		else {
 
-			if(___28ab4h_cdecl(cdp[s_6c[D(___1a1ef8h)].car].price_tire_upgrades[s_6c[D(___1a1ef8h)].tires]) == 0){
+			if(___28ab4h_cdecl(career_shop_price(CAREER_SHOP_TIRES)) == 0){
 				
 				dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-				s_6c[D(___1a1ef8h)].money -= cdp[s_6c[D(___1a1ef8h)].car].price_tire_upgrades[s_6c[D(___1a1ef8h)].tires];
-				s_6c[D(___1a1ef8h)].refund += cdp[s_6c[D(___1a1ef8h)].car].price_tire_upgrades[s_6c[D(___1a1ef8h)].tires];
+				// the installed text goes by the level before
 				___276f0h();
 				D(___185a38h_delay) = 0x136;
-				s_6c[D(___1a1ef8h)].tires++;
+				career_shop_buy(CAREER_SHOP_TIRES);
 				___25330h();
 				___12cb8h__VESA101_PRESENTSCREEN();
 			}
 		}
 		break;
 	case 3:	// BUY ARMOR
-		if((int)s_6c[D(___1a1ef8h)].armor >= (int)cdp[s_6c[D(___1a1ef8h)].car].n_armor_upgrades){
+		if((int)career_shop_price(CAREER_SHOP_ARMOR) == CAREER_SHOP_NONE){
 
 			___26650h();
 			___12cb8h__VESA101_PRESENTSCREEN();
 		}
 		else {
 
-			if(___28ab4h_cdecl(cdp[s_6c[D(___1a1ef8h)].car].price_armor_upgrades[s_6c[D(___1a1ef8h)].armor]) == 0){
+			if(___28ab4h_cdecl(career_shop_price(CAREER_SHOP_ARMOR)) == 0){
 				
 				dRally_Sound_pushEffect(1, SFX_CLICK_4, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-				s_6c[D(___1a1ef8h)].money -= cdp[s_6c[D(___1a1ef8h)].car].price_armor_upgrades[s_6c[D(___1a1ef8h)].armor];
-				s_6c[D(___1a1ef8h)].refund += cdp[s_6c[D(___1a1ef8h)].car].price_armor_upgrades[s_6c[D(___1a1ef8h)].armor];
+				// the installed text goes by the level before
 				___27a10h();
 				D(___185a38h_delay) = 0x136;
-				s_6c[D(___1a1ef8h)].armor++;
+				career_shop_buy(CAREER_SHOP_ARMOR);
 				___25330h();
 				___12cb8h__VESA101_PRESENTSCREEN();
 			}
 		}
 		break;
 	case 4:	// REPAIR
-		esi = cdp[s_6c[D(___1a1ef8h)].car].price_repair;
-
-		if((int)s_6c[D(___1a1ef8h)].damage < 10) esi = s_6c[D(___1a1ef8h)].damage*esi/10;
-
-		if(D(___185a14h_UseWeapons) != 0) esi = (int)esi/2;
-
 		if((int)s_6c[D(___1a1ef8h)].damage > 0){
 			
-			if(___28ab4h_cdecl(esi) == 0){
+			if(___28ab4h_cdecl(career_shop_price(CAREER_SHOP_REPAIR)) == 0){
 				
 				dRally_Sound_pushEffect(1, SFX_ANVIL, 0, ___24cc54h_sfx_volume, 0x28000, 0x8000);
-
-				if((int)s_6c[D(___1a1ef8h)].damage < 10){
-
-					s_6c[D(___1a1ef8h)].damage = 0;
-				}
-				else {
-
-					s_6c[D(___1a1ef8h)].damage -= 10;
-				}
-
-				s_6c[D(___1a1ef8h)].money -= esi;
-				s_6c[D(___1a1ef8h)].refund += esi;
+				career_shop_buy(CAREER_SHOP_REPAIR);
 				___25330h();
 				___269e4h();
 				___12cb8h__VESA101_PRESENTSCREEN();
@@ -408,7 +375,7 @@ void shop___28e40h(void){
 		}
 		break;
 	case 5:	// CONTINUE
-		if((s_6c[D(___1a1ef8h)].damage == 100)&&(D(___185a14h_UseWeapons) == 0)){
+		if(!career_shop_can_race()){
 
 			___13248h_cdecl(144, 114, 384, 119, 1);
 			VESA101_16X16_FORMAT_PRINT("[Repair your car first.",             170, 124);
