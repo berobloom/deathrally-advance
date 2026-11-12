@@ -19,7 +19,9 @@
 #include "drally_structs_fixed.h"
 #include "drally_career.h"
 #include "drally_shop.h"
+#include "sfx.h"
 #include "gba.h"
+#include "sound.h"
 
 	extern __BYTE__ ___1a01e0h[];
 	extern __BYTE__ ___1a1ef8h[];
@@ -88,6 +90,24 @@ static void item(int row, int chosen, const char * s){
 
 	gba_print(2, row, (row == chosen) ? ">" : " ");
 	gba_print(4, row, s);
+}
+
+// the menus' sounds (MEN-SAM.CMF's), on the channels and at the rates
+// the desktop's menus play them
+static void click(int n){ sound_menu(1, n, 0x28000); }
+static void voice(int n){ sound_menu(5, n, 0x24000); }
+static void laugh(void){ sound_menu(2, SFX_LAUGHTER, 0x25500); }
+
+// a menu's frame, clicking as ___146c4h() does: up and down, A, B
+static u16 menu_frame(void){
+
+	u16 	k = gba_frame();
+
+	if(k&(KEY_UP|KEY_DOWN)) click(SFX_CLICK_2);
+	else if(k&(KEY_A|KEY_START)) click(SFX_CLICK_4);
+	else if(k&KEY_B) click(SFX_CLICK_1);
+
+	return k;
 }
 
 // until A or Start, or B if it may: 1 for B
@@ -183,7 +203,7 @@ int gba_title(void){
 			item(9, 9+2*row, "CAREER");
 			item(11, 9+2*row, "QUICK RACE");
 			item(13, 9+2*row, "HALL OF FAME");
-			k = gba_frame();
+			k = menu_frame();
 			if(k&KEY_UP) row = (row+2)%3;
 			if(k&KEY_DOWN) row = (row+1)%3;
 			if(k&(KEY_A|KEY_START)) break;
@@ -231,7 +251,7 @@ static int new_game(void){
 		gba_print(2, 14, (row == 3) ? ">" : " ");
 		gba_print(2, 18, edit ? "UP/DOWN LETTER, A DONE " : "A CHOOSE, B BACK       ");
 
-		k = gba_frame();
+		k = menu_frame();
 		if(edit){
 
 			const char * 	c = strchr(name_chars, name[cur]);
@@ -250,6 +270,8 @@ static int new_game(void){
 		n = (k&KEY_RIGHT) ? 1 : (k&KEY_LEFT) ? -1 : 0;
 		if(row == 1) face = (face+RACERS+n)%RACERS;
 		if(row == 2) difficulty = (difficulty+3+n)%3;
+		// the difficulty says itself, as ___3ab5ch()'s does
+		if((row == 2)&&n) voice(SFX_SPEED_MAKES_ME_DIZZY+difficulty);
 		if(k&(KEY_A|KEY_START)){
 
 			if(row == 0){ edit = 1; continue; }
@@ -571,6 +593,7 @@ static void offer(void){
 		t[6] = "[line before things get crowded{, be"; t[7] = "first, like, floor it, like.";
 	}
 	gba_text_screen();
+	voice(SFX_SPECIAL_OFFER);
 	center(0, "SPECIAL OFFER");
 	text_lines(3, 13, t, 8);
 	center(17, "A DEAL");
@@ -599,12 +622,14 @@ static int signup(void){
 		k = KEY_A;		// the easy race, always
 #endif
 		if((++frames&1) == 0) ___3079ch_cdecl(0x4b);
+		if(k&(KEY_LEFT|KEY_RIGHT)) click(SFX_CLICK_2);
 		if(k&KEY_LEFT) chosen = (chosen+2)%3;
 		if(k&KEY_RIGHT) chosen = (chosen+1)%3;
 		if(k&KEY_B) break;
 		if(k&(KEY_A|KEY_START)){
 
 			r = career_signup_check(chosen);
+			click((r == 0) ? SFX_SIGNUP_BRAKES : SFX_BUMMER);
 			if(r == CAREER_NEEDS_CAR){
 
 				message("A FASTER CAR WOULD DO BETTER", "PRESS A AGAIN TO RACE ANYWAY");
@@ -633,6 +658,7 @@ static int signup(void){
 
 	// sat out, or too late: the round without you
 	career_signup_rest();
+	sound_menu(1, SFX_LAUGHTER, 0x24500);
 	message("YOU DID NOT SIGN UP", "IN ANY RACE");
 	results(1);
 
@@ -649,6 +675,7 @@ static int adversary(void){
 	center(17, "B CHICKEN OUT");
 	if(wait_key(1)){
 
+		sound_menu(1, SFX_LAUGHTER, 0x24500);
 		career_adversary_decline();
 		results(1);
 		career_adversary_declined();
@@ -791,6 +818,7 @@ static int shop_short(int price){
 	racer_t * 	me = racer(ME);
 
 	if(price <= me->money) return 0;
+	laugh();
 	snprintf(t[2], 40, "No dough, no go, bro. No money,");
 	snprintf(t[3], 40, "honey. You are $%d short.", price-me->money);
 	snprintf(t[4], 40, "Gotta earn it. Go do it already.");
@@ -844,7 +872,7 @@ static int shop_confirm_car(void){
 	gba_print(1, 19, "A YES  B NO                 ");
 	for(;;){
 
-		u16 	k = gba_frame();
+		u16 	k = menu_frame();
 
 		gba_turn_car();
 		if(k&(KEY_A|KEY_START)) return 1;
@@ -908,7 +936,7 @@ static void shop(void){
 		u16 	k;
 
 		shop_draw(row);
-		k = gba_frame();
+		k = menu_frame();
 		gba_turn_car();
 		if(k&KEY_B) break;
 		if(k&(KEY_UP|KEY_DOWN)){
@@ -943,6 +971,7 @@ static void shop(void){
 				break;
 			}
 			career_shop_buy(row);
+			voice(SFX_NEW_CAR_BOUGHT);
 			gba_show_car(me->car, SHOP_CAR_X, SHOP_CAR_Y);
 			shop_color();
 			// shown as ___27078h() does it, the new car's own words,
@@ -951,6 +980,7 @@ static void shop(void){
 			break;
 		case CAREER_SHOP_REPAIR:
 			career_shop_buy(row);
+			click(SFX_ANVIL);
 			shop_about(row);
 			break;
 		default:
@@ -1051,7 +1081,11 @@ static void market_buy(int row){
 			career_loan_pay();
 			shop_text(market_paid);
 		}
-		else if(!career_loan_amount()) shop_text(market_denied);
+		else if(!career_loan_amount()){
+
+			click(SFX_BUMMER);
+			shop_text(market_denied);
+		}
 		else {
 
 			career_loan_take();
@@ -1064,6 +1098,7 @@ static void market_buy(int row){
 	}
 	if(career_market_state(row) != 1){
 
+		laugh();
 		market_about(row);
 		return;
 	}
@@ -1091,7 +1126,7 @@ static void market(void){
 		u16 	k;
 
 		market_draw(row);
-		k = gba_frame();
+		k = menu_frame();
 		if(k&KEY_B) break;
 		if(k&(KEY_UP|KEY_DOWN)){
 
@@ -1238,7 +1273,7 @@ static int continue_or_new(void){
 
 		item(4, row ? 13 : 4, "CONTINUE");
 		item(13, row ? 13 : 4, "NEW CAREER");
-		k = gba_frame();
+		k = menu_frame();
 		if(k&(KEY_UP|KEY_DOWN)) row = !row;
 		if(k&KEY_B) return -1;
 		if(k&(KEY_A|KEY_START)) break;
@@ -1327,7 +1362,7 @@ void career_play(void){
 			item(16, 10+2*row, "STANDINGS");
 			item(18, 10+2*row, "QUIT");
 			for(n = 0; n < 5; n++) gba_print(2, 10+2*n, (n == row) ? ">" : " ");
-			k = gba_frame();
+			k = menu_frame();
 			if(k&KEY_UP) row = (row+4)%5;
 			if(k&KEY_DOWN) row = (row+1)%5;
 			if(k&(KEY_A|KEY_START)) break;
@@ -1335,9 +1370,14 @@ void career_play(void){
 		if(row == 0){
 
 			// CONTINUE's check
-			if(!career_shop_can_race()) message("REPAIR YOUR CAR FIRST", "R-E-P-A-I-R");
+			if(!career_shop_can_race()){
+
+				laugh();
+				message("REPAIR YOUR CAR FIRST", "R-E-P-A-I-R");
+			}
 			else {
 
+				click(SFX_SIGNUP_ENGINE_ON);
 				career_shop_continue();
 				if(career_leading() ? adversary() : signup()){
 

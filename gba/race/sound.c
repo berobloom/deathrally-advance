@@ -13,6 +13,7 @@
 
 extern const u8 soundbank_bin[];
 extern const u8 sfx_bin[];		// each effect's base volume, 0-64
+extern const u8 men_bin[];		// and each of the menus'
 
 // the effects' ids come first in the soundbank, then a module for each track
 #define SFX_FIRST		0
@@ -96,4 +97,23 @@ void dRally_Sound_freeEffectChannel(__BYTE__ ch_num){
 	LOCKED(mmEffectCancel(handles[ch_num]));
 	handles[ch_num] = 0;
 	effect[ch_num] = 0;
+}
+
+// the menus' effect n (MEN-SAM.CMF's instrument n, sfx.h's numbers) on
+// channel 1-14 at freq times its own, as the menus' calls give it, the
+// one there before cut short
+void sound_menu(int channel, int n, __DWORD__ freq){
+
+	mm_sound_effect 	e;
+	__DWORD__ 		v;
+
+	if(!channel||(channel > SFX_CHANNELS)||(n < 1)||(n > SFX_MEN31-SFX_MEN01+1)) return;
+	v = (0xc000 >> 8)*men_bin[n-1] >> 6;	// the menus' default volume
+	e.id = SFX_MEN01+n-1;
+	e.rate = rate(freq);
+	e.handle = 0;
+	e.volume = (v > 255) ? 255 : v;
+	e.panning = 128;
+	LOCKED(mmEffectCancel(handles[channel]); handles[channel] = mmEffectEx(&e));
+	effect[channel] = 0;
 }

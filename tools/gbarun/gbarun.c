@@ -2,10 +2,11 @@
 // reading memory and saving screenshots at given frames, and prints what
 // the ROM logs (gba/race's say(), through mGBA's debug registers).
 //
-//   gbarun [-s SAVE] ROM FRAMES [SCRIPT]
+//   gbarun [-s SAVE] [-a SOUND.wav] ROM FRAMES [SCRIPT]
 //
 // -s keeps the cartridge's save memory in the file SAVE, made if it
-// isn't there, as a real cartridge's battery would.
+// isn't there, as a real cartridge's battery would. -a records what it
+// plays, 32768 Hz stereo.
 //
 // SCRIPT, one command a line, # for comments:
 //
@@ -19,6 +20,7 @@
 // Addresses come from the ROM's map, gba/race/build/drrace.map. With no
 // SCRIPT it just runs, as for the benchmark builds. See shop.txt.
 
+#include <mgba/core/blip_buf.h>
 #include <mgba/core/core.h>
 #include <mgba/core/config.h>
 #include <mgba/core/log.h>
@@ -110,6 +112,22 @@ static int save_png(const char * path, const color_t * px, unsigned w, unsigned 
 	return 1;
 }
 
+#define SOUND_RATE		32768
+
+static void put32le(FILE * f, uint32_t v){ fputc(v, f); fputc(v >> 8, f); fputc(v >> 16, f); fputc(v >> 24, f); }
+
+// a 16-bit stereo WAV's header, for n frames of samples
+static void wav_header(FILE * f, uint32_t n){
+
+	fseek(f, 0, SEEK_SET);
+	fwrite("RIFF", 1, 4, f); put32le(f, 36+4*n);
+	fwrite("WAVEfmt ", 1, 8, f); put32le(f, 16);
+	put32le(f, 1|(2 << 16));		// PCM, 2 channels
+	put32le(f, SOUND_RATE); put32le(f, 4*SOUND_RATE);
+	put32le(f, 4|(16 << 16));		// 4 bytes a frame, 16 bits
+	fwrite("data", 1, 4, f); put32le(f, 4*n);
+}
+
 static uint32_t parse_keys(const char * k){
 
 	uint32_t 	keys = 0;
@@ -163,16 +181,23 @@ int main(int argc, char ** argv){
 	unsigned 	w, h;
 	int 		frames, n_ev = 0, f, i, release = -1;
 	const char 	* save = NULL;
+	FILE 		* wav = NULL;
+	uint32_t 	wav_n = 0;
 
-	if((argc > 2)&&!strcmp(argv[1], "-s")){
+	while((argc > 2)&&(!strcmp(argv[1], "-s")||!strcmp(argv[1], "-a"))){
 
-		save = argv[2];
+		if(argv[1][1] == 's') save = argv[2];
+		else if(!(wav = fopen(argv[2], "wb"))){
+
+			fprintf(stderr, "gbarun: can't write %s\n", argv[2]);
+			return 1;
+		}
 		argv += 2;
 		argc -= 2;
 	}
 	if(argc < 3){
 
-		fprintf(stderr, "usage: gbarun [-s SAVE] ROM FRAMES [SCRIPT]\n");
+		fprintf(stderr, "usage: gbarun [-s SAVE] [-a SOUND.wav] ROM FRAMES [SCRIPT]\n");
 		return 1;
 	}
 	frames = atoi(argv[2]);
@@ -200,6 +225,13 @@ int main(int argc, char ** argv){
 		return 1;
 	}
 	core->reset(core);
+	if(wav){
+
+		wav_header(wav, 0);
+		core->setAudioBufferSize(core, 2048);
+		blip_set_rates(core->getAudioChannel(core, 0), core->frequency(core), SOUND_RATE);
+		blip_set_rates(core->getAudioChannel(core, 1), core->frequency(core), SOUND_RATE);
+	}
 
 	for(f = 0; f < frames; f++){
 
@@ -230,6 +262,22 @@ int main(int argc, char ** argv){
 			}
 		}
 		core->runFrame(core);
+		if(wav){
+
+			short 	buf[2*4096];
+			int 	n = blip_samples_avail(core->getAudioChannel(core, 0));
+
+			if(n > 4096) n = 4096;
+			blip_read_samples(core->getAudioChannel(core, 0), buf, n, 1);
+			blip_read_samples(core->getAudioChannel(core, 1), buf+1, n, 1);
+			fwrite(buf, 4, n, wav);
+			wav_n += n;
+		}
+	}
+	if(wav){
+
+		wav_header(wav, wav_n);
+		fclose(wav);
 	}
 
 	core->deinit(core);

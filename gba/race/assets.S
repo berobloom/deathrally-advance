@@ -39,6 +39,7 @@
 	asset	carcol_pal, carcol.pal
 	asset	copper_pal, copper.pal
 	asset	sfx_bin, sfx.bin
+	asset	men_bin, men.bin
 	asset	soundbank_bin, soundbank.bin
 #if defined(RACE_PRE)
 	asset	race_pre, pre.bin

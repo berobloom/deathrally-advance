@@ -34,6 +34,8 @@
 //   efeNN.wav    the race's sound effects, GEN-EFE.CMF's instruments 1, 2, ...:
 //                each one's first sample, 8-bit, at its base rate, with its loop
 //   sfx.bin      their base volumes, 0-64, one byte each, for effect 1 on
+//   menNN.wav    the menus' sound effects, MEN-SAM.CMF's, the same way, and
+//   men.bin      their volumes
 //   mines1a.bin  MINES1A.BPK, BLOWI.BPK and OBSTACLE.BPK decoded
 //   blowi.bin
 //   obstacle.bin
@@ -492,24 +494,17 @@ static void s3m_clean(__POINTER__ p, unsigned size){
 	}
 }
 
-static void bake_sound(int track, const char * outdir){
+// an XM's instruments as sound effects, PREFIXnn.wav from 01 on, and
+// their base volumes, 0-64, in VOLS_NAME
+static void bake_xm(const char * cmf, const char * prefix, const char * vols_name, const char * outdir){
 
-	char 		entry[32];
 	unsigned 	size, o, i, k, n_ins, n_pat;
 	__POINTER__ 	p;
 	__BYTE__ 	vols[256];
 	FILE * 		fd;
 
-	snprintf(entry, sizeof(entry), "TR%d-MUS.CMF", track);
-	p = read_cmf(entry, &size);
-	if(memcmp(p+0x2c, "SCRM", 4)){ fprintf(stderr, "%s isn't an S3M\n", entry); exit(1); }
-	s3m_clean(p, size);
-	snprintf(entry, sizeof(entry), "tr%d.s3m", track);
-	write_file(outdir, entry, p, size);
-	free(p);
-
-	p = read_cmf("GEN-EFE.CMF", &size);
-	if(memcmp(p, "Extended Module: ", 17)){ fprintf(stderr, "GEN-EFE.CMF isn't an XM\n"); exit(1); }
+	p = read_cmf(cmf, &size);
+	if(memcmp(p, "Extended Module: ", 17)){ fprintf(stderr, "%s isn't an XM\n", cmf); exit(1); }
 	n_pat = get16(p+70);
 	n_ins = get16(p+72);
 	o = 60+get32(p+60);
@@ -549,15 +544,33 @@ static void bake_sound(int track, const char * outdir){
 			o += size;
 		}
 		if(!len){ free(pcm); pcm = calloc(1, 2); len = 2; }
-		snprintf(name, sizeof(name), "efe%02u.wav", i+1);
+		snprintf(name, sizeof(name), "%s%02u.wav", prefix, i+1);
 		write_wav(outdir, name, pcm, len, rate, loop);
 		free(pcm);
 	}
-	fd = out(outdir, "sfx.bin");
+	fd = out(outdir, vols_name);
 	fwrite(vols, 1, n_ins, fd);
 	fclose(fd);
 	free(p);
-	printf("%u sound effects\n", n_ins);
+	printf("%s: %u sound effects\n", cmf, n_ins);
+}
+
+static void bake_sound(int track, const char * outdir){
+
+	char 		entry[32];
+	unsigned 	size;
+	__POINTER__ 	p;
+
+	snprintf(entry, sizeof(entry), "TR%d-MUS.CMF", track);
+	p = read_cmf(entry, &size);
+	if(memcmp(p+0x2c, "SCRM", 4)){ fprintf(stderr, "%s isn't an S3M\n", entry); exit(1); }
+	s3m_clean(p, size);
+	snprintf(entry, sizeof(entry), "tr%d.s3m", track);
+	write_file(outdir, entry, p, size);
+	free(p);
+
+	bake_xm("GEN-EFE.CMF", "efe", "sfx.bin", outdir);
+	bake_xm("MEN-SAM.CMF", "men", "men.bin", outdir);
 }
 
 int main(int argc, char * argv[]){
