@@ -601,9 +601,12 @@ static void upload_car(int n, const view_t * v){
 
 // sprite k of the view into OAM entry o, its image into its OBJ VRAM if
 // that holds another
+static const u8 * sprite_shown[MAX_SPRITES];	// the image in each sprite's OBJ VRAM
+static const u16 * lamp_shown;			// and in the start lights'
+
 static void place_sprite(int o, int k, const sprite_t * s){
 
-	static const u8 * 	shown[MAX_SPRITES];
+	const u8 ** 		shown = sprite_shown;
 	int 			tile = SPRITE_TILE0+8*k;
 
 	if(shown[k] != s->img){
@@ -630,16 +633,14 @@ static void place_sprite(int o, int k, const sprite_t * s){
 // the start lights as a 64x64 OBJ and a 32x64 one, over everything
 static int place_lamp(const view_t * v){
 
-	static const u16 * 	shown;
-
 	if(!v->lamp||(v->lamp_x >= SCREEN_W)) return 0;
-	if(shown != v->lamp){
+	if(lamp_shown != v->lamp){
 
 		const u8 	* tiles = (const u8 *)(lamps_dtl+LAMP_FRAMES*LAMP_TILES);
 		int 		k;
 
 		for(k = 0; k < LAMP_TILES; k++) copy32((u8 *)SPRITE_GFX+32*LAMP_TILE0+64*k, tiles+64*v->lamp[k], 64);
-		shown = v->lamp;
+		lamp_shown = v->lamp;
 	}
 	OAM[0].attr0 = OBJ_Y(0) | OBJ_256_COLOR | OBJ_SQUARE;
 	OAM[0].attr1 = OBJ_X(v->lamp_x) | OBJ_SIZE(3);
@@ -1001,6 +1002,9 @@ static const char * start_race(int career, int my_index, int num_cars){
 		for(n = 0; (n < (int)race_tracks_n)&&(race_tracks[n].track != (u32)(___19bd64h[2]-'0')); n++);
 		if(n == (int)race_tracks_n) return "the career's track isn't in the ROM";
 		reversed = D(___1de7d0h+0x48);
+		// the menus' layers off while it's set up: their tiles are in
+		// the menus' colors, which use_track() changes
+		REG_DISPCNT = MODE_0;
 		use_track(&race_tracks[n]);
 		say("career race on %s%s, %d laps, you in place %d of %d", ___19bd64h, reversed ? " reversed" : "", NUM_OF_LAPS, my_index, num_cars);
 	}
@@ -1030,6 +1034,13 @@ static const char * start_race(int career, int my_index, int num_cars){
 	race_setup(my_index, num_cars, &race_loaders_baked);
 	ima_pad = race_ima_pad();
 	car_colors(num_cars);
+	// the menus' pictures and side panel out of OBJ VRAM and OAM: a car
+	// fills only the top left 40x40 of its 64x64 sprite, the rest of it
+	// would show what was there
+	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	for(n = 0; n < 0x8000/4; n++) ((u32 *)SPRITE_GFX)[n] = 0;
+	for(n = 0; n < MAX_SPRITES; n++) sprite_shown[n] = 0;
+	lamp_shown = 0;
 	make_light();
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
