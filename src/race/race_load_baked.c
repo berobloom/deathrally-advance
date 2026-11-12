@@ -62,9 +62,10 @@ static void baked_inf(void){
 }
 
 // how many of the track image's tiles a race can draw into on the GBA, 64
-// bytes each: skid marks, mines and the rest stop showing past them
+// bytes each: skid marks, mines and the rest stop showing past them. The
+// AI's 4-lap races draw into 300 at most
 #if !defined(RACE_IMA_TILES)
-#define RACE_IMA_TILES 		2048
+#define RACE_IMA_TILES 		1536
 #endif
 
 // race_alloc()'s buffers the logic uses; the rest are only drawn from

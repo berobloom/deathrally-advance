@@ -68,8 +68,11 @@ static int 			ima_tw, ima_th, ima_rev, ima_pad;
 static __BYTE__ 		(*pool)[64];
 static unsigned 		pool_n, pool_max, pool_full;
 // each tile's place in the pool+1, or 0; bit 15: on the list, which the
-// screen clears from the vblank interrupt
-static volatile unsigned short * 	slots;
+// screen clears from the vblank interrupt. For the most tiles a track has,
+// TR3's, once: a track's own, allocated as it came, failed when what was
+// left of the heap was in pieces
+#define SLOTS_N 	12000
+DR_COLD static volatile unsigned short 	slots[SLOTS_N];
 
 #define DIRTY_N 	512
 DR_COLD static unsigned short 	dirty[DIRTY_N];	// ty << 8 | tx
@@ -82,16 +85,18 @@ void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles){
 	ima_tiles = tiles+((2*tw*th+3)&~3);
 	ima_tw = tw;
 	ima_th = th;
-	free((void *)slots);
-	// the pool first: it stays, and each track's slots, which differ in
-	// size, then come after it instead of leaving holes before it
+	if(tw*th > SLOTS_N){
+
+		// not one of the game's tracks: only as many as there's room for
+		ima_th = th = SLOTS_N/tw;
+	}
 	if(max_tiles != pool_max){
 
 		free(pool);
 		pool = malloc(max_tiles*64);
 		pool_max = pool ? max_tiles : 0;
 	}
-	slots = calloc(tw*th, sizeof(slots[0]));
+	memset((void *)slots, 0, tw*th*sizeof(slots[0]));
 	pool_n = pool_full = 0;
 	ima_rev = ima_pad = 0;
 	dirty_tail = dirty_head;

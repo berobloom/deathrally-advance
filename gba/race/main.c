@@ -149,7 +149,7 @@ void race___400ech(void);
 #define BOX_W			64
 #define BOX_H			32
 #if !defined(RACE_IMA_TILES)
-#define RACE_IMA_TILES		2048	// the tiles the race can draw into, as race_load_baked.c's
+#define RACE_IMA_TILES		1536	// the tiles the race can draw into, as race_load_baked.c's
 #endif
 // under it on BG2, its map in screenblock 29: a black tile, as BG1 shows its colour 0 as see-through
 #define BOX_BACK_MAP		((u16 *)SCREEN_BASE_BLOCK(29))
