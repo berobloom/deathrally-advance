@@ -60,7 +60,6 @@ _Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE")
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
 extern const u8 lamps_obj[];		// 6 KB a frame, see gbabake
-extern const u8 cars_obj[];		// [car image][frame], in place 0's colors, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
 #endif
@@ -114,8 +113,9 @@ void race___400ech(void);
 #define CAR_FRAMES		96
 #define CAR_IMG_BYTES		(40*40)		// a rotation frame in the game's car images
 #define CAR_OBJ_BYTES		(64*64)		// OBJ VRAM for each car's 64x64 sprite
-#define CAR_TILES		5		// its 40x40 frame, 5x5 tiles from the top left
-#define CAR_FRAME_BYTES		(CAR_TILES*CAR_TILES*64)	// a frame in cars_obj
+#define CAR_W			40		// a car frame, 40x40
+#define CAR_TILES		(CAR_W/8)	// 5x5 tiles from the top left of the sprite
+#define CAR_FRAME_BYTES		(CAR_W*CAR_W)		// a frame in cars_img
 #define NUM_CARS		4
 // the car images in the ROM, assets.S's RACE_GBA_CARS: the 7 models,
 // the Adversary's last, without the spiked ones (see race_baked_t)
@@ -198,7 +198,7 @@ static int reversed;
 static int ima_pad;			// and its image this far down its tiles
 static int vis_x0 = -1, vis_y0, vis_x1, vis_y1;	// in its tiles
 static int shown_frame[NUM_CARS];	// rotation frame in each car's OBJ VRAM
-static const u8 * car_frames[NUM_CARS];	// each car's frames in cars_obj
+static const u8 * car_frames[NUM_CARS];	// each car's frames in cars_img
 static volatile u32 vblanks;
 EWRAM_BSS static u8 ring_row[256];		// ty % RING_H, without dividing
 static int debug_log;
@@ -545,40 +545,40 @@ static void place_box(const view_t * v){
 	shown = v->box_seq;
 }
 
-// copy a car's rotation frame into its OBJ VRAM if it changed and is in view
-// n words of a car's frame, in place 0's body colors, from src to dst
-// with add added to those bytes. In ARM in IWRAM: the vblank does it for
-// each car that turned
-static IWRAM_CODE ARM_CODE __attribute__((noinline)) void recolor_car(u32 * dst, const u32 * src, int n, u32 add){
+// a car's 40x40 frame, as the race reads it (cars_img, in place 0's body
+// colors), into the 8bpp tiles of the 64x64 sprite at dst, with add added
+// to its body colors. In ARM in IWRAM: the vblank does it for each car
+// that turned
+static IWRAM_CODE ARM_CODE __attribute__((noinline)) void tile_car(u32 * dst, const u32 * src, u32 add){
 
-	while(n--){
+	int 	y, x;
 
-		// each byte's top bit: 15 or more, 25 or more, of the low 7 bits,
-		// then those of 15 to 24 as a mask of the whole byte. None
-		// carries: the colors are at most 24, the most added 30
-		u32 	w = *src++, l = w&0x7f7f7f7f;
-		u32 	in = (l+0x71717171)&~(l+0x67676767)&~w&0x80808080;
+	for(y = 0; y < CAR_W; y++){
 
-		*dst++ = w+(add&((in >> 7)*0xff));
+		// row y&7 of the tiles in tile row y >> 3, which are 8 wide
+		u32 	* d = dst+(y >> 3)*8*16+(y&7)*2;
+
+		for(x = 0; x < 2*CAR_TILES; x++){
+
+			// each byte's top bit: 15 or more, 25 or more, of the low 7
+			// bits, then those of 15 to 24 as a mask of the whole byte.
+			// None carries: the colors are at most 24, the most added 30
+			u32 	w = *src++, l = w&0x7f7f7f7f;
+			u32 	in = (l+0x71717171)&~(l+0x67676767)&~w&0x80808080;
+
+			d[16*(x >> 1)+(x&1)] = w+(add&((in >> 7)*0xff));
+		}
 	}
 }
 
 static void upload_car(int n, const view_t * v){
 
-	int 	r, frame = v->frame[n];
+	int 	frame = v->frame[n];
 
 	if((frame == shown_frame[n])||v->hidden[n]) return;
-	// a row of tiles at a time: the sprite's rows are 8 tiles wide. The
-	// first car's as they are, the others' with their own body colors
+	// the first car's as they are, the others' with their own body colors
 	// (race___42824h()'s): 15 to 24 moved up 10 a place
-	for(r = 0; r < CAR_TILES; r++){
-
-		u32 		* dst = (u32 *)((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64);
-		const u32 	* src = (const u32 *)(car_frames[n] + frame*CAR_FRAME_BYTES + r*CAR_TILES*64);
-
-		if(n == 0) copy32(dst, src, CAR_TILES*64);
-		else recolor_car(dst, src, CAR_TILES*64/4, 0x0a0a0a0a*n);
-	}
+	tile_car((u32 *)((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES), (const u32 *)(car_frames[n] + frame*CAR_FRAME_BYTES), 0x0a0a0a0a*n);
 	shown_frame[n] = frame;
 }
 
@@ -833,8 +833,8 @@ static int choose_race(void){
 			x += dx;
 			if(vblanks&1) y += dy;
 			update_track(x, y);
-			frames = cars_obj+my_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
-			for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
+			frames = cars_img+my_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+			tile_car((u32 *)SPRITE_GFX, (const u32 *)frames, 0);
 
 			scanKeys();
 			n = keysDown();
@@ -1028,7 +1028,7 @@ static const char * start_race(int career, int my_index, int num_cars){
 
 	for(n = 0; n < NUM_CARS; n++){
 
-		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n) : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
+		car_frames[n] = cars_img + ((n < NUM_OF_CARS) ? race_car_variant(n) : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
 	}
 
 	// the track's music, and your engine, as race_main() starts them
@@ -1326,8 +1326,8 @@ void gba_turn_car(void){
 		return;
 	}
 	if(shown_model < 0) return;
-	frames = cars_obj+shown_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
-	for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
+	frames = cars_img+shown_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+	tile_car((u32 *)SPRITE_GFX, (const u32 *)frames, 0);
 }
 
 void gba_print(int col, int row, const char * s){
