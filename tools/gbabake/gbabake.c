@@ -50,8 +50,9 @@
 //                96 frames of 40x40 each, not recolored
 //   cars.shp     the shapes the race code asks of them, race_car_shapes_t
 //                for each car image
-//   cars-all.obj the same as sprites, as in cars.obj, for each car image
-//                in each of the 4 places' colors: [image][place][frame]
+//   cars-all.obj the same as sprites, as in cars.obj, for each car image,
+//                in the first place's colors: gba/race adds the others' as
+//                it shows them
 //
 // and for the track reversed, turned round by 180 degrees as race___4af3ch()
 // turns it, which race_loaders_baked can't do to the data in ROM. TR0, which
@@ -415,19 +416,9 @@ static void bake_setup(int track, int w, int h, const char * outdir){
 	}
 	free(shapes);
 
-	// recolored as race___42824h() does for the car in place n
 	fd = out(outdir, "cars-all.obj");
-	car = malloc(CAR_FRAMES*CAR_W*CAR_W);
-	for(v = 0; v < 13; v++){
-		for(n = 0; n < 4; n++){
-
-			memcpy(car, cars+v*CAR_FRAMES*CAR_W*CAR_W, CAR_FRAMES*CAR_W*CAR_W);
-			for(i = 0; i < CAR_FRAMES*CAR_W*CAR_W; i++) if((car[i] >= 0xf)&&(car[i] <= 0x18)) car[i] += 0xa*n;
-			put_frames(fd, car);
-		}
-	}
+	for(v = 0; v < 13; v++) put_frames(fd, cars+v*CAR_FRAMES*CAR_W*CAR_W);
 	fclose(fd);
-	free(car);
 	free(cars);
 }
 

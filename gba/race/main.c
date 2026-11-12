@@ -60,7 +60,7 @@ _Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE")
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
 extern const u8 lamps_obj[];		// 6 KB a frame, see gbabake
-extern const u8 cars_obj[];		// [car image][place][frame], see gbabake
+extern const u8 cars_obj[];		// [car image][frame], in place 0's colors, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
 #endif
@@ -546,15 +546,38 @@ static void place_box(const view_t * v){
 }
 
 // copy a car's rotation frame into its OBJ VRAM if it changed and is in view
+// n words of a car's frame, in place 0's body colors, from src to dst
+// with add added to those bytes. In ARM in IWRAM: the vblank does it for
+// each car that turned
+static IWRAM_CODE ARM_CODE __attribute__((noinline)) void recolor_car(u32 * dst, const u32 * src, int n, u32 add){
+
+	while(n--){
+
+		// each byte's top bit: 15 or more, 25 or more, of the low 7 bits,
+		// then those of 15 to 24 as a mask of the whole byte. None
+		// carries: the colors are at most 24, the most added 30
+		u32 	w = *src++, l = w&0x7f7f7f7f;
+		u32 	in = (l+0x71717171)&~(l+0x67676767)&~w&0x80808080;
+
+		*dst++ = w+(add&((in >> 7)*0xff));
+	}
+}
+
 static void upload_car(int n, const view_t * v){
 
 	int 	r, frame = v->frame[n];
 
 	if((frame == shown_frame[n])||v->hidden[n]) return;
-	// a row of tiles at a time: the sprite's rows are 8 tiles wide
+	// a row of tiles at a time: the sprite's rows are 8 tiles wide. The
+	// first car's as they are, the others' with their own body colors
+	// (race___42824h()'s): 15 to 24 moved up 10 a place
 	for(r = 0; r < CAR_TILES; r++){
 
-		copy32((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64, car_frames[n] + frame*CAR_FRAME_BYTES + r*CAR_TILES*64, CAR_TILES*64);
+		u32 		* dst = (u32 *)((u8 *)SPRITE_GFX + n*CAR_OBJ_BYTES + r*8*64);
+		const u32 	* src = (const u32 *)(car_frames[n] + frame*CAR_FRAME_BYTES + r*CAR_TILES*64);
+
+		if(n == 0) copy32(dst, src, CAR_TILES*64);
+		else recolor_car(dst, src, CAR_TILES*64/4, 0x0a0a0a0a*n);
 	}
 	shown_frame[n] = frame;
 }
@@ -810,7 +833,7 @@ static int choose_race(void){
 			x += dx;
 			if(vblanks&1) y += dy;
 			update_track(x, y);
-			frames = cars_obj+my_model*NUM_CARS*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+			frames = cars_obj+my_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
 			for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
 
 			scanKeys();
@@ -1005,7 +1028,7 @@ static const char * start_race(int career, int my_index, int num_cars){
 
 	for(n = 0; n < NUM_CARS; n++){
 
-		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n)*NUM_CARS+n : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
+		car_frames[n] = cars_obj + ((n < NUM_OF_CARS) ? race_car_variant(n) : 0)*CAR_FRAMES*CAR_FRAME_BYTES;
 	}
 
 	// the track's music, and your engine, as race_main() starts them
@@ -1303,7 +1326,7 @@ void gba_turn_car(void){
 		return;
 	}
 	if(shown_model < 0) return;
-	frames = cars_obj+shown_model*NUM_CARS*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
+	frames = cars_obj+shown_model*CAR_FRAMES*CAR_FRAME_BYTES+((vblanks/3)%CAR_FRAMES)*CAR_FRAME_BYTES;
 	for(n = 0; n < CAR_TILES; n++) copy32((u8 *)SPRITE_GFX+n*8*64, frames+n*CAR_TILES*64, CAR_TILES*64);
 }
 

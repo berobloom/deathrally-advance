@@ -35,7 +35,7 @@
 	asset	sprites_bin, sprites.bin
 	asset	hud_bin, hud.bin
 	asset	lamps_obj, lamps.obj
-	asset_part	cars_obj, cars-all.obj, RACE_GBA_CARS*4*96*5*5*64
+	asset_part	cars_obj, cars-all.obj, RACE_GBA_CARS*96*5*5*64
 	asset	carcol_pal, carcol.pal
 	asset	copper_pal, copper.pal
 	asset	menu_pal, menu.pal
