@@ -822,6 +822,29 @@ static int choose_race(void){
 // the race: a quick one with what choose_race() chose, or with career
 // set the career's, which ___1de7d0h and the rest hold already (see
 // career_race() in career.c), with you in place my_index of num_cars
+// the cars' body colors, 10 from 15+10*n for car n, which race___4a25ch()
+// built into the game's palette from each driver's color, the Adversary's
+// car's aside: gbabake baked a quick race's four
+static void car_colors(int num_cars){
+
+	extern __BYTE__ ___1a51d0h[];
+
+	int 	n, i;
+
+	for(n = 0; n < num_cars; n++){
+
+		if((n == 0)&&(D(___1de580h) == 6)) continue;
+		for(i = 15+10*n; i < 25+10*n; i++){
+
+			const __BYTE__ 	* c = ___1a51d0h+3*i;
+			u16 		v = (c[0] >> 1)|((c[1] >> 1) << 5)|((c[2] >> 1) << 10);
+
+			BG_PALETTE[i] = v;
+			SPRITE_PALETTE[i] = v;
+		}
+	}
+}
+
 static const char * start_race(int career, int my_index, int num_cars){
 
 	int 		n;
@@ -875,6 +898,7 @@ static const char * start_race(int career, int my_index, int num_cars){
 	race_sprite_cb = on_sprite;
 	race_setup(my_index, num_cars, &race_loaders_baked);
 	ima_pad = race_ima_pad();
+	car_colors(num_cars);
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
 	// RACE_CFLAGS=-DVAR_HASHES: each global's, as VAR_HASHES=1 tools/replay --quick prints them
@@ -1063,6 +1087,24 @@ void gba_show_car(int model, int x, int y){
 	OAM[0].attr1 = OBJ_X(x) | OBJ_SIZE(3);
 	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
 	gba_turn_car();
+}
+
+// the shown car's 10 body colors (car 0's, from 15 on), as ___4a064h_cdecl()
+// makes them from a 6-bit VGA color
+void gba_car_color(int r, int g, int b){
+
+	int 	i, k, c[3] = { r, g, b }, v[2][3];
+
+	for(i = 0; i < 5; i++){
+
+		for(k = 0; k < 3; k++){
+
+			v[0][k] = (int)((0.18*i+0.1)*c[k]);
+			v[1][k] = (int)(12.6*i+(1.0-0.2*i)*c[k]);
+		}
+		SPRITE_PALETTE[15+i] = (v[0][0] >> 1)|((v[0][1] >> 1) << 5)|((v[0][2] >> 1) << 10);
+		SPRITE_PALETTE[20+i] = (v[1][0] >> 1)|((v[1][1] >> 1) << 5)|((v[1][2] >> 1) << 10);
+	}
 }
 
 void gba_turn_car(void){

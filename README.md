@@ -176,7 +176,7 @@ Working: drawing any of the ten tracks with four cars and their shadows at 60 fr
 
 Not done yet:
 
-* In the career: choosing a new car's color, the shop's and the special offers' sounds (the menus' effects aren't in the soundbank), the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
+* In the career: the shop's and the special offers' sounds (the menus' effects aren't in the soundbank), the menus' pictures and faces, and the end of the game's hall of fame.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.

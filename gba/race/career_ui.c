@@ -780,6 +780,43 @@ static int shop_confirm_car(void){
 	}
 }
 
+// the car on show in your color, one of COPPER.PAL's (___1a0fb8h),
+// as the shop shows it (___11378h_cdecl())
+static void my_color(void){
+
+	const __BYTE__ 	* c = (const __BYTE__ *)___1a0fb8h+3*racer(ME)->color;
+
+	gba_car_color(c[0], c[1], c[2]);
+}
+
+// a new car's color, as the shop asks for it once it's bought: left and
+// right two along the copper colors, A done
+static void shop_color(void){
+
+	racer_t * 	me = racer(ME);
+	char 		buf[32];
+	int 		n;
+
+	for(;;){
+
+		u16 	k;
+
+		my_color();
+		snprintf(buf, sizeof(buf), "COLOR  <%4d >", (int)me->color/2+1);
+		gba_print(1, 11, buf);
+		gba_print(1, 19, "LEFT/RIGHT COLOR, A DONE    ");
+		k = gba_frame();
+		gba_turn_car();
+		// L and R 16 along
+		n = (k&KEY_LEFT) ? -2 : (k&KEY_RIGHT) ? 2 : (k&KEY_L) ? -32 : (k&KEY_R) ? 32 : 0;
+		n += (int)me->color;
+		me->color = (n < 0) ? 0 : (n > 0xfe) ? 0xfe : n;
+		if(k&(KEY_A|KEY_START)) break;
+	}
+	gba_print(1, 11, "              ");
+	gba_print(1, 19, "                            ");
+}
+
 // the shop (shop_main()), until DONE or B. Buying shows what was bought
 // until another row is chosen
 static void shop(void){
@@ -790,6 +827,7 @@ static void shop(void){
 	// the car after yours on show, as ___24548h() starts it
 	D(___1a1ee4h) = ((int)me->car >= 5) ? 5 : me->car+1;
 	gba_text_screen();
+	my_color();
 	center(0, "THE SHOP");
 	shop_car(row);
 	shop_about(row);
@@ -833,10 +871,11 @@ static void shop(void){
 				break;
 			}
 			career_shop_buy(row);
+			gba_show_car(me->car, SHOP_CAR_X, SHOP_CAR_Y);
+			shop_color();
 			// shown as ___27078h() does it, the new car's own words,
 			// and turning until another row or car is chosen
 			shop_text(___18e298h[me->car].txt_bought);
-			gba_show_car(me->car, SHOP_CAR_X, SHOP_CAR_Y);
 			break;
 		case CAREER_SHOP_REPAIR:
 			career_shop_buy(row);
