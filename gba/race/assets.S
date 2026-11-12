@@ -52,7 +52,7 @@
 	.irp	n, TRACKS
 	asset	tr\n\()_pal, bake-tr\n/track.pal
 	asset	tr\n\()_inf, bake-tr\n/track.inf
-	asset	tr\n\()_tiles, bake-tr\n/track.tiles
+	asset	tr\n\()_tiles, bake-tr\n/track.dtl
 	asset	tr\n\()_mas, bake-tr\n/track.mbk	@ DR_MAS_BLOCKS, forward and reversed
 	asset	tr\n\()_setup_inf, bake-tr\n/inf.bin
 	asset	tr\n\()_vai, bake-tr\n/vai.bin

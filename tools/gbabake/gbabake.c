@@ -6,6 +6,7 @@
 // Writes, for track TRn:
 //   track.pal    256 BGR555 colors (the track's 6-bit VGA palette)
 //   track.tiles  the track image as 8bpp 8x8 tiles, row by row
+//   track.dtl    the same with each different tile once, after a map of them
 //   track.mas    the track mask, one byte per pixel (wall/surface codes)
 //   track.inf    width and height in tiles, then in pixels, then the 4 start positions
 //                (x, y, rot), all as little-endian 32-bit values
@@ -254,6 +255,49 @@ static void write_mbk(const char * dir, const __BYTE__ * mas, int w, int h){
 	fclose(fd);
 	free(map);
 	free(blocks);
+}
+
+// track.dtl: track.tiles with each different tile once, after a u16 for
+// each of the track's, its number among them, padded to 4 bytes; see
+// src/race/race_ima.c
+static void write_dtl(const char * dir, const __BYTE__ * ima, int w, int h, int tw, int th){
+
+	__WORD__ * 	map = malloc(2*tw*th);
+	__BYTE__ * 	tiles = malloc(64*tw*th), t[64];
+	int 		*hash = malloc(sizeof(int)*65536), *next = malloc(sizeof(int)*tw*th);
+	int 		n = 0, tx, ty, x, y, k;
+	FILE * 		fd;
+
+	for(k = 0; k < 65536; k++) hash[k] = -1;
+	for(ty = 0; ty < th; ty++) for(tx = 0; tx < tw; tx++){
+
+		unsigned 	hv = 0;
+
+		for(y = 0; y < 8; y++) for(x = 0; x < 8; x++){
+
+			int 	px = 8*tx+x, py = 8*ty+y;
+
+			t[8*y+x] = ((px < w)&&(py < h)) ? ima[py*w+px] : 0;
+			hv = 31*hv+t[8*y+x];
+		}
+		hv &= 0xffff;
+		for(k = hash[hv]; (k >= 0)&&memcmp(tiles+64*k, t, 64); k = next[k]);
+		if(k < 0){
+
+			k = n++;
+			memcpy(tiles+64*k, t, 64);
+			next[k] = hash[hv];
+			hash[hv] = k;
+		}
+		if(k > 0xffff){ fprintf(stderr, "track.dtl: too many tiles\n"); exit(1); }
+		map[tw*ty+tx] = k;
+	}
+	fd = out(dir, "track.dtl");
+	fwrite(map, 2, tw*th, fd);
+	if((tw*th)&1) fputc(0, fd), fputc(0, fd);
+	fwrite(tiles, 64, n, fd);
+	fclose(fd);
+	free(map); free(tiles); free(hash); free(next);
 }
 
 static void write_reversed(const char * dir, const char * name, const __BYTE__ * p, unsigned size){
@@ -860,6 +904,7 @@ int main(int argc, char * argv[]){
 		}
 	}
 	fclose(fd);
+	write_dtl(outdir, ima, w, h, tw, th);
 
 	snprintf(entry, sizeof(entry), "TR%d-MAS.BPK", track);
 	src = read_entry(bpa_name, entry);

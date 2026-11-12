@@ -51,7 +51,10 @@ void race_ima_reverse(void){
 #else
 
 // The GBA has no room for the whole image: it is the track's 8x8 tiles in
-// ROM, with the ones drawn into copied to a pool in RAM. A tile that
+// ROM, gbabake's track.dtl, with the ones drawn into copied to a pool in
+// RAM. track.dtl is a u16 for each tile, row by row, the tile's number
+// among the different ones that follow, 64 bytes each, after the map
+// padded to 4 bytes. A tile that
 // changes goes on a list for the screen to load again.
 //
 // Reversed (race_ima_reverse()), the image is turned round by 180 degrees.
@@ -59,7 +62,8 @@ void race_ima_reverse(void){
 // and copied to the pool turned. The widths are all multiples of 8, but a
 // height may not be: the turned image starts ima_pad rows into its tiles.
 
-static const __BYTE__ * 	ima_tiles;	// 64 bytes each, row by row
+static const __BYTE__ * 	ima_tiles;	// the different ones, 64 bytes each
+static const __WORD__ * 	ima_map;	// each one's of them, row by row
 static int 			ima_tw, ima_th, ima_rev, ima_pad;
 static __BYTE__ 		(*pool)[64];
 static unsigned 		pool_n, pool_max, pool_full;
@@ -74,7 +78,8 @@ static volatile int 		dirty_lost;
 
 void race_ima_tiles(const __BYTE__ * tiles, int tw, int th, unsigned max_tiles){
 
-	ima_tiles = tiles;
+	ima_map = (const __WORD__ *)tiles;
+	ima_tiles = tiles+((2*tw*th+3)&~3);
 	ima_tw = tw;
 	ima_th = th;
 	free((void *)slots);
@@ -102,6 +107,12 @@ void race_ima_reverse(void){
 
 int race_ima_pad(void){ return ima_pad; }
 
+// stored tile t, unturned
+static inline const __BYTE__ * rom_tile(unsigned t){
+
+	return ima_tiles+64*ima_map[t];
+}
+
 // tile (tx, ty) as it is now; *turned: it is to be shown turned round
 const __BYTE__ * race_ima_tile(int tx, int ty, int * turned){
 
@@ -110,13 +121,13 @@ const __BYTE__ * race_ima_tile(int tx, int ty, int * turned){
 	*turned = !s&&ima_rev;
 	if(s) return pool[s-1];
 
-	return ima_tiles+64*(ima_rev ? ima_tw*ima_th-1-t : t);
+	return rom_tile(ima_rev ? ima_tw*ima_th-1-t : t);
 }
 
 // pixel o of tile t as it is in ROM
 static inline __BYTE__ rom_px(unsigned t, int o){
 
-	return ima_rev ? ima_tiles[64*(ima_tw*ima_th-1-t)+63-o] : ima_tiles[64*t+o];
+	return ima_rev ? rom_tile(ima_tw*ima_th-1-t)[63-o] : rom_tile(t)[o];
 }
 
 int race_ima_dirty(void){
@@ -185,12 +196,12 @@ static inline __BYTE__ * to_pool(unsigned t){
 	d = (__DWORD__ *)pool[pool_n];
 	if(ima_rev){
 
-		q = (const __DWORD__ *)(ima_tiles+64*(ima_tw*ima_th-1-t));
+		q = (const __DWORD__ *)rom_tile(ima_tw*ima_th-1-t);
 		for(i = 0; i < 16; i++) d[15-i] = __builtin_bswap32(q[i]);
 	}
 	else {
 
-		q = (const __DWORD__ *)(ima_tiles+64*t);
+		q = (const __DWORD__ *)rom_tile(t);
 		for(i = 0; i < 16; i++) d[i] = q[i];
 	}
 	slots[t] |= ++pool_n;
@@ -227,7 +238,7 @@ static inline void tile_op(int op, unsigned t, int tx, int ty, int o, __BYTE__ *
 	}
 	else {
 
-		p = ((s&0x7fff) ? pool[(s&0x7fff)-1] : (__BYTE__ *)ima_tiles+64*t)+o;
+		p = ((s&0x7fff) ? pool[(s&0x7fff)-1] : (__BYTE__ *)rom_tile(t))+o;
 		if(op == OP_READ){
 
 			for(i = 0; i < k; i++) buf[i] = p[i];
