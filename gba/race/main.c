@@ -1343,7 +1343,7 @@ void gba_text_screen(void){
 }
 
 // one of the menus' 64x64 pictures (gbabake's pictures.obj and faces.obj)
-// on the text screen in sprite slot 0 or 1, its top left at x, y, in the
+// on the text screen in sprite slot 0, 1 or 2, its top left at x, y, in the
 // menus' colors: not with gba_show_car()'s car, whose colors are the
 // track's. obj 0 hides it
 void gba_picture(int slot, const u8 * obj, int x, int y){

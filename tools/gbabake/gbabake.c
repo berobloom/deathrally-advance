@@ -48,6 +48,7 @@
 //   pictures.obj the events' pictures, halved, and the loan shark's, each a
 //                64x64 sprite's 8bpp tiles in menu.pal's colors
 //   faces.obj    the drivers' faces, 64x64, the same way
+//   tracks.obj   the sign-up's pictures of the tracks, halved, the same way
 //   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
 //                cursor, see bake_menu_screen()
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
@@ -858,6 +859,21 @@ static void bake_menu_pictures(const char * outdir){
 
 	bake_shop_parts(outdir);
 	bake_menu_screen(outdir);
+
+	// the sign-up's pictures of the tracks, TRSNAP2M's first 19 of
+	// 128x112, as ___30df8h() shows them: TR0, TR1-TR9, TR1-TR9 reversed
+	src = read_entry("MENU.BPA", "trsnap2m.bpk");
+	img = calloc(1, 0x15*0x3800);
+	bpk_decode2(img, src);
+	fd = out(outdir, "tracks.obj");
+	for(i = 0; i < 19; i++){
+
+		halve(px, 64, img+0x3800*i, 128, 112);
+		put_obj64(fd, px);
+	}
+	fclose(fd);
+	free(img);
+	free(src);
 
 	// the drivers' faces as they are, 64x64, then facexx, nobody's
 	fd = out(outdir, "faces.obj");

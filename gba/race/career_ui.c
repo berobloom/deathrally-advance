@@ -59,7 +59,7 @@ static racer_t * racer(int n){ return (racer_t *)___1a01e0h+n; }
 
 // the menus' pictures (gbabake's pictures.obj), the drivers' faces and
 // the shop's animations
-extern const u8 pictures_obj[], faces_obj[];
+extern const u8 pictures_obj[], faces_obj[], tracks_obj[];
 extern const u32 shop_lz[];
 #define PIC_SPONSOR		0
 #define PIC_REAPER		1
@@ -579,16 +579,18 @@ static void signup_draw(int chosen){
 		int 	col = 10*r;
 
 		gba_text_color((r == chosen) ? 3 : 0, (r == chosen) ? 15 : 10);
-		print(col+1, 5, "%-8s", race_names[r]);
+		print(col+1, 4, "%-8s", race_names[r]);
 		gba_text_color(0, (r == chosen) ? 15 : 10);
-		print(col+1, 7, "%-8s", track_name(r, buf));
-		print(col+1, 8, "%d LAPS", 4+r);
-		print(col+1, 9, "$%-7d", prizes[r]);
+		// no more than the column's 10 cells a string: gba_print()
+		// clears as many as it has characters
+		print(col+1, 12, "%-8s", track_name(r, buf));
+		print(col+1, 13, "%d LAPS", 4+r);
+		print(col+1, 14, "$%-7d", prizes[r]);
 		for(n = 0; n < 4; n++){
 
 			const char * 	name = (n < B(___1a1f64h+r+3)) ? racer(B(___1a0ef8h+4*r+n))->name : "";
 
-			print(col+1, 11+n, "%-9.9s", name);
+			print(col+1, 15+n, "%-10.10s", name);
 		}
 		gba_text_color(0, 15);
 	}
@@ -657,12 +659,20 @@ static void offer(void){
 	if(!wait_key(1)) career_offer_accept(ev, target);
 }
 
+// TRACK_PIC(k): the picture of track k as ___106cbh[] names them, 18 none
+#define TRACK_PIC(k)		(tracks_obj+64*64*(k))
+#define TRACK_PIC_Y		40	// 64x56, under the races' names
+
 static void signup_screen(void){
+
+	int 	r;
 
 	gba_text_screen();
 	center(3, "SIGN UP FOR A RACE");
+	// the three tracks' pictures, as ___30df8h() shows them
+	for(r = 0; r < 3; r++) gba_picture(r, TRACK_PIC(B(___1a1f64h+r)), 8+80*r, TRACK_PIC_Y);
 	gba_text_color(0, 11);
-	center(18, "LEFT/RIGHT CHOOSE, A SIGN UP, B SIT IT OUT");
+	center(19, "LEFT/RIGHT CHOOSE, A SIGN UP, B SIT IT OUT");
 	gba_text_color(0, 15);
 }
 
