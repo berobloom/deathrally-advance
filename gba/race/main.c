@@ -66,6 +66,7 @@ extern const u16 menubg_dtl[];		// the menus' background, see gbabake's bake_men
 extern const u32 menufont_bin[];	// and their fonts
 extern const u32 cursor_bin[];		// and cursor
 extern const u8 menu_pal[];
+extern const u8 panel_bin[];		// the side panel, see gbabake's bake_panel()
 extern const u16 lamps_dtl[];		// a u16 for each frame's 96 tiles, then the tiles, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -1365,6 +1366,88 @@ void gba_picture(int slot, const u8 * obj, int x, int y){
 	o->attr2 = OBJ_CHAR(256+128*slot) | OBJ_PRIORITY(0);
 }
 
+// The side panel with your car and its upgrades (the desktop's
+// ___25330h()), 48x112, its top left at x, y, in sprites 4 and 5 from
+// OBJ VRAM's 20 KB on, in the menus' colors. gba_panel_*() draw on it,
+// in its pixels
+#define PANEL_GFX		((u8 *)SPRITE_GFX+20*1024)
+
+void gba_panel(int x, int y){
+
+	int 	k;
+
+	copy32(PANEL_GFX, panel_bin, 2*64*64);
+	for(k = 0; k < 2; k++){
+
+		OAM[4+k].attr0 = OBJ_Y(y+64*k) | OBJ_256_COLOR | OBJ_SQUARE;
+		OAM[4+k].attr1 = OBJ_X(x) | OBJ_SIZE(3);
+		OAM[4+k].attr2 = OBJ_CHAR(640+128*k) | OBJ_PRIORITY(0);
+	}
+	REG_DISPCNT = MENU_DISPCNT;
+}
+
+static void panel_px(int x, int y, int c){
+
+	int 		o;
+	vu16 		* p;
+
+	if((x < 0)||(x >= 48)||(y < 0)||(y >= 112)) return;
+	o = 4096*(y >> 6)+64*(8*((y&63) >> 3)+(x >> 3))+8*(y&7)+(x&7);
+	p = (vu16 *)(PANEL_GFX+(o&~1));
+	*p = (o&1) ? ((*p&0xff)|(c << 8)) : ((*p&0xff00)|c);
+}
+
+// a w x h picture at x, y on it, color 0 see-through
+void gba_panel_image(const u8 * px, int w, int h, int x, int y){
+
+	int 	i, j;
+
+	for(j = 0; j < h; j++) for(i = 0; i < w; i++) if(px[w*j+i]) panel_px(x+i, y+j, px[w*j+i]);
+}
+
+void gba_panel_fill(int x, int y, int w, int h, int c){
+
+	int 	i, j;
+
+	for(j = 0; j < h; j++) for(i = 0; i < w; i++) panel_px(x+i, y+j, c);
+}
+
+// s in the small font, its top left at x, y, in gba_text_color()'s
+void gba_panel_text(int x, int y, const char * s){
+
+	int 	r, k;
+
+	for(; *s; s++){
+
+		int 	c = (*s&127)-' ';
+
+		if(c < 0) c = 0;
+		if(c) for(r = 0; r < 8; r++){
+
+			u32 	g = FONT_SMALL[8*c+r];
+
+			for(k = 0; k < 8; k++, g >>= 4) if(g&15) panel_px(x+k, y+r, 16*text_bank+((g&15)*text_shade+14)/15);
+		}
+		x += FONT_WIDTHS[c];
+	}
+}
+
+// your car's body in the menus' colors 64-95, as ___11378h_cdecl() makes
+// them from a 6-bit VGA color
+void gba_panel_car_color(int r, int g, int b){
+
+	int 	n;
+
+	for(n = 0; n < 16; n++){
+
+		int 	d[3] = { r*(9*n+16)/160, g*(9*n+16)/160, b*(9*n+16)/160 };
+		int 	l[3] = { r+n*(63-r)/16, g+n*(63-g)/16, b+n*(63-b)/16 };
+
+		SPRITE_PALETTE[0x40+n] = (d[0] >> 1)|((d[1] >> 1) << 5)|((d[2] >> 1) << 10);
+		SPRITE_PALETTE[0x50+n] = (l[0] >> 1)|((l[1] >> 1) << 5)|((l[2] >> 1) << 10);
+	}
+}
+
 // a car turning on the text screen, its top left at x, y; model -1 hides
 // it. gba_turn_car() shows its next frame, once a frame
 
@@ -1463,21 +1546,27 @@ void gba_turn_car(void){
 // first, as many as it has characters. A word after two spaces or more
 // starts in its own cell, so the screens' columns, which they line up with
 // spaces, still line up
-void gba_print(int col, int row, const char * s){
+void gba_print(int col, int row, const char * s){ gba_print_cells(col, row, 30, s); }
 
-	int 	n = strlen(s), cells, x = 8*col, k, y;
+// the same in no more than cells cells: what doesn't fit isn't drawn
+void gba_print_cells(int col, int row, int cells, const char * s){
+
+	int 	n = strlen(s), x = 8*col, k, y, end;
 
 	if(col < 0){ s -= col; n += col; x = col = 0; }
-	cells = (col+n > 30) ? 30-col : n;
+	if(cells > n) cells = n;
+	if(col+cells > 30) cells = 30-col;
 	if((cells <= 0)||text_known(col, row, cells, s)) return;
+	end = 8*(col+cells);
 	for(y = 8*row; y < 8*row+8; y++) for(k = 0; k < cells; k++) text_put(8*(col+k), y, 0, 0xffffffff);
 	text_bank_cells(col, row, cells);
-	for(k = 0; (k < n)&&(x < SCREEN_W); k++){
+	for(k = 0; k < n; k++){
 
 		int 	c = (s[k]&127)-' ';
 
 		if(c < 0) c = 0;
 		if((k == 0)||((k >= 2)&&(s[k-1] == ' ')&&(s[k-2] == ' '))) if(x < 8*(col+k)) x = 8*(col+k);
+		if(x+FONT_WIDTHS[c] > end) break;
 		if(c) for(y = 0; y < 8; y++) text_glyph_row(x, 8*row+y, FONT_SMALL[8*c+y]);
 		x += FONT_WIDTHS[c];
 	}

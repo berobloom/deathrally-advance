@@ -49,6 +49,7 @@
 //                64x64 sprite's 8bpp tiles in menu.pal's colors
 //   faces.obj    the drivers' faces, 64x64, the same way
 //   tracks.obj   the sign-up's pictures of the tracks, halved, the same way
+//   panel.bin    the side panel with your car and its upgrades, see bake_panel()
 //   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
 //                cursor, see bake_menu_screen()
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
@@ -803,6 +804,7 @@ static void bake_shop_parts(const char * outdir){
 }
 
 static void bake_menu_screen(const char * outdir);
+static void bake_panel(const char * outdir);
 
 static void bake_menu_pictures(const char * outdir){
 
@@ -859,6 +861,8 @@ static void bake_menu_pictures(const char * outdir){
 
 	bake_shop_parts(outdir);
 	bake_menu_screen(outdir);
+
+	bake_panel(outdir);
 
 	// the sign-up's pictures of the tracks, TRSNAP2M's first 19 of
 	// 128x112, as ___30df8h() shows them: TR0, TR1-TR9, TR1-TR9 reversed
@@ -1030,6 +1034,73 @@ static void bake_menu_screen(const char * outdir){
 	}
 	fclose(fd);
 	free(bg);
+}
+
+// img, w x h, at half its size into dst, dw pixels a row: each pixel the
+// average of the four it's made of that are in the ramp of 16 colors most
+// of them are in, so that colors the menus change, a car's body (64-95),
+// stay their own
+static void halve_ramp(__BYTE__ * dst, int dw, const __BYTE__ * img, int w, int h){
+
+	int 	x, y, k, j;
+
+	for(y = 0; y < h/2; y++) for(x = 0; x < w/2; x++){
+
+		__BYTE__ 	p[4];
+		int 		best = 0, best_n = 0, sum = 0;
+
+		for(k = 0; k < 4; k++) p[k] = img[w*(2*y+k/2)+2*x+k%2];
+		for(k = 0; k < 4; k++){
+
+			int 	n = 0;
+
+			for(j = 0; j < 4; j++) n += ((p[j] >> 4) == (p[k] >> 4));
+			if(n > best_n){ best_n = n; best = p[k] >> 4; }
+		}
+		for(k = 0; k < 4; k++) if((p[k] >> 4) == best) sum += p[k]&15;
+		dst[dw*y+x] = 16*best+(sum+best_n/2)/best_n;
+	}
+}
+
+// panel.bin, the side panel with your car (___25330h()'s), halved: the
+// panel, STATBAS7.BPK's 96x224, as two 64x64 sprites' 8bpp tiles one over
+// the other, see-through right of its 48 columns; SCENECAR.BPK's six cars,
+// 48x32 each, a row after another; STATPOP4.BPK's upgrades, 10x5 each:
+// four bought, then one not
+static void bake_panel(const char * outdir){
+
+	__BYTE__ 	* img = calloc(1, 0x9000), half[64*128], obj[64*128];
+	__POINTER__ 	src;
+	int 		x, y;
+	FILE * 		fd = out(outdir, "panel.bin");
+
+	src = read_entry("MENU.BPA", "statbas7.bpk");
+	bpk_decode2(img, src);
+	free(src);
+	memset(half, 0, sizeof(half));
+	halve_ramp(half, 64, img, 96, 224);
+	for(y = 0; y < 128; y++) for(x = 0; x < 64; x++) obj[4096*(y/64)+64*(8*((y%64)/8)+x/8)+8*(y%8)+x%8] = half[64*y+x];
+	fwrite(obj, 1, sizeof(obj), fd);
+
+	src = read_entry("MENU.BPA", "scenecar.bpk");
+	bpk_decode2(img, src);
+	free(src);
+	for(x = 0; x < 6; x++){
+
+		halve_ramp(half, 48, img+0x1800*x, 96, 64);
+		fwrite(half, 1, 48*32, fd);
+	}
+
+	src = read_entry("MENU.BPA", "statpop4.bpk");
+	bpk_decode2(img, src);
+	free(src);
+	for(x = 0; x < 5; x++){
+
+		halve_ramp(half, 10, img+200*x, 20, 10);
+		fwrite(half, 1, 10*5, fd);
+	}
+	fclose(fd);
+	free(img);
 }
 
 static void bake_sound(int track, const char * outdir){

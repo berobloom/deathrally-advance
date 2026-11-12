@@ -84,6 +84,53 @@ static const char * const difficulty_names[3] = { "SPEED MAKES ME DIZZY", "I LIV
 static const char * const race_names[4] = { "EASY", "MEDIUM", "HARD", "ADVERSARY" };
 static const int prizes[3] = { 750, 3000, 12000 };
 
+// --- the side panel ---------------------------------------------------------------
+
+extern const u8 panel_bin[];
+#define PANEL_CARS		(panel_bin+2*64*64)		// 48x32 each
+#define PANEL_PIPS		(PANEL_CARS+6*48*32)		// 10x5 each, 4 the one not bought
+#define PANEL_X			192
+#define PANEL_Y			24
+
+// the top speed of each car with each engine (___25330h()'s ___18e220h)
+static const int top_speed[6][5] = {
+	{  55,  60,   0,   0,   0 }, {  65,  70,  75,   0,   0 }, {  80,  85,  90,   0,   0 },
+	{  95, 100, 105, 110,   0 }, { 115, 120, 125, 130,   0 }, { 140, 145, 150, 155, 160 }
+};
+
+// your car and how it's fitted out, as the desktop's shop, market and
+// sign-up have it on the right (___25330h()), at half its size
+static void panel(void){
+
+	const racer_t 		* me = (const racer_t *)___1a01e0h+D(___1a1ef8h);
+	const cardata_t 	* c = &___18e298h[me->car];
+	const __BYTE__ 		* col = (const __BYTE__ *)copper_pal+3*me->color;
+	const int 		most[3] = { c->n_engine_upgrades, c->n_tire_upgrades, c->n_armor_upgrades };
+	const int 		has[3] = { me->engine, me->tires, me->armor };
+	char 			buf[24];
+	int 			k, n;
+
+	gba_panel(PANEL_X, PANEL_Y);
+	gba_panel_car_color(col[0], col[1], col[2]);
+	gba_panel_image(PANEL_CARS+48*32*me->car, 48, 32, 0, 8);
+	gba_text_color(0, 15);
+	snprintf(buf, sizeof(buf), "%s", me->name);
+	for(k = 0; buf[k]; k++) if((buf[k] >= 'a')&&(buf[k] <= 'z')) buf[k] -= 0x20;
+	gba_panel_text((48-gba_text_width(buf, 99))/2, 0, buf);
+	snprintf(buf, sizeof(buf), "$%d", (me->money > 9999999) ? 9999999 : me->money);
+	gba_panel_text((48-gba_text_width(buf, 99))/2, 40, buf);
+	// the upgrades: each there is, bought or not
+	for(k = 0; k < 3; k++) for(n = 0; n < most[k]; n++) gba_panel_image(PANEL_PIPS+50*((n < has[k]) ? n : 4), 10, 5, 2+23*n/2, 54+12*k);
+	gba_panel_fill(2, 90, (22*me->damage+99)/100, 2, 0x3f);
+	snprintf(buf, sizeof(buf), "%d", me->damage);
+	gba_panel_text(39-gba_text_width(buf, 99), 87, buf);
+	// right of SPEED: and RANK:, to the panel's edge
+	snprintf(buf, sizeof(buf), "%d", top_speed[me->car%6][me->engine%5]);
+	gba_panel_text(47-gba_text_width(buf, 99), 96, buf);
+	snprintf(buf, sizeof(buf), "#%d", me->rank);
+	gba_panel_text(47-gba_text_width(buf, 99), 104, buf);
+}
+
 #if defined(CAREER_BENCH)
 static int bench_round;
 #endif
@@ -576,21 +623,22 @@ static void signup_draw(int chosen){
 
 	for(r = 0; r < 3; r++){
 
-		int 	col = 10*r;
+		int 	col = 8*r;
 
+		// in the column's 8 cells, the next column's first left
+		// clear: gba_print() clears as many as a string has characters
 		gba_text_color((r == chosen) ? 3 : 0, (r == chosen) ? 15 : 10);
-		print(col+1, 4, "%-8s", race_names[r]);
+		print(col+1, 4, "%-7s", race_names[r]);
 		gba_text_color(0, (r == chosen) ? 15 : 10);
-		// no more than the column's 10 cells a string: gba_print()
-		// clears as many as it has characters
-		print(col+1, 12, "%-8s", track_name(r, buf));
+		print(col+1, 12, "%-7s", track_name(r, buf));
 		print(col+1, 13, "%d LAPS", 4+r);
-		print(col+1, 14, "$%-7d", prizes[r]);
+		print(col+1, 14, "$%-6d", prizes[r]);
 		for(n = 0; n < 4; n++){
 
 			const char * 	name = (n < B(___1a1f64h+r+3)) ? racer(B(___1a0ef8h+4*r+n))->name : "";
 
-			print(col+1, 15+n, "%-10.10s", name);
+			snprintf(buf, sizeof(buf), "%-11s", name);
+			gba_print_cells(col+1, 15+n, 8, buf);
 		}
 		gba_text_color(0, 15);
 	}
@@ -670,7 +718,8 @@ static void signup_screen(void){
 	gba_text_screen();
 	center(3, "SIGN UP FOR A RACE");
 	// the three tracks' pictures, as ___30df8h() shows them
-	for(r = 0; r < 3; r++) gba_picture(r, TRACK_PIC(B(___1a1f64h+r)), 8+80*r, TRACK_PIC_Y);
+	for(r = 0; r < 3; r++) gba_picture(r, TRACK_PIC(B(___1a1f64h+r)), 64*r, TRACK_PIC_Y);
+	panel();
 	gba_text_color(0, 11);
 	center(19, "LEFT/RIGHT CHOOSE, A SIGN UP, B SIT IT OUT");
 	gba_text_color(0, 15);
@@ -1535,16 +1584,18 @@ void career_play(void){
 #endif
 		career_store();
 		gba_text_screen();
-		gba_picture(0, FACE(me->face), 176, 24);
+		gba_picture(0, FACE(me->face), 120, 24);
+		panel();
 		gba_text_color(3, 15);
 		print(1, 3, "%s", me->name);
 		gba_text_color(0, 15);
-		print(1, 4, "RANK      %d OF 20", me->rank);
-		print(1, 5, "POINTS    %d", me->points);
-		print(1, 6, "MONEY     $%d", me->money);
-		print(1, 7, "CAR       %s", car_names[me->car]);
-		print(1, 8, "DAMAGE    %d%%", me->damage);
-		if(career_loan_owed()) print(1, 9, "LOAN      $%d, %d RACE%s LEFT", career_loan_owed(), 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+		print(1, 5, "%d POINTS", me->points);
+		print(1, 6, "%s", car_names[me->car]);
+		if(career_loan_owed()){
+
+			print(1, 8, "LOAN $%d", career_loan_owed());
+			print(1, 9, "%d RACE%s LEFT", 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+		}
 		// after events(), shop_main()'s end of the road: a wreck you
 		// can't pay to repair
 		if(career_shop_broke()){
@@ -1563,9 +1614,9 @@ void career_play(void){
 
 			if(n != row){
 
-				item_at(HUB_Y+14*0, row == 0, career_leading() ? "FACE THE ADVERSARY" : "RACE");
+				item_at(HUB_Y+14*0, row == 0, career_leading() ? "THE ADVERSARY" : "RACE");
 				item_at(HUB_Y+14*1, row == 1, "SHOP");
-				item_at(HUB_Y+14*2, row == 2, "UNDERGROUND MARKET");
+				item_at(HUB_Y+14*2, row == 2, "MARKET");
 				item_at(HUB_Y+14*3, row == 3, "STANDINGS");
 				item_at(HUB_Y+14*4, row == 4, "QUIT");
 				n = row;

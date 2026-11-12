@@ -44,6 +44,7 @@
 	asset	pictures_obj, pictures.obj
 	asset	faces_obj, faces.obj
 	asset	tracks_obj, tracks.obj
+	asset	panel_bin, panel.bin
 	asset	shop_lz, shop.lz
 	asset	menubg_dtl, menubg.dtl
 	asset	menufont_bin, menufont.bin
