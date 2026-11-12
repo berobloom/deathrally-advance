@@ -164,7 +164,7 @@ In `gba/race`:
 
 The title screen chooses the career or a quick race. In the career's screens, the D-pad moves, A chooses and B goes back. A new game asks for your name (A on it, then up and down change the letter and left and right move along), your face, which is one of the drivers' and leaves that driver out, and the difficulty. At the sign-up, left and right pick a race and A signs up, or B sits the round out. The others sign up as you choose, and a race that has its four is full.
 
-The career saves itself in the cartridge's SRAM each time you're back at its hub, in the desktop's saved game's form, and the lap records and hall of fame with it, which start as a new DR.CFG's. The title screen shows the hall of fame, and the race's screen before it the track's lap record for your car. Choosing the career again offers to continue it or start a new one; a career that's over, won or lost, is no longer offered.
+The career saves itself in the cartridge's SRAM each time you're back at its hub, in the desktop's saved game's form, and the lap records and hall of fame with it, which start as a new DR.CFG's. The menus play the game's menu music, jumping in it where the desktop's do. The title screen shows the hall of fame, and the race's screen before it the track's lap record for your car. Choosing the career again offers to continue it or start a new one; a career that's over, won or lost, is no longer offered.
 
 Before a quick race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill, your car's upgrades, and whether there are weapons. A or Start races, and B goes back to the title. Without weapons nobody has guns or mines, and the HUD box shows the lap time instead. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
@@ -181,7 +181,7 @@ Not done yet:
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
-* The menus' music, and the sound effects starting partway through, which Maxmod can't do.
+* The sound effects starting partway through, which Maxmod can't do.
 * Testing on real hardware.
 
 ## Desktop

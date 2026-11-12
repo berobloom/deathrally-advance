@@ -60,9 +60,31 @@ void sound_init(void){
 	mmSetEffectsVolume(1024);
 }
 
+static int 	menu_playing;
+
 void sound_music(int n){
 
 	LOCKED(mmEffectCancelAll(); if(n < 0) mmStop(); else mmStart(n, MM_PLAY_LOOP));
+	menu_playing = 0;
+}
+
+// the menus' music (MEN-MUS.CMF) from its pattern order, as the desktop's
+// dRally_Sound_setPosition(order << 8) jumps in it, or going on where it
+// is if order < 0. Started if it isn't playing
+void sound_menu_music(int order){
+
+	if(!menu_playing){
+
+		LOCKED(mmStart(MOD_MEN, MM_PLAY_LOOP); mmPosition((order < 0) ? 0x2d : order));
+		menu_playing = 1;
+	}
+	else if(order >= 0) LOCKED(mmPosition(order));
+}
+
+// where the menus' music is, for sound_menu_music() to go back to
+int sound_menu_position(void){
+
+	return menu_playing ? (int)mmGetPosition() : -1;
 }
 
 // sfx_channel 1-14 plays effect n (GEN-EFE.CMF's instrument n) at vol and

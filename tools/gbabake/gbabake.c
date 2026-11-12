@@ -31,6 +31,7 @@
 //   hud.bin      the HUD box's pictures from IBFILES.BPA, RACE_HUD_* in
 //                drally_race.h
 //   trN.s3m      the track's music, TRn-MUS.CMF decoded, for mmutil
+//   men.s3m      the menus' music, MEN-MUS.CMF, the same way
 //   efeNN.wav    the race's sound effects, GEN-EFE.CMF's instruments 1, 2, ...:
 //                each one's first sample, 8-bit, at its base rate, with its loop
 //   sfx.bin      their base volumes, 0-64, one byte each, for effect 1 on
@@ -567,6 +568,18 @@ static void bake_sound(int track, const char * outdir){
 	s3m_clean(p, size);
 	snprintf(entry, sizeof(entry), "tr%d.s3m", track);
 	write_file(outdir, entry, p, size);
+	free(p);
+
+	// the menus' music, as the track's
+	p = read_cmf("MEN-MUS.CMF", &size);
+	if(!memcmp(p+0x2c, "SCRM", 4)){
+
+		s3m_clean(p, size);
+		write_file(outdir, "men.s3m", p, size);
+	}
+	else if(!memcmp(p, "Extended Module: ", 17)) write_file(outdir, "men.xm", p, size);
+	else { fprintf(stderr, "MEN-MUS.CMF is neither an S3M nor an XM\n"); exit(1); }
+	printf("MEN-MUS.CMF: %s, %u bytes\n", memcmp(p+0x2c, "SCRM", 4) ? "XM" : "S3M", size);
 	free(p);
 
 	bake_xm("GEN-EFE.CMF", "efe", "sfx.bin", outdir);

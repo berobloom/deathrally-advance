@@ -170,8 +170,9 @@ static const char * const 	difficulty_short[3] = { "DIZZY", "RIDE", "PETROL" };
 // you marked at place you if you're one. Until A or B
 static void hall_of_fame(int you){
 
-	int 	n;
+	int 	n, back = sound_menu_position();
 
+	sound_menu_music(0x51);		// its own music, as menu___22a80h()'s
 	gba_text_screen();
 	center(1, "HALL OF FAME");
 	gba_print(4, 3, "NAME        RACES");
@@ -183,6 +184,7 @@ static void hall_of_fame(int you){
 	}
 	center(18, "PRESS A");
 	wait_key(1);
+	sound_menu_music(back);
 }
 
 // --- the title and a new game ----------------------------------------------------
@@ -193,6 +195,7 @@ int gba_title(void){
 
 	for(;;){
 
+		sound_menu_music(-1);
 		gba_text_screen();
 		center(4, "DEATH RALLY ADVANCE");
 		center(17, "PRESS A");
@@ -484,6 +487,7 @@ static int race(int num_cars){
 	career_race_fill(num_cars, grid);
 	gba_career_race(D(___1a103ch), num_cars);
 	career_race_after(num_cars, grid);
+	sound_menu_music(0x28);		// as ___33010h() goes back to the menus
 
 	// how it went
 	gba_text_screen();
@@ -1114,8 +1118,10 @@ static void market(void){
 		"Jealousy burns you like a dragon inside, you", "[want that road all to yourself?{ So jinx",
 		"those rival suckers, let them go out in a", "blaze; you take the glory. [Welcome to the",
 		"[Underground Market.{ What you want, we got.", "Dig out the dough, this gonna cost you.", "" };
-	int 	row = CAREER_MARKET_LOAN;
+	int 	row = CAREER_MARKET_LOAN, back = sound_menu_position();
 
+	// its own music, as underground_main() plays it, and back after
+	sound_menu_music(0x31);
 	career_market_open();
 	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
@@ -1138,6 +1144,7 @@ static void market(void){
 		if(row == MARKET_DONE) break;
 		market_buy(row);
 	}
+	sound_menu_music(back);
 }
 
 // ___168b4h(): after three races, the loan shark comes for his money
