@@ -1069,6 +1069,31 @@ void gba_text_screen(void){
 	shown_model = -1;
 	for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
 	BG_PALETTE[0] = 0;
+	// the track's colors for the sprites again, which gba_picture() changes
+	copy32(SPRITE_PALETTE, BG_PALETTE, 512);
+}
+
+// one of the menus' 64x64 pictures (gbabake's pictures.obj and faces.obj)
+// on the text screen in sprite slot 0 or 1, its top left at x, y, in the
+// menus' colors: not with gba_show_car()'s car, whose colors are the
+// track's. obj 0 hides it
+void gba_picture(int slot, const u8 * obj, int x, int y){
+
+	extern const u8 menu_pal[];
+
+	OBJATTR 	* o = &OAM[1+slot];
+
+	if(!obj){
+
+		o->attr0 = OBJ_DISABLE;
+		return;
+	}
+	copy32(SPRITE_PALETTE, menu_pal, 512);
+	copy32((u8 *)SPRITE_GFX+(8+4*slot)*1024, obj, 64*64);
+	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	o->attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_SQUARE;
+	o->attr1 = OBJ_X(x) | OBJ_SIZE(3);
+	o->attr2 = OBJ_CHAR(256+128*slot) | OBJ_PRIORITY(0);
 }
 
 // a car turning on the text screen, its top left at x, y; model -1 hides

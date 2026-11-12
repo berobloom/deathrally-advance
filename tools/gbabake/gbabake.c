@@ -42,6 +42,10 @@
 //   obstacle.bin
 //   carcol.pal   MENU.BPA's CARCOL.PAL and COPPER.PAL, the racers' car colors
 //   copper.pal   as the career's ___33010h_cdecl() picks them, see career.c
+//   menu.pal     MENU.BPA's MENU.PAL, the menus' colors, as track.pal
+//   pictures.obj the events' pictures, halved, and the loan shark's, each a
+//                64x64 sprite's 8bpp tiles in menu.pal's colors
+//   faces.obj    the drivers' faces, 64x64, the same way
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
 //                96 frames of 40x40 each, not recolored
 //   cars.shp     the shapes the race code asks of them, race_car_shapes_t
@@ -556,6 +560,109 @@ static void bake_xm(const char * cmf, const char * prefix, const char * vols_nam
 	printf("%s: %u sound effects\n", cmf, n_ins);
 }
 
+// the menus' pictures, for the GBA's text screens: menu.pal as 256
+// BGR555 colors, and pictures as 64x64 sprites of 8bpp 8x8 tiles, color 0
+// see-through. The events' pictures, 104x128 and the loan shark's 96x96,
+// are halved, each 2x2 block the menu color nearest its pixels' average,
+// see-through if most are
+static const __BYTE__ * 	menu_pal;
+
+static int nearest_menu_color(int r, int g, int b){
+
+	int 	n, best = 1, d, best_d = 1 << 30;
+
+	for(n = 1; n < 0x100; n++){
+
+		int 	dr = menu_pal[3*n]-r, dg = menu_pal[3*n+1]-g, db = menu_pal[3*n+2]-b;
+
+		d = dr*dr+dg*dg+db*db;
+		if(d < best_d){ best_d = d; best = n; }
+	}
+
+	return best;
+}
+
+static void put_obj64(FILE * fd, const __BYTE__ * px){
+
+	__BYTE__ 	obj[64*64];
+	int 		x, y;
+
+	for(y = 0; y < 64; y++) for(x = 0; x < 64; x++) obj[64*((y/8)*8+x/8)+8*(y%8)+x%8] = px[64*y+x];
+	fwrite(obj, 1, sizeof(obj), fd);
+}
+
+static void bake_menu_pictures(const char * outdir){
+
+	static const struct { const char * name; int w, h; } pics[] = {
+		{ "spons1b.bpk", 104, 128 },	// a streak, lapped, too slow
+		{ "reaper_x.bpk", 104, 128 },	// the reaper
+		{ "event_2.bpk", 104, 128 },	// the hit, not a scratch
+		{ "drugdeal.bpk", 104, 128 },	// the steroids
+		{ "dealer2b.bpk", 96, 96 },	// the loan shark
+	};
+	__BYTE__ 	pal[0x300], px[64*64];
+	__POINTER__ 	src, img;
+	char 		name[16];
+	unsigned 	i, n, x, y, k;
+	FILE * 		fd;
+
+	src = read_entry("MENU.BPA", "menu.pal");
+	memcpy(pal, src, sizeof(pal));
+	free(src);
+	menu_pal = pal;
+	fd = out(outdir, "menu.pal");
+	for(n = 0; n < 0x100; n++){
+
+		__WORD__ c = (pal[3*n] >> 1) | ((pal[3*n+1] >> 1) << 5) | ((pal[3*n+2] >> 1) << 10);
+
+		fputc(c, fd); fputc(c >> 8, fd);
+	}
+	fclose(fd);
+
+	fd = out(outdir, "pictures.obj");
+	for(i = 0; i < sizeof(pics)/sizeof(pics[0]); i++){
+
+		src = read_entry("MENU.BPA", pics[i].name);
+		img = calloc(1, pics[i].w*pics[i].h);
+		bpk_decode2(img, src);
+		memset(px, 0, sizeof(px));
+		for(y = 0; y < (unsigned)pics[i].h/2; y++){
+			for(x = 0; x < (unsigned)pics[i].w/2; x++){
+
+				int 	r = 0, g = 0, b = 0, m = 0;
+
+				for(k = 0; k < 4; k++){
+
+					__BYTE__ 	c = img[pics[i].w*(2*y+k/2)+2*x+k%2];
+
+					if(!c) continue;
+					r += pal[3*c]; g += pal[3*c+1]; b += pal[3*c+2]; m++;
+				}
+				if(m >= 2) px[64*y+x] = nearest_menu_color(r/m, g/m, b/m);
+			}
+		}
+		put_obj64(fd, px);
+		free(img);
+		free(src);
+	}
+	fclose(fd);
+
+	// the drivers' faces as they are, 64x64, then facexx, nobody's
+	fd = out(outdir, "faces.obj");
+	for(i = 0; i <= 20; i++){
+
+		if(i < 20) snprintf(name, sizeof(name), "face%02u.bpk", i+1);
+		else strcpy(name, "facexx.bpk");
+		src = read_entry("MENU.BPA", name);
+		img = calloc(1, 64*64);
+		bpk_decode2(img, src);
+		put_obj64(fd, img);
+		free(img);
+		free(src);
+	}
+	fclose(fd);
+}
+
 static void bake_sound(int track, const char * outdir){
 
 	char 		entry[32];
@@ -670,6 +777,7 @@ int main(int argc, char * argv[]){
 
 	bake_setup(track, w, h, outdir);
 	bake_sound(track, outdir);
+	bake_menu_pictures(outdir);
 	if(argc == 5) race_spins = read_race(argv[4], w, h, outdir);
 
 	fd = out(outdir, "cars.obj");

@@ -38,6 +38,9 @@
 	asset_part	cars_obj, cars-all.obj, RACE_GBA_CARS*4*96*5*5*64
 	asset	carcol_pal, carcol.pal
 	asset	copper_pal, copper.pal
+	asset	menu_pal, menu.pal
+	asset	pictures_obj, pictures.obj
+	asset	faces_obj, faces.obj
 	asset	sfx_bin, sfx.bin
 	asset	men_bin, men.bin
 	asset	soundbank_bin, soundbank.bin

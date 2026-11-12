@@ -57,6 +57,25 @@ void ___3079ch_cdecl(__DWORD__);
 
 static racer_t * racer(int n){ return (racer_t *)___1a01e0h+n; }
 
+// the menus' pictures (gbabake's pictures.obj), and the drivers' faces
+extern const u8 pictures_obj[], faces_obj[];
+#define PIC_SPONSOR		0
+#define PIC_REAPER		1
+#define PIC_HIT			2
+#define PIC_DRUGS		3
+#define PIC_LOANSHARK		4
+#define PICTURE(n)		(pictures_obj+64*64*(n))
+#define FACE(n)			(faces_obj+64*64*(n))	// 20: nobody's
+#define PICTURE_X		176	// top right, beside the words
+#define PICTURE_Y		8
+#define PICTURE_ROWS		10	// the rows it's beside
+
+// the picture the next speech shows, if one, and the rows from the top that
+// are narrower beside it
+static const u8 * 	picture;
+static int 		text_narrow;
+
+
 static const char * const car_names[7] = { "VAGABOND", "DERVISH", "SENTINEL", "SHRIEKER", "WRAITH", "DELIVERATOR", "ADVERSARY" };
 static const char * const difficulty_names[3] = { "SPEED MAKES ME DIZZY", "I LIVE TO RIDE", "PETROL IN MY VEINS" };
 static const char * const race_names[4] = { "EASY", "MEDIUM", "HARD", "ADVERSARY" };
@@ -225,7 +244,7 @@ static int new_game(void){
 
 	static char 	name[NAME_LEN+1] = "RACER";
 	static int 	face = 0, difficulty = 1;
-	int 		row = 0, edit = 0, cur = 0, n;
+	int 		row = 0, edit = 0, cur = 0, n, shown = -1;
 	char 		buf[32];
 
 #if defined(CAREER_BENCH)
@@ -245,6 +264,8 @@ static int new_game(void){
 		for(n = 0; n < NAME_LEN; n++) gba_print(11+n, 5, (edit&&(n == cur)) ? "-" : " ");
 		gba_print(4, 7, "FACE");
 		print(11, 7, "%-11s", name_list[face]);
+		if(face != shown) gba_picture(0, FACE(face), 176, 0);
+		shown = face;
 		gba_print(4, 10, "DIFFICULTY");
 		print(4, 11, "%-22s", difficulty_names[difficulty]);
 		gba_print(4, 14, "START");
@@ -598,8 +619,11 @@ static void offer(void){
 	}
 	gba_text_screen();
 	voice(SFX_SPECIAL_OFFER);
+	gba_picture(0, PICTURE((ev == CAREER_EVENT_HITMAN) ? PIC_HIT : PIC_DRUGS), PICTURE_X, PICTURE_Y);
 	center(0, "SPECIAL OFFER");
-	text_lines(3, 13, t, 8);
+	text_narrow = PICTURE_ROWS;
+	text_lines(2, 14, t, 8);
+	text_narrow = 0;
 	center(17, "A DEAL");
 	center(18, "B NO DEAL");
 	if(!wait_key(1)) career_offer_accept(ev, target);
@@ -735,8 +759,9 @@ static void text_lines(int row0, int rows, const char * const * t, int n_lines){
 		char 	line[29];
 
 		while(*w == ' ') w++;
-		// as much as fits, broken at a space or a line's end
-		for(len = 0; w[len]&&(w[len] != '\n')&&(len < 28); len++);
+		// as much as fits, broken at a space or a line's end, beside
+		// a picture less
+		for(len = 0; w[len]&&(w[len] != '\n')&&(len < ((row < text_narrow) ? 21 : 28)); len++);
 		if(w[len]&&(w[len] != '\n')&&(w[len] != ' ')){
 
 			for(i = len; (i > 0)&&(w[i] != ' '); i--);
@@ -776,18 +801,34 @@ static void shop_text(const char40 * t){
 static void speech(const char40 * t, int n_lines){
 
 	gba_text_screen();
-	text_at(3, 13, t, n_lines);
+	if(picture){
+
+		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
+		text_narrow = PICTURE_ROWS;
+		text_at(1, 16, t, n_lines);
+	}
+	else text_at(3, 13, t, n_lines);
 	center(18, "PRESS A");
 	wait_key(0);
+	text_narrow = 0;
+	picture = 0;
 }
 
 // the same, of lines of any length
 static void speech_lines(const char * const * t, int n_lines){
 
 	gba_text_screen();
-	text_lines(3, 13, t, n_lines);
+	if(picture){
+
+		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
+		text_narrow = PICTURE_ROWS;
+		text_lines(1, 16, t, n_lines);
+	}
+	else text_lines(3, 13, t, n_lines);
 	center(18, "PRESS A");
 	wait_key(0);
+	text_narrow = 0;
+	picture = 0;
 }
 
 // what to say of the item when it's chosen, as the shop's own panels do
@@ -1159,6 +1200,7 @@ static void loan_collect(void){
 		"joker. A deal is a deal. I got a", "reputation to look after. Too bad.",
 		"Nothing personal, but I got to hurt", "you some now. Hurt 'im, boyz." };
 
+	picture = PICTURE(PIC_LOANSHARK);
 	speech(career_loan_collect(1) ? paid : hurt, 8);
 }
 
@@ -1240,6 +1282,17 @@ static void events(void){
 
 	while((ev = career_event_next()) != CAREER_EVENT_NONE){
 
+		// shop_main()'s functions' pictures
+		switch(ev){
+		case CAREER_EVENT_LAPPED:
+		case CAREER_EVENT_STREAK:
+		case CAREER_EVENT_TOO_SLOW: picture = PICTURE(PIC_SPONSOR); break;
+		case CAREER_EVENT_REAPER: picture = PICTURE(PIC_REAPER); break;
+		case CAREER_EVENT_INCONCEIVABLE:
+		case CAREER_EVENT_HITMAN: picture = PICTURE(PIC_HIT); break;
+		case CAREER_EVENT_STEROIDS: picture = PICTURE(PIC_DRUGS); break;
+		case CAREER_EVENT_LOAN: picture = PICTURE(PIC_LOANSHARK); break;
+		}
 		switch(ev){
 		case CAREER_EVENT_WELCOME: speech_lines(shop_welcome, 10); break;
 		case CAREER_EVENT_LAPPED: speech_lines(lapped, 10); break;
@@ -1346,6 +1399,7 @@ void career_play(void){
 #endif
 		career_store();
 		gba_text_screen();
+		gba_picture(0, FACE(me->face), 176, 0);
 		print(1, 1, "%s", me->name);
 		print(1, 3, "RANK    %d", me->rank);
 		print(1, 4, "POINTS  %d", me->points);

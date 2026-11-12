@@ -9,6 +9,7 @@ void gba_print(int col, int row, const char * s);
 void gba_show_car(int model, int x, int y);
 void gba_turn_car(void);
 void gba_car_color(int r, int g, int b);
+void gba_picture(int slot, const u8 * obj, int x, int y);
 u16 gba_frame(void);
 void gba_career_reset(void);
 void gba_career_race(int my_index, int num_cars);
