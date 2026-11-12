@@ -7,6 +7,8 @@
 //   track.pal    256 BGR555 colors (the track's 6-bit VGA palette)
 //   track.tiles  the track image as 8bpp 8x8 tiles, row by row
 //   track.dtl    the same with each different tile once, after a map of them
+//                Both have the track's buildings drawn in, from straight
+//                above: see bake_buildings()
 //   track.mas    the track mask, one byte per pixel (wall/surface codes)
 //   track.inf    width and height in tiles, then in pixels, then the 4 start positions
 //                (x, y, rot), all as little-endian 32-bit values
@@ -78,6 +80,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <math.h>
 
 #include "drally.h"
 #include "bpa.h"
@@ -1201,6 +1204,127 @@ static void bake_sound(int track, const char * outdir){
 	bake_xm("MEN-SAM.CMF", "men", "men.bin", outdir);
 }
 
+// The track's buildings (TRn-SCE.BPK), which the desktop draws in 3D over
+// the track each frame (race___53464h()), projected from the middle of the
+// screen, are holes in its image. The GBA has no time for that, so they're
+// drawn into the image here, as seen from straight above: each point at its
+// X/256, Y/256 from the object's TRX_X, TRX_Y, where the desktop puts the
+// ground's (Z 256). Its faces that look up, the lowest first, in their
+// colors and the trees' shades as race___53464h() works them out, without
+// the textures, which it can leave off too, or the shadows, through tables
+// it leaves empty
+#pragma pack(push, 1)
+typedef struct xc50_s {
+	int 		PointsN, TrianglesN;
+	int 		CONST_X___8[75], CONST_Y_134[75], CONST_Z_260[75];
+	__DWORD__ 	_38C, _390, _394, _398;
+	__DWORD__	IndicesP1[100], IndicesP2[100], IndicesP3[100], _84C[100];
+	__DWORD__	TRX_X, TRX_Y, X_REL_VIEWPORT_CENTER, Y_REL_VIEWPORT_CENTER;
+	__DWORD__	PointsX[75], PointsY[75];
+	__DWORD__	_C44, _C48, _C4C;
+} xc50_t;
+#pragma pack(pop)
+xc50_t 		___1f3b08h[100];
+int 		NUM_OF_OBJECTS;
+__DWORD__ 	___1df9a0h[100][75];
+void race___4a6b4h(void);
+
+typedef struct {
+	double 		x[3], y[3], c[3], z;
+} face_t;
+
+// race___53464h()'s kind 0x80 color of a point, the shift as x86 does it
+static int tree_color(int x, int y){
+
+	int 	c = 0x36*((100-x) >> 8)+8;
+
+	return 0x6d+(abs((75*y) >> (c&31))&7);
+}
+
+static int face_cmp(const void * a, const void * b){
+
+	double 	za = ((const face_t *)a)->z, zb = ((const face_t *)b)->z;
+
+	return (za < zb) ? 1 : (za > zb) ? -1 : 0;	// the farthest down first
+}
+
+// each pixel whose middle is in the triangle, its color from its corners'
+static void fill_face(__BYTE__ * ima, int w, int h, const face_t * f){
+
+	double 	x0 = f->x[0], y0 = f->y[0], x1 = f->x[1], y1 = f->y[1], x2 = f->x[2], y2 = f->y[2];
+	double 	area = (x1-x0)*(y2-y0)-(y1-y0)*(x2-x0);
+	int 	px, py, xa, xb, ya, yb;
+
+	if(fabs(area) < 1e-9) return;
+	xa = (int)floor(fmin(x0, fmin(x1, x2))); xb = (int)ceil(fmax(x0, fmax(x1, x2)));
+	ya = (int)floor(fmin(y0, fmin(y1, y2))); yb = (int)ceil(fmax(y0, fmax(y1, y2)));
+	if(xa < 0) xa = 0;
+	if(ya < 0) ya = 0;
+	if(xb > w-1) xb = w-1;
+	if(yb > h-1) yb = h-1;
+	for(py = ya; py <= yb; py++) for(px = xa; px <= xb; px++){
+
+		double 	cx = px+0.5, cy = py+0.5;
+		double 	b0 = ((x1-cx)*(y2-cy)-(y1-cy)*(x2-cx))/area;
+		double 	b1 = ((x2-cx)*(y0-cy)-(y2-cy)*(x0-cx))/area;
+		double 	b2 = 1.0-b0-b1;
+
+		if((b0 < -1e-6)||(b1 < -1e-6)||(b2 < -1e-6)) continue;
+		ima[w*py+px] = (int)(b0*f->c[0]+b1*f->c[1]+b2*f->c[2]+0.5);
+	}
+}
+
+static void bake_buildings(int track, const char * bpa_name, __BYTE__ * ima, int w, int h){
+
+	char 		entry[32];
+	__POINTER__ 	src;
+	face_t 		* faces;
+	int 		k, m, j, n = 0;
+
+	snprintf(entry, sizeof(entry), "TR%d-SCE.BPK", track);
+	src = read_entry(bpa_name, entry);
+	NUM_OF_OBJECTS = 0;
+	bpk_decode4(1, 0, (__POINTER__)&NUM_OF_OBJECTS, src);
+	if((NUM_OF_OBJECTS < 0)||(NUM_OF_OBJECTS > 100)){ fprintf(stderr, "%s: %d objects\n", entry, NUM_OF_OBJECTS); exit(1); }
+	bpk_decode4(sizeof(xc50_t)*NUM_OF_OBJECTS, 1, (__POINTER__)___1f3b08h, src);
+	free(src);
+	race___4a6b4h();	// the shades of kind 0x8a's points
+
+	faces = calloc(100*NUM_OF_OBJECTS+1, sizeof(face_t));
+	for(k = 0; k < NUM_OF_OBJECTS; k++){
+
+		const xc50_t 	* o = &___1f3b08h[k];
+
+		if((o->PointsN > 75)||(o->TrianglesN > 100)){ fprintf(stderr, "%s: object %d too big\n", entry, k); exit(1); }
+		for(m = 0; m < o->TrianglesN; m++){
+
+			__DWORD__ 	p[3] = { o->IndicesP1[m], o->IndicesP2[m], o->IndicesP3[m] }, kind = o->_84C[m]&0xff;
+			face_t 		* f = &faces[n];
+			double 		face;
+
+			if((kind >= 0x81)&&(kind <= 0x83)) continue;	// shadows
+			f->z = 0;
+			for(j = 0; j < 3; j++){
+
+				if(p[j] >= (__DWORD__)o->PointsN){ fprintf(stderr, "%s: object %d triangle %d's points\n", entry, k, m); exit(1); }
+				f->x[j] = (int)o->TRX_X+o->CONST_X___8[p[j]]/256.0;
+				f->y[j] = (int)o->TRX_Y+o->CONST_Y_134[p[j]]/256.0;
+				f->z += o->CONST_Z_260[p[j]]/3.0;
+				f->c[j] = (kind == 0x80) ? tree_color(o->CONST_X___8[p[j]], o->CONST_Y_134[p[j]])
+					: (kind == 0x8a) ? (int)___1df9a0h[k][p[j]]+0x6c : kind;
+			}
+			// race___53464h()'s test: the ones that face away, and the
+			// walls, which are lines from above, left out
+			face = (f->x[1]-f->x[0])*(f->y[2]-f->y[0])-(f->y[1]-f->y[0])*(f->x[2]-f->x[0]);
+			if(face < -1e-9) n++;
+		}
+	}
+	qsort(faces, n, sizeof(face_t), face_cmp);
+	for(k = 0; k < n; k++) fill_face(ima, w, h, &faces[k]);
+	printf("%s: %d objects, %d faces drawn in\n", entry, NUM_OF_OBJECTS, n);
+	free(faces);
+}
+
 int main(int argc, char * argv[]){
 
 	char		bpa_name[16], entry[32], outdir[PATH_MAX];
@@ -1235,6 +1359,7 @@ int main(int argc, char * argv[]){
 	ima = calloc(1, w*h);
 	bpk_decode4(w*h, 0x30a, ima, src);
 	free(src);
+	bake_buildings(track, bpa_name, ima, w, h);
 	write_pal(outdir, "track.pal", pal);
 	{
 		BPA * 		bpa = bpa_open(bpa_name);
