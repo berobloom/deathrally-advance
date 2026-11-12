@@ -72,4 +72,25 @@ int career_loan_collect(int clear);
 int career_loan_due(void);
 int career_signup_sabotage(__DWORD__ seed);
 
+// the random events and what else the shop tells when you come back, as
+// shop_main() numbers them
+#define CAREER_EVENT_NONE 		0
+#define CAREER_EVENT_WELCOME 		1	// the shop's, the first time
+#define CAREER_EVENT_STREAK 		2	// three wins in a row
+#define CAREER_EVENT_INCONCEIVABLE 	3	// no damage in a race with weapons
+#define CAREER_EVENT_REAPER 		4	// all the others wrecked
+#define CAREER_EVENT_STEROIDS 		5	// the offer's outcome
+#define CAREER_EVENT_HITMAN 		6	// the offer's outcome
+#define CAREER_EVENT_LOAN 		7	// the loan shark collects
+#define CAREER_EVENT_LAPPED 		9
+#define CAREER_EVENT_TOO_SLOW 		10	// last
+
+int career_event_next(void);
+int career_event_apply(int ev);
+void career_event_clear(int ev);
+void career_shop_continue(void);
+int career_market_welcome(void);
+int career_offer(int * pay, int * target);
+void career_offer_accept(int ev, int target);
+
 #endif // __DRALLY_CAREER_H

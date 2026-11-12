@@ -475,3 +475,83 @@ const char40 ___192870h[5][6] = {
 		[5] = "Press [ESC{ to go back to the shop."
 	}
 };
+
+// the events that pay you when you come back from a race, the line at
+// spcf_i each car's own, spcf[car]
+// three wins in a row
+const event_text_t event_streak = {
+	.common = {
+		[0] = "",
+		[1] = "",
+		[2] = "[Not too shabby, driver.",
+		[3] = "",
+		[4] = "[Your wild winning streak has earned",
+		[5] = "", // <--
+		[6] = "get cocky, those other wannabe",
+		[7] = "victory hounds are going to zero",
+		[8] = "right into your blazing taillights.",
+		[9] = "And they want to get you bad."
+	},
+	.spcf = {
+		[0] = "[you an extra 600 bucks.{ But don't",
+		[1] = "[you an extra 1,000 bucks.{ But don't",
+		[2] = "[you an extra 2,000 bucks.{ But don't",
+		[3] = "[you an extra 3,000 bucks.{ But don't",
+		[4] = "[you an extra 4,000 bucks.{ But don't",
+		[5] = "[you an extra 5,000 bucks.{ But don't"
+	},
+	.spcf_i = 5,
+	.rewards = { 600, 1000, 2000, 3000, 4000, 5000 }
+};
+
+// all your rivals wrecked
+const event_text_t event_reaper = {
+	.common = {
+		[0] = "",
+		[1] = "",
+		[2] = "[I am one grateful reaper, driver.",
+		[3] = "",
+		[4] = "[More car corpses{ for my domain. You",
+		[5] = "are my sweetest minion. Your dead-",
+		[6] = "serious dedication has earned you",
+		[7] = "a parking space among my horsemen.",
+		[8] = "", // <--
+		[9] = "powered serial-auto-killer."
+	},
+	.spcf = {
+		[0] = "[A bonus of $600 to you{, horse-",
+		[1] = "[A bonus of $1,000 to you{, horse-",
+		[2] = "[A bonus of $2,000 to you{, horse-",
+		[3] = "[A bonus of $3,000 to you{, horse-",
+		[4] = "[A bonus of $4,000 to you{, horse-",
+		[5] = "[A bonus of $5,000 to you{, horse-"
+	},
+	.spcf_i = 8,
+	.rewards = { 600, 1000, 2000, 3000, 4000, 5000 }
+};
+
+// not a scratch in a race with weapons
+const event_text_t event_inconceivable = {
+	.common = {
+		[0] = "",
+		[1] = "",
+		[2] = "[Inconceivable, driver!",
+		[3] = "",
+		[4] = "It was a snowball's chance in hell.",
+		[5] = "Through that blitzkrieg battle, and",
+		[6] = "[not a shadow of a scratch on your",
+		[7] = "[paint job.{ My bet was on you, and",
+		[8] = "it paid me back big time. Here, [your",
+		[9] = "" // <--
+	},
+	.spcf = {
+		[0] = "[share{, [$350{. Go knock yourself out.",
+		[1] = "[share{, [$750{. Go knock yourself out.",
+		[2] = "[share{, [$1,500{. Go knock yourself out.",
+		[3] = "[share, [$3,000{. Go knock yourself out.",
+		[4] = "[share, [$4,500{. Go knock yourself out.",
+		[5] = "[share, [$6,000{. Go knock yourself out."
+	},
+	.spcf_i = 9,
+	.rewards = { 350, 750, 1500, 3000, 4500, 6000 }
+};

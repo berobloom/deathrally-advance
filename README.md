@@ -170,11 +170,11 @@ Its meter, at the bottom right, shows frames per second and the share of the CPU
 
 ### Status
 
-Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed, with the track's music and the sound effects. A career on text screens, with the game's own sign-up, prize money, points, ranks and the Adversary, the same as the desktop's.
+Working: drawing any of the ten tracks with four cars and their shadows at 60 frames per second in mGBA, setting a race up and running the game's race logic on the GBA with the same results as the desktop, and driving a race against the game's AI with it at the game's real speed, with the track's music and the sound effects. A career on text screens, with the game's own sign-up, prize money, points, ranks and the Adversary, the shop, the underground market and the random events (the hitman's and the steroids' offers, winning streaks and the rest), the same as the desktop's.
 
 Not done yet:
 
-* In the career: choosing a new car's color, the shop's sounds (the menus' effects aren't in the soundbank), the random events (the hitman's and the steroids' offers, winning streaks, being lapped and the rest), the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
+* In the career: choosing a new car's color, the shop's and the special offers' sounds (the menus' effects aren't in the soundbank), the menus' pictures and faces, and the end of the game's hall of fame. Each car's colors on the GBA are its place's on the grid, not its driver's.
 * The headlights. The game lightens three triangles in front of each car through the track's light table, on seven of the ten tracks. The GBA's blending can brighten or darken under the sprite window, not both, and the car shadows darken there; lightening the pixels in software into sprites would take about 50,000 cycles a frame and sprite memory there isn't room for.
 * The track's buildings, which the game draws as perspective-projected 3D textured triangles every frame. That needs a software rasterizer into tiles.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.

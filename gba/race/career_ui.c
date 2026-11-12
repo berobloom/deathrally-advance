@@ -27,6 +27,7 @@
 	extern __BYTE__ ___1a103ch[];
 	extern __BYTE__ ___1a1f64h[];
 	extern __BYTE__ ___1a0ef8h[];
+	extern __BYTE__ ___1a1ff1h[];
 	extern __BYTE__ ___1de7d0h[];
 	extern __BYTE__ ___196aech[];
 	extern __BYTE__ ___196af0h[];
@@ -357,16 +358,17 @@ static void signup_draw(int chosen){
 }
 
 static void speech(const char40 * t, int n_lines);
+static void text_lines(int row0, int rows, const char * const * t, int n_lines);
 
 // after the grids are ordered (___32230h()): the others' cars repaired,
 // and the sabotage you paid for done
-static void sabotage(void){
+static int sabotage(void){
 
 	char40 		t[7] = { "", "", "", "", "", "", "" };
 	int 		victim;
 
 	victim = career_signup_sabotage(gba_cycles());
-	if(victim < 0) return;
+	if(victim < 0) return 0;
 	snprintf(t[0], 40, "[Sabotage");
 	snprintf(t[2], 40, "Money talks, and the damage is");
 	snprintf(t[3], 40, "done, %d%% worth! Sabotage says that", (int)racer(victim)->damage);
@@ -374,6 +376,43 @@ static void sabotage(void){
 	snprintf(t[5], 40, "down. That's dough baked luck for");
 	snprintf(t[6], 40, "you. And luck, she ain't no lady.");
 	speech(t, 7);
+
+	return 1;
+}
+
+// ___31868h(): maybe a special offer after the sign-up, the hitman's or the
+// steroids', yes or no
+static void offer(void){
+
+	char 		l3[48], l5[48], l6[48];
+	const char 	* t[8];
+	int 		ev, pay, target;
+
+	ev = career_offer(&pay, &target);
+	if(ev == CAREER_EVENT_NONE) return;
+	if(ev == CAREER_EVENT_HITMAN){
+
+		snprintf(l3, sizeof(l3), "that [%s won't reach the", racer(target)->name);
+		snprintf(l5, sizeof(l5), "[it'll pay you $%d.", pay);
+		t[0] = "[Wanna be my hitman, driver?"; t[1] = "";
+		t[2] = "Wanna get rich, tough guy? OK."; t[3] = "[Here's the deal{. I have put some";
+		t[4] = "major funds on this race, betting"; t[5] = l3;
+		t[6] = "[finish line{. Make me right, and"; t[7] = l5;
+	}
+	else {
+
+		snprintf(l6, sizeof(l6), "[Extra $%d{, anyone? You? This is", pay);
+		t[0] = "[A slick steroid run, anyone?"; t[1] = "";
+		t[2] = l6; t[3] = "easy as shifting gears 1-2-3.";
+		t[4] = "[Just pick up some pills along the"; t[5] = "[way, and get them to the finish";
+		t[6] = "[line before things get crowded{, be"; t[7] = "first, like, floor it, like.";
+	}
+	gba_text_screen();
+	center(0, "SPECIAL OFFER");
+	text_lines(3, 13, t, 8);
+	center(17, "A DEAL");
+	center(18, "B NO DEAL");
+	if(!wait_key(1)) career_offer_accept(ev, target);
 }
 
 // the round's sign-up (___3266ch()): the others sign up as you choose. 1
@@ -423,7 +462,7 @@ static int signup(void){
 			}
 			signup_draw(chosen);
 			career_signup_order();
-			sabotage();
+			if(!sabotage()) offer();
 			return race(4);
 		}
 		if(career_signup_full()) break;
@@ -470,19 +509,22 @@ static int adversary(void){
 
 static const char * const shop_items[6] = { "CAR", "ENGINE", "TIRES", "ARMOR", "REPAIR", "DONE" };
 
-// the game's n lines of 40 in rows row0 to row0+rows-1, without its colour
-// marks ([ and {): the first line by itself, the rest run on, word-wrapped
-static void text_at(int row0, int rows, const char40 * t, int n_lines){
+// the game's n lines in rows row0 to row0+rows-1, without its colour marks
+// ([ and {): the first line by itself, the rest run on, word-wrapped
+static void text_lines(int row0, int rows, const char * const * t, int n_lines){
 
-	char 	para[12*40+16], * w;
-	int 	row = row0, n, len, i;
+	char 	para[12*48+16], * w;
+	int 	row = row0, n, len, i, first;
 
 	for(n = 0; n < rows; n++) gba_print(1, row0+n, "                            ");
 	para[0] = 0;
-	for(n = 0; n < n_lines; n++){
+	// the heading is the first line with words, the screens' empty ones
+	// before it left out
+	for(first = 0; (first < n_lines)&&!t[first][0]; first++);
+	for(n = first; n < n_lines; n++){
 
 		len = strlen(para);
-		for(i = 0; (i < 40)&&t[n][i]&&(len < (int)sizeof(para)-2); i++){
+		for(i = 0; t[n][i]&&(len < (int)sizeof(para)-2); i++){
 
 			// the loan shark's speeches are indented: not the spaces
 			if((len > 0)&&(para[len-1] == ' ')&&(t[n][i] == ' ')) continue;
@@ -490,7 +532,7 @@ static void text_at(int row0, int rows, const char40 * t, int n_lines){
 		}
 		// a line by itself after the first, the rest run together, a
 		// word broken with a hyphen joined up again
-		if(n == 0) para[len++] = '\n';
+		if(n == first) para[len++] = '\n';
 		else if((len > 0)&&(para[len-1] != '-')&&(para[len-1] != ' ')&&(para[len-1] != '\n')) para[len++] = ' ';
 		para[len] = 0;
 	}
@@ -514,6 +556,22 @@ static void text_at(int row0, int rows, const char40 * t, int n_lines){
 	}
 }
 
+// the same for lines of 40
+static void text_at(int row0, int rows, const char40 * t, int n_lines){
+
+	char 		buf[12][41];	// a line of 40 may have no 0
+	const char 	* p[12];
+	int 		n;
+
+	for(n = 0; (n < n_lines)&&(n < 12); n++){
+
+		memcpy(buf[n], t[n], 40);
+		buf[n][40] = 0;
+		p[n] = buf[n];
+	}
+	text_lines(row0, rows, p, n);
+}
+
 // the game's 6 lines of 40 under the shop's or the market's items
 static void shop_text(const char40 * t){
 
@@ -525,6 +583,15 @@ static void speech(const char40 * t, int n_lines){
 
 	gba_text_screen();
 	text_at(3, 13, t, n_lines);
+	center(18, "PRESS A");
+	wait_key(0);
+}
+
+// the same, of lines of any length
+static void speech_lines(const char * const * t, int n_lines){
+
+	gba_text_screen();
+	text_lines(3, 13, t, n_lines);
 	center(18, "PRESS A");
 	wait_key(0);
 }
@@ -805,9 +872,15 @@ static void market_buy(int row){
 
 static void market(void){
 
+	// ___1716ch(), the first time
+	static const char * const 	welcome[10] = { "", "[Psst...Yeah you, driver.", "",
+		"Jealousy burns you like a dragon inside, you", "[want that road all to yourself?{ So jinx",
+		"those rival suckers, let them go out in a", "blaze; you take the glory. [Welcome to the",
+		"[Underground Market.{ What you want, we got.", "Dig out the dough, this gonna cost you.", "" };
 	int 	row = CAREER_MARKET_LOAN;
 
 	career_market_open();
+	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
 	center(0, "THE UNDERGROUND MARKET");
 	market_about(row);
@@ -845,6 +918,99 @@ static void loan_collect(void){
 	speech(career_loan_collect(1) ? paid : hurt, 8);
 }
 
+// the shop's welcome after your first race (___164d0h()), and the game's
+// before it (___17248h())
+static const char * const 	shop_welcome[10] = { "", "[Welcome to The Shop", "",
+	"Zillions more miles to go. That junk of yours", "is no juggernaut, she won't take you all",
+	"the way. [You need to gear up{, to upgrade,", "make headlong headway, strive to stride,",
+	"stride to strive, evolve, improve, better,", "best. [Buy & be one shining perfection.{", "" };
+static const char * const 	game_welcome[10] = { "", "[Welcome to Death Rally.", "",
+	"The race is on, in [Death Rally{, where life is", "short & hot, fast & deadly. Watch the road,",
+	"hear the rumble. [Start out easy{, get the", "feel of it. But remember: by the rules or",
+	"fry the rules, [play to win{. 'nuff said. Now", "[ride your machine{, your motor-war-chariot.", "" };
+
+// a winning streak, the reaper's or not a scratch (___14dc4h() and its
+// kin): the game's lines, the one at spcf_i your car's
+static void event_paid(const event_text_t * e){
+
+	const char 	* t[10];
+	int 		n;
+
+	for(n = 0; n < 10; n++) t[n] = (n == e->spcf_i) ? e->spcf[racer(ME)->car] : e->common[n];
+	speech_lines(t, 10);
+}
+
+// the steroids' or the hit's outcome (___15808h(), ___15e3ch()): what it
+// paid, or the fine
+static void event_deal(int ev){
+
+	static const char * const 	no_pills[8] = { "[Where're my steroids?", "",
+		"[The whole deal went sour{ because", "of your incompetence. A few slick",
+		"turns of the wheel, but no, nope!", "I'm not happy, and when I'm not",
+		"happy I am mad, and when I am", "mad [bad things happen - to you!" };
+	static const char * const 	missed[8] = { "[Your hit missed!", "",
+		"You sissy Sunday driver. [The", "[simplest job, and you screw it up!",
+		"I bet you are afraid of the dark as", "well. I'll show you what happens",
+		"when you break your promises to me.", "[I'm gonna make you pay!" };
+	char 		a[64], b[48];
+	const char 	* t[8];
+	int 		v = career_event_apply(ev);
+
+	if(v <= 0){
+
+		speech_lines((ev == CAREER_EVENT_STEROIDS) ? no_pills : missed, 8);
+		return;
+	}
+	if(ev == CAREER_EVENT_STEROIDS){
+
+		snprintf(b, sizeof(b), "[here is prime stuff! $%d, to you.", v);
+		t[0] = "[What motorized steroid peddling!"; t[1] = "";
+		t[2] = "Wow, my main man. I didn't know"; t[3] = "there was that much smoke in the";
+		t[4] = "whole burning hell, and through"; t[5] = "it all, bearing gifts like some";
+		t[6] = "blessed beast, you came. And [this"; t[7] = b;
+	}
+	else {
+
+		snprintf(a, sizeof(a), "beautiful, [%s is in a car-", (const char *)___1a1ff1h);
+		snprintf(b, sizeof(b), "[coffin grave. $%d, your money.", v);
+		t[0] = "[You totally slew that car."; t[1] = "";
+		t[2] = "A killer race! The bullets took the"; t[3] = "sky like clouds of locusts, and";
+		t[4] = "the screams of motors were a"; t[5] = "banshee wail. [Death!{ You were";
+		t[6] = a; t[7] = b;
+	}
+	speech_lines(t, 8);
+}
+
+// what shop_main() tells you when you come back from a race, each in turn
+static void events(void){
+
+	static const char * const 	lapped[10] = { "", "", "[You were lapped, you loser!", "",
+		"The pain, the humiliation! Your stunt", "made me the laughing stock of the",
+		"races. What were you trying to do,", "mimic slow-motion? No one is going",
+		"to take me seriously after this.", "[No money or points awarded." };
+	static const char * const 	too_slow[10] = { "", "", "[Too slow, no dough!", "",
+		"Death Rally is for winners. You", "totally lost this race. [All the",
+		"[bonus $$ you collected on the way", "[are null and void.{ You get nothing,",
+		"get it? Zero, none, naught, nix,", "nada, zilch. Next time, be better." };
+	int 	ev;
+
+	while((ev = career_event_next()) != CAREER_EVENT_NONE){
+
+		switch(ev){
+		case CAREER_EVENT_WELCOME: speech_lines(shop_welcome, 10); break;
+		case CAREER_EVENT_LAPPED: speech_lines(lapped, 10); break;
+		case CAREER_EVENT_STREAK: career_event_apply(ev); event_paid(&event_streak); break;
+		case CAREER_EVENT_REAPER: career_event_apply(ev); event_paid(&event_reaper); break;
+		case CAREER_EVENT_INCONCEIVABLE: career_event_apply(ev); event_paid(&event_inconceivable); break;
+		case CAREER_EVENT_STEROIDS:
+		case CAREER_EVENT_HITMAN: event_deal(ev); break;
+		case CAREER_EVENT_LOAN: loan_collect(); break;
+		case CAREER_EVENT_TOO_SLOW: speech_lines(too_slow, 10); break;
+		}
+		career_event_clear(ev);
+	}
+}
+
 // --- the hub ---------------------------------------------------------------------------
 
 void career_play(void){
@@ -866,18 +1032,24 @@ void career_play(void){
 	// Adversary's race, as tools/replay --career with CAREER_LEAD=1
 	racer(ME)->points = 200;
 #endif
+	// a new game goes straight to the sign-up, welcomed (shop_main(),
+	// ___3266ch()), the shop's welcome after
+	speech_lines(game_welcome, 10);
+	if(career_leading() ? adversary() : signup()) return;
 
 	for(;;){
 
 		racer_t * 	me = racer(ME);
 		u16 		k;
 
+		events();
 #if defined(CAREER_BENCH)
 		if(bench_round >= CAREER_BENCH){
 
 			say("CAREER BENCH done");
 			for(;;) gba_frame();
 		}
+		career_shop_continue();
 		if(career_leading() ? adversary() : signup()) return;
 		continue;
 #endif
@@ -889,13 +1061,8 @@ void career_play(void){
 		print(1, 6, "CAR     %s", car_names[me->car]);
 		print(1, 7, "DAMAGE  %d%%", me->damage);
 		if(career_loan_owed()) print(1, 8, "LOAN    $%d, %d RACE%s LEFT", career_loan_owed(), 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
-		// shop_main()'s: the loan shark, then the end of the road, a
-		// wreck you can't pay to repair
-		if(career_loan_due()){
-
-			loan_collect();
-			continue;
-		}
+		// after events(), shop_main()'s end of the road: a wreck you
+		// can't pay to repair
 		if(career_shop_broke()){
 
 			message("END OF THE ROAD, DRIVER", "A WRECK AND NO MONEY TO FIX IT");
@@ -918,7 +1085,11 @@ void career_play(void){
 
 			// CONTINUE's check
 			if(!career_shop_can_race()) message("REPAIR YOUR CAR FIRST", "R-E-P-A-I-R");
-			else if(career_leading() ? adversary() : signup()) return;
+			else {
+
+				career_shop_continue();
+				if(career_leading() ? adversary() : signup()) return;
+			}
 		}
 		else if(row == 1) shop();
 		else if(row == 2) market();

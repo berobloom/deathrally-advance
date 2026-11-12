@@ -356,7 +356,7 @@ static int career(char * argv[]){
 
 	static __BYTE__ 	carcol[0x300], copper[0x300];
 	char 		path[1024];
-	int 		rounds = atoi(argv[4]);
+	int 		rounds = atoi(argv[4]), first = 1;
 	FILE * 		fd;
 
 	career_bakes = argv[2];
@@ -375,6 +375,22 @@ static int career(char * argv[]){
 
 	while(career_round < rounds){
 
+		// as gba/race's hub after a round: what the shop tells you,
+		// then its CONTINUE. Not before the first, which a new game
+		// goes straight to
+		if(!first){
+
+			int 	ev;
+
+			while((ev = career_event_next()) != CAREER_EVENT_NONE){
+
+				if(ev == CAREER_EVENT_LOAN) career_loan_collect(1);
+				else career_event_apply(ev);
+				career_event_clear(ev);
+			}
+			career_shop_continue();
+		}
+		first = 0;
 		if(career_leading()){
 
 			career_adversary_accept();
@@ -396,8 +412,14 @@ static int career(char * argv[]){
 		while(!career_signup_full()) ___3079ch_cdecl(3);
 		career_signup_order();
 		// the others repaired, as gba/race does it; never sabotage, which
-		// the benchmark doesn't buy, so the seed doesn't matter
-		career_signup_sabotage(0);
+		// the benchmark doesn't buy, so the seed doesn't matter. Then
+		// the special offer, always taken, as the benchmark's A takes it
+		if(career_signup_sabotage(0) < 0){
+
+			int 	pay, target, ev = career_offer(&pay, &target);
+
+			if(ev != CAREER_EVENT_NONE) career_offer_accept(ev, target);
+		}
 		if(career_race(4)) break;
 	}
 

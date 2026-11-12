@@ -1295,3 +1295,153 @@ int career_signup_sabotage(__DWORD__ seed){
 
 	return grid[best];
 }
+
+// --- the random events: the offers after the sign-up (___31868h()), and
+// what the shop says and pays when you come back from a race (shop_main()
+// and the functions it calls). career_race_after() sets their flags
+
+	extern __BYTE__ ___196b24h[];
+	extern __BYTE__ ___1a1ff1h[];
+	extern __BYTE__ ___185a3ch[];
+	extern __BYTE__ ___185a40h[];
+	extern __BYTE__ ___185a4ch[];
+
+__DWORD__ ___14c50h(void);
+
+// each car's pay, the Vagabond's last, as each event's tables have them
+static const int pay_streak[6] = { 600, 1000, 2000, 3000, 4000, 5000 };		// by car
+static const int pay_inconceivable[6] = { 350, 750, 1500, 3000, 4500, 6000 };	// by car
+static const int pay_steroids[6] = { 12000, 8000, 6000, 4000, 2000, 1000 };	// by level-1
+static const int fine_steroids[6] = { 6000, 4000, 3000, 2000, 1000, 500 };
+static const int pay_hitman[6] = { 6000, 4000, 3000, 2000, 1000, 500 };
+static const int fine_hitman[6] = { 3000, 2000, 1000, 750, 500, 250 };
+
+// the next one to tell, in shop_main()'s order, or CAREER_EVENT_NONE.
+// It's told until career_event_clear()
+int career_event_next(void){
+
+	racer_t * 	me = career_me();
+
+	if(D(___185a3ch) != 0) return CAREER_EVENT_WELCOME;
+	if(D(___196ab0h) == 1) return CAREER_EVENT_LAPPED;
+	if(D(___196a98h) == 3) return CAREER_EVENT_STREAK;
+	if(D(___196a9ch) == 1) return CAREER_EVENT_INCONCEIVABLE;
+	if(D(___196aa0h) == 1) return CAREER_EVENT_REAPER;
+	if(D(___196aa4h) != 0) return CAREER_EVENT_STEROIDS;
+	if(D(___196aa8h) != 0) return CAREER_EVENT_HITMAN;
+	if(me->loanshark_counter == 4) return CAREER_EVENT_LOAN;
+	if(D(___185a18h) == 4) return CAREER_EVENT_TOO_SLOW;
+
+	return CAREER_EVENT_NONE;
+}
+
+// what it pays you, or takes, less than 0: a fine, or if you haven't got
+// it, ___14c50h(), an engine upgrade or half your money. The loan shark's
+// is career_loan_collect()
+int career_event_apply(int ev){
+
+	racer_t * 	me = career_me();
+	int 		n, v;
+
+	switch(ev){
+	case CAREER_EVENT_STREAK:
+	case CAREER_EVENT_REAPER:
+		me->money += pay_streak[me->car];
+		return pay_streak[me->car];
+	case CAREER_EVENT_INCONCEIVABLE:
+		me->money += pay_inconceivable[me->car];
+		return pay_inconceivable[me->car];
+	case CAREER_EVENT_STEROIDS:
+	case CAREER_EVENT_HITMAN:
+		n = (int)D((ev == CAREER_EVENT_STEROIDS) ? ___196aa4h : ___196aa8h);
+		if(n > 0){
+
+			v = (ev == CAREER_EVENT_STEROIDS) ? pay_steroids[n-1] : pay_hitman[n-1];
+			me->money += v;
+			return v;
+		}
+		v = (ev == CAREER_EVENT_STEROIDS) ? fine_steroids[-n-1] : fine_hitman[-n-1];
+		if((int)me->money < v) ___14c50h();
+		else me->money -= v;
+		return -v;
+	default:
+		return 0;
+	}
+}
+
+// told: not again. shop_main() clears them itself
+void career_event_clear(int ev){
+
+	switch(ev){
+	case CAREER_EVENT_WELCOME: D(___185a3ch) = 0; break;
+	case CAREER_EVENT_LAPPED: D(___196ab0h) = 0; D(___185a18h) = 0; break;	// not too slow as well
+	case CAREER_EVENT_STREAK: D(___196a98h) = 0; break;
+	case CAREER_EVENT_INCONCEIVABLE: D(___196a9ch) = 0; break;
+	case CAREER_EVENT_REAPER: D(___196aa0h) = 0; break;
+	case CAREER_EVENT_STEROIDS: D(___196aa4h) = 0; break;
+	case CAREER_EVENT_HITMAN: D(___196aa8h) = 0; break;
+	case CAREER_EVENT_LOAN: loan_clear(); break;
+	case CAREER_EVENT_TOO_SLOW: D(___185a18h) = 0; break;
+	}
+}
+
+// leaving the shop for the sign-up, as its CONTINUE does: the market's
+// prices set and, which career_results() reads, ___185a4ch
+void career_shop_continue(void){
+
+	D(___185a4ch) = underground___28c1ch();
+}
+
+// the market's welcome, the first time
+int career_market_welcome(void){
+
+	int 	first = D(___185a40h) != 0;
+
+	D(___185a40h) = 0;
+	return first;
+}
+
+// ___31868h()'s: after the sign-up, with weapons, sometimes an offer, the
+// more likely the longer since the last: CAREER_EVENT_HITMAN, a rival to
+// wreck, *target, or CAREER_EVENT_STEROIDS, a race to win. *pay is what it
+// pays. CAREER_EVENT_NONE if none
+int career_offer(int * pay, int * target){
+
+	racer_t * 	me = career_me();
+	int 		n;
+
+	if(((rand_watcom106()%0x64) >= (int)D(___196b24h))||(D(___185a14h_UseWeapons) == 0)){
+
+		if((int)D(___196b24h) < 0x61) D(___196b24h) += 2;
+		return CAREER_EVENT_NONE;
+	}
+	D(___196b24h) = 5;
+	if((rand_watcom106()%0x64) >= 0x32){
+
+		*pay = pay_hitman[5-me->car];
+		// anyone on your grid but you
+		do n = B(___1a0ef8h+4*D(___1a1028h)+rand_watcom106()%4);
+		while(n == (int)D(___1a1ef8h));
+		*target = n;
+		return CAREER_EVENT_HITMAN;
+	}
+	*pay = pay_steroids[5-me->car];
+	*target = -1;
+
+	return CAREER_EVENT_STEROIDS;
+}
+
+void career_offer_accept(int ev, int target){
+
+	racer_t * 	s_6c = (racer_t *)___1a01e0h;
+	int 		level = 6-career_me()->car;
+
+	if(ev == CAREER_EVENT_STEROIDS){
+
+		D(___196aa4h) = level;
+		return;
+	}
+	D(___196aa8h) = level;
+	D(___196aach) = target;
+	strcpy((char *)___1a1ff1h, s_6c[target].name);
+}

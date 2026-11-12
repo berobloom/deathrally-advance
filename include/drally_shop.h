@@ -17,4 +17,18 @@ extern const char40 ___193db0h[4][6];	// market items bought
 extern const char40 ___1923c0h[5][6];	// loan offered, by 5 less your car
 extern const char40 ___192870h[5][6];	// loan granted, the same way
 
+// the events that pay you when you come back from a race (___14dc4h.c):
+// 10 lines of 80, the one at spcf_i each car's own
+typedef char char80[80];
+typedef struct event_text_s {
+	const char80 	common[10];
+	const char80 	spcf[6];
+	int 		spcf_i;
+	int 		rewards[6];
+} event_text_t;
+
+extern const event_text_t event_streak;
+extern const event_text_t event_reaper;
+extern const event_text_t event_inconceivable;
+
 #endif // __DRALLY_SHOP_H
