@@ -104,6 +104,7 @@ void race___400ech(void);
 #define WIN_BLD			(1 << 5)
 #define BLEND_BG0		(1 << 0)
 #define BLEND_DARKEN		(3 << 6)
+#define BLEND_BG0_UNDER		(1 << 8)	// BG0 as the second target
 #define REG_DEBUG_ENABLE	(*(vu16 *)0x04FFF780)
 #define REG_DEBUG_FLAGS		(*(vu16 *)0x04FFF700)
 #define REG_DEBUG_STRING	((char *)0x04FFF600)
@@ -386,7 +387,7 @@ static struct_35e_t * car(int n){
 // what the screen shows: the state after the last whole frame of the
 // logic, taken by take_view() and drawn by the vblank interrupt
 // the race's other pictures (race_sprite()), as OBJs of 8x8 or 16x16
-#define MAX_SPRITES		40
+#define MAX_SPRITES		32
 #define SPRITE_TILE0		(NUM_CARS*CAR_OBJ_BYTES/32)	// their OBJ VRAM, after the cars'
 typedef struct {
 	const u8 * 	img;
@@ -399,6 +400,8 @@ typedef struct {
 	int 	x[NUM_CARS], y[NUM_CARS];	// the cars' centers on the screen
 	int 	frame[NUM_CARS];		// their rotation frames
 	int 	hidden[NUM_CARS];
+	int 	lit[NUM_CARS];			// their headlights shown
+	s16 	light[NUM_CARS][4];		// and turned, as OAM affine pa, pb, pc, pd
 	int 	position, lap, over;
 	int 	nspr, cars_at;			// sprites, and how many of them are under the cars
 	sprite_t 	spr[MAX_SPRITES];		// in the order the race drew them
@@ -414,7 +417,12 @@ static int drawn_n, drawn_cars;
 // of the screen
 #define LAMP_W			0x50
 #define LAMP_H			0x3c
-#define LAMP_TILE0		(SPRITE_TILE0+8*MAX_SPRITES)	// a 64x64 OBJ and a 32x64 one
+// the headlights: a 64x64 16 color OBJ with the car's center in its
+// middle, pointing up, 32 pixels to 40 on the screen
+#define LIGHT_TILE0		(SPRITE_TILE0+8*MAX_SPRITES)
+static int light_bank;			// its palette, make_light()'s
+static int track_lit;			// whether the track's -LIT.TAB lightens anything
+#define LAMP_TILE0		(LIGHT_TILE0+64)	// a 64x64 OBJ and a 32x64 one
 #define LAMP_OBJ_BYTES		(64*64+32*64)	// a frame of them in lamps_obj
 static const u8 * drawn_lamp;
 static int drawn_lamp_x;
@@ -623,6 +631,25 @@ static void place_objs(const view_t * v){
 		OAM[o+1].attr2 = OBJ_CHAR(tile) | OBJ_PRIORITY(1);
 	}
 	for(k = v->cars_at-1; k >= 0; k--) place_sprite(o++, k, &v->spr[k]);
+	// the headlights under all of it: each a semi-transparent OBJ, which
+	// blends only inside the OBJ window, so a copy of it there too
+	for(n = 0; n < NUM_CARS; n++){
+
+		OBJAFFINE 	* a = &((OBJAFFINE *)OAM)[n];
+		int 		k, sx = v->x[n] - 64, sy = v->y[n] - 64;
+
+		if(!v->lit[n]) continue;
+		a->pa = v->light[n][0];
+		a->pb = v->light[n][1];
+		a->pc = v->light[n][2];
+		a->pd = v->light[n][3];
+		for(k = 1; k <= 2; k++, o++){
+
+			OAM[o].attr0 = OBJ_Y(sy) | OBJ_ROT_SCALE_ON | OBJ_DOUBLE | OBJ_16_COLOR | OBJ_SQUARE | OBJ_MODE(k);
+			OAM[o].attr1 = OBJ_X(sx) | OBJ_ROT_SCALE(n) | OBJ_SIZE(3);
+			OAM[o].attr2 = OBJ_CHAR(LIGHT_TILE0) | OBJ_PRIORITY(1) | OBJ_PALETTE(light_bank);
+		}
+	}
 	for(n = o; n < used; n++) OAM[n].attr0 = OBJ_DISABLE;
 	used = o;
 }
@@ -845,6 +872,67 @@ static void car_colors(int num_cars){
 	}
 }
 
+// the headlights' OBJ: race___4f300h()'s three triangles from the car's
+// center, to 40 pixels at 10 degrees each side and 36 at 18. The tracks'
+// -LIT.TABs light in their own tones, from TR0's pale blue to TR5's red, so it
+// adds what the track's adds to its colors on average: as a color none of
+// the cars' (car_colors()) take, times as little of it as will do
+
+static void make_light(void){
+
+	// the outline, x16, pointing up from (0, 0)
+	static const s16 	poly[5][2] = { {0, 0}, {-178, -548}, {-111, -630}, {111, -630}, {178, -548} };
+	u32 			* dst = (u32 *)((u8 *)SPRITE_GFX+32*LIGHT_TILE0);
+	extern __BYTE__ 	TRX_LIT_TAB[0x100];
+	int 			n, best = 1, best_d = 0x7fffffff, tx, ty, r, x, c;
+	int 			add[3] = { 0, 0, 0 }, lit = 0, eva = 1, k;
+
+	for(n = 0; n < 256; n++) if(TRX_LIT_TAB[n] != n){
+
+		int 	a = trk->pal[n], b = trk->pal[TRX_LIT_TAB[n]];
+
+		add[0] += (b & 31)-(a & 31);
+		add[1] += ((b >> 5) & 31)-((a >> 5) & 31);
+		add[2] += ((b >> 10) & 31)-((a >> 10) & 31);
+		lit++;
+	}
+	// three of the tracks' leave every color as it is
+	if(!(track_lit = (lit > 0))) return;
+	for(n = 0; n < 3; n++) add[n] = 16*add[n]/lit;		// x16, as the blending adds color*eva/16
+	for(k = 1; k <= 16; k++) for(n = 1; n < 256; n++){
+
+		int 	p = trk->pal[n], dr = (p & 31)*k-add[0], dg = ((p >> 5) & 31)*k-add[1], db = ((p >> 10) & 31)*k-add[2];
+		int 	d = dr*dr+dg*dg+db*db;
+
+		if(!(n & 15)||((n >= 15)&&(n < 15+10*NUM_CARS))) continue;
+		if(d < best_d){ best_d = d; best = n; eva = k; }
+	}
+	REG_BLDALPHA = eva | (16 << 8);
+	light_bank = best >> 4;
+	c = best & 15;
+	// 4bpp tiles, 8 of them a row, 4 bytes a row of a tile
+	for(ty = 0; ty < 8; ty++) for(tx = 0; tx < 8; tx++) for(r = 0; r < 8; r++){
+
+		u32 	row = 0;
+
+		for(x = 0; x < 8; x++){
+
+			// the texel's center, in screen pixels x16
+			int 	px = (2*(8*tx+x)+1-64)*10, py = (2*(8*ty+r)+1-64)*10;
+			int 	in = 1;
+
+			for(n = 0; in&&(n < 5); n++){
+
+				const s16 	* a = poly[n], * b = poly[(n+1)%5];
+
+				in = (b[0]-a[0])*(py-a[1])-(b[1]-a[1])*(px-a[0]) >= 0;
+			}
+			if(in) row |= (u32)c << (4*x);
+		}
+		*dst++ = row;
+	}
+}
+
 static const char * start_race(int career, int my_index, int num_cars){
 
 	int 		n;
@@ -899,6 +987,7 @@ static const char * start_race(int career, int my_index, int num_cars){
 	race_setup(my_index, num_cars, &race_loaders_baked);
 	ima_pad = race_ima_pad();
 	car_colors(num_cars);
+	make_light();
 	race_replay_gather(flat);
 	say("set up: globals hash %08lx", race_replay_hash(flat));
 	// RACE_CFLAGS=-DVAR_HASHES: each global's, as VAR_HASHES=1 tools/replay --quick prints them
@@ -991,6 +1080,21 @@ static void take_view(void){
 		v->y[n] = (int)car(n)->YLocation - cam_y;
 		v->frame[n] = dRMath_div15(car(n)->ImgOffset >> 6, CAR_IMG_BYTES >> 6)-n*CAR_FRAMES;	// ImgOffset/CAR_IMG_BYTES
 		v->hidden[n] = (n >= NUM_OF_CARS)||(v->x[n] <= -32)||(v->x[n] >= SCREEN_W+32)||(v->y[n] <= -32)||(v->y[n] >= SCREEN_H+32);
+		// race___4f300h()'s, for a car not wrecked and still racing
+		v->lit[n] = track_lit&&(n < NUM_OF_CARS)&&((int)D(___1de580h+0x94*n+0x18) > 0)&&!car(n)->Finished
+			&&(v->x[n] > -40)&&(v->x[n] < SCREEN_W+40)&&(v->y[n] > -40)&&(v->y[n] < SCREEN_H+40);
+		if(v->lit[n]){
+
+			// Direction+180 ahead, x by its sine and y by its cosine, y
+			// scaled by 5/6 as the game does it for its screen's pixels
+			int 	t = dRMath_turns_degf(car(n)->Direction);
+			int 	s = dRMath_sin_i(t) >> 20, c = dRMath_cos_i(t) >> 20;	// 8.8
+
+			v->light[n][0] = (205*c) >> 8;		// 0.8 cos
+			v->light[n][1] = -((246*s) >> 8);	// -0.96 sin
+			v->light[n][2] = (205*s) >> 8;		// 0.8 sin
+			v->light[n][3] = (246*c) >> 8;		// 0.96 cos
+		}
 	}
 	// the pictures on screen
 	v->nspr = v->cars_at = 0;
@@ -1414,7 +1518,7 @@ int main(void){
 	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
 	// shadows: inside the OBJ window the track (BG0) is darkened
 	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ | WIN_BLD) << 8);
-	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN;
+	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN | BLEND_BG0_UNDER;
 	REG_BLDY = 9;
 
 	race_replay_gather(flat_boot);
