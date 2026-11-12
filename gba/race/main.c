@@ -62,6 +62,10 @@ _Static_assert(sizeof(race_car_shapes_t) == 8064, "assets.S's RACE_SHAPES_SIZE")
 extern const u8 sprites_bin[];
 extern const u8 hud_bin[];
 extern const u32 shop_lz[];		// the shop's animations, see gbabake
+extern const u16 menubg_dtl[];		// the menus' background, see gbabake's bake_menu_screen()
+extern const u32 menufont_bin[];	// and their fonts
+extern const u32 cursor_bin[];		// and cursor
+extern const u8 menu_pal[];
 extern const u16 lamps_dtl[];		// a u16 for each frame's 96 tiles, then the tiles, see gbabake
 #if defined(RACE_PRE)
 extern const __DWORD__ race_pre[];	// race_main()'s arguments, the size of the globals, the globals
@@ -334,6 +338,13 @@ static void init_hud(void){
 
 	int white = closest_color(31, 31, 31), black = closest_color(0, 0, 0);
 	int g, x, y;
+
+	// the race's layers, which the menus' screen changes
+	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
+	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
+	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
+	REG_BG1HOFS = 0;
+	REG_BG1VOFS = 0;
 
 	for(g = 0; g < (int)sizeof(hud_chars)-1; g++){
 
@@ -1193,23 +1204,142 @@ static const u32 * shown_part;		// its frames' places in shop_lz
 static int shown_part_frame;
 static int part_frames, part_bounce;
 
-// the HUD's glyphs on black, and nothing else
+// The menus' screen, as the desktop's: its background with the DEATH
+// RALLY banner on BG3, 8bpp in menu.pal's colors, and over it on BG1 the
+// text, drawn in the desktop's fonts at half their size into 4bpp tiles,
+// one for each 8x8 of the screen. The fonts are in menu.pal's grey ramp,
+// colors 1-15, which a tile's palette bank can make another of its ramps.
+// The race's tiles and maps are where these are; use_track()'s init_hud()
+// puts its layers back
+#define MENU_BG_MAP		((u16 *)SCREEN_BASE_BLOCK(19))
+#define MENU_TEXT_MAP		((u16 *)SCREEN_BASE_BLOCK(20))
+#define MENU_TEXT_TILE0		320		// from charblock 2, after the maps
+#define MENU_TEXT		((u32 *)CHAR_BASE_BLOCK(2)+8*MENU_TEXT_TILE0)
+#define MENU_BLANK_TILE		(MENU_TEXT_TILE0+30*20)
+#define MENU_DISPCNT		(MODE_0 | BG1_ON | BG3_ON | OBJ_ON | OBJ_1D_MAP)
+#define FONT_SMALL		menufont_bin
+#define FONT_BIG		(menufont_bin+96*8)
+#define FONT_WIDTHS		((const u8 *)(menufont_bin+96*8+96*32))
+
+static int text_bank, text_shade = 15;		// gba_text_color()'s
+// what's printed in each row: a hash of each string, its color and where
+// it is, and the cells it took, so that printing it again does nothing
+EWRAM_BSS static u32 text_was[20][30];
+EWRAM_BSS static u8 text_was_n[20][30];
+
+// whether s at col is in row already; if not, the strings it covers are
+// forgotten and it's noted
+static int text_known(int col, int row, int cells, const char * s){
+
+	u32 	h = 0x811c9dc5^(text_bank << 8)^text_shade;
+	int 	c;
+
+	if((row < 0)||(row >= 20)||(col < 0)||(col >= 30)) return 0;
+	for(; *s; s++) h = (h^(u8)*s)*0x01000193;
+	if(!h) h = 1;
+	if((text_was[row][col] == h)&&(text_was_n[row][col] == cells)) return 1;
+	for(c = 0; c < 30; c++) if(text_was[row][c]&&(c < col+cells)&&(c+text_was_n[row][c] > col)) text_was[row][c] = 0;
+	text_was[row][col] = h;
+	text_was_n[row][col] = cells;
+
+	return 0;
+}
+
+// rows y to y+h-1 drawn over another way
+static void text_forget(int y, int h){
+
+	int 	r;
+
+	for(r = (y < 0) ? 0 : (y >> 3); (r <= ((y+h-1) >> 3))&&(r < 20); r++) memset(text_was[r], 0, sizeof(text_was[r]));
+}
+static int cursor_x = -1, cursor_y;		// gba_cursor()'s
+
+// 8 4bpp pixels of g at x, y on the text layer where m's are set, x >= 0
+static void text_put(int x, int y, u32 g, u32 m){
+
+	int 	tx = x >> 3, s = 4*(x&7);
+	u32 	* t;
+
+	if((y < 0)||(y >= SCREEN_H)||(tx >= 30)) return;
+	t = MENU_TEXT+8*(30*(y >> 3)+tx)+(y&7);
+	*t = (*t&~(m << s))|(g << s);
+	if(s&&(tx < 29)) t[8] = (t[8]&~(m >> (32-s)))|(g >> (32-s));
+}
+
+// the same, see-through where g is 0, and in gba_text_color()'s shade
+static void text_glyph_row(int x, int y, u32 g){
+
+	u32 	m;
+
+	if(!g) return;
+	if(text_shade < 15){
+
+		u32 	o = 0;
+		int 	k;
+
+		for(k = 0; k < 32; k += 4){
+
+			u32 	v = (g >> k)&15;
+
+			if(v) o |= ((v*text_shade+14)/15) << k;
+		}
+		g = o;
+	}
+	m = g|(g >> 1)|(g >> 2)|(g >> 3);
+	m = (m&0x11111111)*15;
+	text_put(x, y, g, m);
+}
+
+// cells col, row on, n of them, in gba_text_color()'s ramp
+static void text_bank_cells(int col, int row, int n){
+
+	for(; n > 0; n--, col++) if((col >= 0)&&(col < 30)&&(row >= 0)&&(row < 20)) MENU_TEXT_MAP[32*row+col] = (MENU_TEXT_TILE0+30*row+col)|(text_bank << 12);
+}
+
+// the text from now on: menu.pal's ramp from color 16*bank, 0 the grey,
+// 2 the blue and 3 the fire's, at its brightest shade, 15 the most
+void gba_text_color(int bank, int shade){
+
+	text_bank = bank;
+	text_shade = shade;
+}
+
+// pixel rows y to y+h-1 of the text layer cleared
+void gba_text_clear(int y, int h){
+
+	int 	tx;
+
+	text_forget(y, h);
+	for(; h > 0; h--, y++) for(tx = 0; tx < 30; tx++) text_put(8*tx, y, 0, 0xffffffff);
+}
+
+// the menus' background, and no text on it
 void gba_text_screen(void){
 
 	int 	n;
 
 	view_drawing = 0;
 	VBlankIntrWait();
-	REG_DISPCNT = MODE_0 | BG1_ON;
-	REG_BG1HOFS = 0;
-	REG_BG1VOFS = 0;
+	REG_DISPCNT = LCDC_OFF;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
 	shown_model = -1;
 	shown_part = 0;
-	for(n = 0; n < 32*32; n++) HUD_MAP[n] = sizeof(hud_chars)-2;
-	BG_PALETTE[0] = 0;
+	cursor_x = -1;
+	REG_BG1CNT = BG_16_COLOR | CHAR_BASE(2) | SCREEN_BASE(20) | BG_SIZE_0 | BG_PRIORITY(1);
+	REG_BG3CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(19) | BG_SIZE_0 | BG_PRIORITY(3);
+	REG_BG1HOFS = REG_BG1VOFS = REG_BG3HOFS = REG_BG3VOFS = 0;
+	copy32(BG_PALETTE, menu_pal, 512);
+	// gbabake's menubg.dtl: the map, then the tiles
+	copy32((void *)CHAR_BASE_BLOCK(0), menubg_dtl+30*20, 0x9800);
+	for(n = 0; n < 32*32; n++) MENU_BG_MAP[n] = ((n&31) < 30)&&(n < 32*20) ? menubg_dtl[30*(n >> 5)+(n&31)] : 0;
+	for(n = 0; n < 8*(30*20+1); n++) MENU_TEXT[n] = 0;
+	for(n = 0; n < 32*32; n++) MENU_TEXT_MAP[n] = MENU_BLANK_TILE;
+	gba_text_color(0, 15);
+	for(n = 0; n < 20; n++) text_bank_cells(0, n, 30);
+	text_forget(0, SCREEN_H);
 	// the track's colors for the sprites again, which gba_picture() changes
-	copy32(SPRITE_PALETTE, BG_PALETTE, 512);
+	copy32(SPRITE_PALETTE, reversed ? trk->rev_pal : trk->pal, 512);
+	REG_DISPCNT = MENU_DISPCNT;
 }
 
 // one of the menus' 64x64 pictures (gbabake's pictures.obj and faces.obj)
@@ -1229,7 +1359,7 @@ void gba_picture(int slot, const u8 * obj, int x, int y){
 	}
 	copy32(SPRITE_PALETTE, menu_pal, 512);
 	copy32((u8 *)SPRITE_GFX+(8+4*slot)*1024, obj, 64*64);
-	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	REG_DISPCNT = MENU_DISPCNT;
 	o->attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_SQUARE;
 	o->attr1 = OBJ_X(x) | OBJ_SIZE(3);
 	o->attr2 = OBJ_CHAR(256+128*slot) | OBJ_PRIORITY(0);
@@ -1248,7 +1378,7 @@ void gba_show_car(int model, int x, int y){
 
 		u32 	* t = (u32 *)SPRITE_GFX;
 
-		copy32(SPRITE_PALETTE, BG_PALETTE, 512);
+		copy32(SPRITE_PALETTE, reversed ? trk->rev_pal : trk->pal, 512);
 		for(n = 0; n < 4*8*16; n++) t[n] = 0;
 	}
 	shown_part = 0;
@@ -1258,7 +1388,7 @@ void gba_show_car(int model, int x, int y){
 		OAM[0].attr0 = OBJ_DISABLE;
 		return;
 	}
-	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	REG_DISPCNT = MENU_DISPCNT;
 	OAM[0].attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_SQUARE;
 	OAM[0].attr1 = OBJ_X(x) | OBJ_SIZE(3);
 	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
@@ -1302,7 +1432,7 @@ void gba_show_part(const u32 * frames, int n, int bounce, int x, int y){
 	shown_part_frame = -1;
 	part_frames = n;
 	part_bounce = bounce;
-	REG_DISPCNT = MODE_0 | BG1_ON | OBJ_ON | OBJ_1D_MAP;
+	REG_DISPCNT = MENU_DISPCNT;
 	OAM[0].attr0 = OBJ_Y(y) | OBJ_256_COLOR | OBJ_WIDE;
 	OAM[0].attr1 = OBJ_X(x) | OBJ_SIZE(3);		// 64x32
 	OAM[0].attr2 = OBJ_CHAR(0) | OBJ_PRIORITY(0);
@@ -1329,9 +1459,123 @@ void gba_turn_car(void){
 	tile_car((u32 *)SPRITE_GFX, (const u32 *)frames, 0);
 }
 
+// s in the small font, in the 8x8 cells from col, row on, which it clears
+// first, as many as it has characters. A word after two spaces or more
+// starts in its own cell, so the screens' columns, which they line up with
+// spaces, still line up
 void gba_print(int col, int row, const char * s){
 
-	for(; *s&&(col < 32); s++, col++) if(col >= 0) HUD_MAP[row*32 + col] = hud_glyph[*s & 127];
+	int 	n = strlen(s), cells, x = 8*col, k, y;
+
+	if(col < 0){ s -= col; n += col; x = col = 0; }
+	cells = (col+n > 30) ? 30-col : n;
+	if((cells <= 0)||text_known(col, row, cells, s)) return;
+	for(y = 8*row; y < 8*row+8; y++) for(k = 0; k < cells; k++) text_put(8*(col+k), y, 0, 0xffffffff);
+	text_bank_cells(col, row, cells);
+	for(k = 0; (k < n)&&(x < SCREEN_W); k++){
+
+		int 	c = (s[k]&127)-' ';
+
+		if(c < 0) c = 0;
+		if((k == 0)||((k >= 2)&&(s[k-1] == ' ')&&(s[k-2] == ' '))) if(x < 8*(col+k)) x = 8*(col+k);
+		if(c) for(y = 0; y < 8; y++) text_glyph_row(x, 8*row+y, FONT_SMALL[8*c+y]);
+		x += FONT_WIDTHS[c];
+	}
+}
+
+// how wide the first n characters of s are in the small font, in pixels
+int gba_text_width(const char * s, int n){
+
+	int 	w = 0;
+
+	for(; *s&&(n > 0); s++, n--) w += FONT_WIDTHS[((*s&127) < ' ') ? 0 : (*s&127)-' '];
+
+	return w;
+}
+
+// s in the small font in the middle of row, which it clears
+void gba_center(int row, const char * s){
+
+	int 	x = 0, k, y;
+
+	for(k = 0; s[k]; k++) x += FONT_WIDTHS[((s[k]&127) < ' ') ? 0 : (s[k]&127)-' '];
+	x = (SCREEN_W-x)/2;
+	if(x < 0) x = 0;
+	if(text_known(0, row, 30, s)) return;
+	for(y = 8*row; y < 8*row+8; y++) for(k = 0; k < 30; k++) text_put(8*k, y, 0, 0xffffffff);
+	text_bank_cells(0, row, 30);
+	for(; *s; s++){
+
+		int 	c = (*s&127)-' ';
+
+		if(c < 0) c = 0;
+		if(c) for(y = 0; y < 8; y++) text_glyph_row(x, 8*row+y, FONT_SMALL[8*c+y]);
+		x += FONT_WIDTHS[c];
+	}
+}
+
+// how wide s is in the big font, in pixels
+int gba_big_width(const char * s){
+
+	int 	w = 0;
+
+	for(; *s; s++) w += FONT_WIDTHS[96+(((*s&127) < ' ') ? 0 : (*s&127)-' ')];
+
+	return w;
+}
+
+// s in the big font, 16 pixels high, its top left at x, y, over what's
+// there: gba_text_clear() clears it
+void gba_print_big(int x, int y, const char * s){
+
+	int 	r;
+
+	text_forget(y, 16);
+	for(r = (y >> 3); r <= ((y+15) >> 3); r++) text_bank_cells(x >> 3, r, ((x+gba_big_width(s)) >> 3)-(x >> 3)+1);
+	for(; *s&&(x < SCREEN_W); s++){
+
+		int 	c = (*s&127)-' ';
+
+		if(c < 0) c = 0;
+		if(c) for(r = 0; r < 16; r++){
+
+			text_glyph_row(x, y+r, FONT_BIG[32*c+2*r]);
+			text_glyph_row(x+8, y+r, FONT_BIG[32*c+2*r+1]);
+		}
+		x += FONT_WIDTHS[96+c];
+	}
+}
+
+// the desktop's spinning cursor, 10x10, its top left at x, y, or none for
+// x -1. gba_frame() turns it
+void gba_cursor(int x, int y){
+
+	int 	r;
+
+	if(cursor_x >= 0) for(r = 0; r < 10; r++){
+
+		text_put(cursor_x, cursor_y+r, 0, 0xffffffff);
+		text_put(cursor_x+8, cursor_y+r, 0, 0xff);
+	}
+	cursor_x = x;
+	cursor_y = y;
+}
+
+static void cursor_turn(void){
+
+	const u32 	* f = cursor_bin+20*((vblanks/2)%50);
+	int 		r, bank = text_bank;
+
+	if(cursor_x < 0) return;
+	text_bank = 0;
+	text_bank_cells(cursor_x >> 3, cursor_y >> 3, 2);
+	text_bank_cells(cursor_x >> 3, (cursor_y >> 3)+1, 2);
+	text_bank = bank;
+	for(r = 0; r < 10; r++){
+
+		text_put(cursor_x, cursor_y+r, f[2*r], 0xffffffff);
+		text_put(cursor_x+8, cursor_y+r, f[2*r+1], 0xff);
+	}
 }
 
 // the next frame, and the keys pressed since the last, the arrows
@@ -1339,6 +1583,7 @@ void gba_print(int col, int row, const char * s){
 u16 gba_frame(void){
 
 	VBlankIntrWait();
+	cursor_turn();
 	scanKeys();
 
 	return keysDown()|(keysDownRepeat()&(KEY_UP|KEY_DOWN|KEY_LEFT|KEY_RIGHT));
@@ -1603,9 +1848,6 @@ int main(void){
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
 	use_track(&race_tracks[0]);
 
-	REG_BG0CNT = BG_256_COLOR | CHAR_BASE(0) | SCREEN_BASE(31) | BG_SIZE_0 | BG_PRIORITY(2);
-	REG_BG1CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(30) | BG_SIZE_0 | BG_PRIORITY(0);
-	REG_BG2CNT = BG_256_COLOR | CHAR_BASE(3) | SCREEN_BASE(29) | BG_SIZE_0 | BG_PRIORITY(0);
 	// shadows: inside the OBJ window the track (BG0) is darkened
 	REG_WINOUT = (WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ) | ((WIN_BG0 | WIN_BG1 | WIN_BG2 | WIN_OBJ | WIN_BLD) << 8);
 	REG_BLDCNT = BLEND_BG0 | BLEND_DARKEN | BLEND_BG0_UNDER;

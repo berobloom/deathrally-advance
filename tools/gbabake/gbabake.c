@@ -48,6 +48,8 @@
 //   pictures.obj the events' pictures, halved, and the loan shark's, each a
 //                64x64 sprite's 8bpp tiles in menu.pal's colors
 //   faces.obj    the drivers' faces, 64x64, the same way
+//   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
+//                cursor, see bake_menu_screen()
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
 //                96 frames of 40x40 each, not recolored
 //   cars.shp     the shapes the race code asks of them, race_car_shapes_t
@@ -799,6 +801,8 @@ static void bake_shop_parts(const char * outdir){
 	free(lz);
 }
 
+static void bake_menu_screen(const char * outdir);
+
 static void bake_menu_pictures(const char * outdir){
 
 	static const struct { const char * name; int w, h; } pics[] = {
@@ -853,6 +857,7 @@ static void bake_menu_pictures(const char * outdir){
 	fclose(fd);
 
 	bake_shop_parts(outdir);
+	bake_menu_screen(outdir);
 
 	// the drivers' faces as they are, 64x64, then facexx, nobody's
 	fd = out(outdir, "faces.obj");
@@ -868,6 +873,147 @@ static void bake_menu_pictures(const char * outdir){
 		free(src);
 	}
 	fclose(fd);
+}
+
+// the menus' screen, for the GBA's career screens, in menu.pal's colors:
+//   menubg.dtl   MENUBG5.BPK, the 640x480 background with the DEATH RALLY
+//                banner, at 3/8 of its size, its top 240x160: 30x20 8bpp
+//                tiles, each different one once (write_tiles_once())
+//   menufont.bin the menus' small font (F-SMA3A.BPK, 16x16) and big one
+//                (F-BIG3A.BPK, 32x32) at half their size: each of the 96
+//                characters from ' ' as 8 rows of 8 4bpp pixels, a u32 a
+//                row, the left pixel in the low bits, then the big one's as
+//                16 rows of two; then their widths, a byte each, small then
+//                big. A pixel is the brightest of the four it's made of: the
+//                fonts are drawn in the grey ramp, colors 1-15
+//   cursor.bin   CURSOR.BPK's 50 frames, 20x20, halved, in the grey ramp
+//                too: 10 rows of a frame as the big font's
+static void bake_menu_screen(const char * outdir){
+
+	static const __BYTE__ 	small_w[96] = {
+		0x0a,0x05,0x08,0x0b,0x0b,0x0d,0x0b,0x05,0x06,0x06,0x09,0x0b,0x05,0x0b,0x04,0x0a,
+		0x0b,0x05,0x09,0x0a,0x0a,0x0a,0x0a,0x0a,0x0a,0x0a,0x04,0x05,0x09,0x0b,0x08,0x08,
+		0x0c,0x0b,0x0b,0x0a,0x0b,0x0a,0x0a,0x0c,0x0b,0x05,0x09,0x0b,0x0a,0x0e,0x0b,0x0b,
+		0x0a,0x0b,0x0b,0x0a,0x0a,0x0b,0x0c,0x0f,0x0b,0x0b,0x0a,0x07,0x0a,0x06,0x0a,0x0a,
+		0x05,0x0b,0x0a,0x09,0x0a,0x09,0x09,0x0a,0x0a,0x05,0x08,0x0a,0x09,0x0c,0x0a,0x0a,
+		0x09,0x0a,0x0a,0x09,0x09,0x0a,0x0a,0x0e,0x0a,0x0a,0x09,0x07,0x04,0x07,0x09,0x0b
+	};	// src/gfx/fonts.c's ___185c0bh
+	static const __BYTE__ 	big_w[96] = {
+		0x14,0x09,0x0e,0x14,0x15,0x18,0x15,0x0a,0x0c,0x0b,0x10,0x15,0x09,0x14,0x08,0x13,
+		0x15,0x0a,0x14,0x13,0x14,0x14,0x13,0x12,0x13,0x12,0x08,0x09,0x10,0x15,0x10,0x0f,
+		0x16,0x16,0x15,0x14,0x16,0x13,0x12,0x16,0x16,0x0a,0x11,0x15,0x13,0x1b,0x15,0x16,
+		0x14,0x16,0x15,0x14,0x14,0x16,0x18,0x1f,0x16,0x17,0x13,0x0c,0x14,0x0c,0x14,0x13,
+		0x09,0x14,0x12,0x11,0x12,0x10,0x0f,0x13,0x12,0x08,0x0e,0x13,0x10,0x16,0x12,0x12,
+		0x10,0x12,0x12,0x11,0x10,0x12,0x13,0x1a,0x12,0x13,0x10,0x0b,0x06,0x0b,0x0f,0x14
+	};	// ___185ba9h
+	__BYTE__ 	used[0x100] = { 0 }, * bg, * tiles, w[2*96];
+	__POINTER__ 	src;
+	int 		x, y, k, c, f, size;
+	FILE * 		fd;
+
+	// the background: each pixel the average of the 8/3 x 8/3 it covers,
+	// in the nearest of the colors the picture has
+	src = read_entry("MENU.BPA", "menubg5.bpk");
+	bg = calloc(1, 640*480);
+	bpk_decode2(bg, src);
+	free(src);
+	for(k = 0; k < 640*480; k++) used[bg[k]] = 1;
+	tiles = calloc(1, 240*160);
+	for(y = 0; y < 160; y++) for(x = 0; x < 240; x++){
+
+		int 	sx, sy, r = 0, g = 0, b = 0, a = 0, best = 0, best_d = 1 << 30;
+
+		// in eighths of a source pixel: [8x/3, 8(x+1)/3)
+		for(sy = 8*y/3; sy*3 < 8*(y+1); sy++) for(sx = 8*x/3; sx*3 < 8*(x+1); sx++){
+
+			int 	wx = (3*(sx+1) < 8*(x+1) ? 3*(sx+1) : 8*(x+1))-(3*sx > 8*x ? 3*sx : 8*x);
+			int 	wy = (3*(sy+1) < 8*(y+1) ? 3*(sy+1) : 8*(y+1))-(3*sy > 8*y ? 3*sy : 8*y);
+			__BYTE__ 	p = bg[640*sy+sx];
+
+			r += wx*wy*menu_pal[3*p]; g += wx*wy*menu_pal[3*p+1]; b += wx*wy*menu_pal[3*p+2]; a += wx*wy;
+		}
+		r /= a; g /= a; b /= a;
+		for(c = 0; c < 0x100; c++){
+
+			int 	dr = menu_pal[3*c]-r, dg = menu_pal[3*c+1]-g, db = menu_pal[3*c+2]-b, d = dr*dr+dg*dg+db*db;
+
+			if(used[c]&&(d < best_d)){ best_d = d; best = c; }
+		}
+		tiles[64*(30*(y/8)+x/8)+8*(y%8)+x%8] = best;
+	}
+	write_tiles_once(outdir, "menubg.dtl", tiles, 30*20);
+	free(tiles);
+	free(bg);
+
+	// the fonts
+	fd = out(outdir, "menufont.bin");
+	for(f = 0; f < 2; f++){
+
+		const char * 	name = f ? "f-big3a.bpk" : "f-sma3a.bpk";
+		int 		g = f ? 32 : 16, n;
+
+		src = read_entry("MENU.BPA", name);
+		bg = calloc(1, 96*g*g);
+		bpk_decode2(bg, src);
+		free(src);
+		for(n = 0; n < 96; n++) for(y = 0; y < g/2; y++){
+
+			__DWORD__ 	row[2] = { 0, 0 };
+
+			for(x = 0; x < g/2; x++){
+
+				int 	v = 0;
+
+				for(k = 0; k < 4; k++){
+
+					int 	p = bg[g*g*n+g*(2*y+k/2)+2*x+k%2]&0xf;
+
+					if(p > v) v = p;
+				}
+				row[x/8] |= v << (4*(x%8));
+			}
+			put32(fd, row[0]);
+			if(f) put32(fd, row[1]);
+		}
+		free(bg);
+	}
+	for(k = 0; k < 96; k++){
+
+		w[k] = (small_w[k]+1)/2;
+		w[96+k] = (big_w[k]+1)/2;
+	}
+	fwrite(w, 1, sizeof(w), fd);
+	fclose(fd);
+
+	// the cursor: each pixel the average of the four it's made of,
+	// see-through if most are, in the grey ramp
+	size = 50*20*20;
+	src = read_entry("MENU.BPA", "cursor.bpk");
+	bg = calloc(1, size);
+	bpk_decode2(bg, src);
+	free(src);
+	fd = out(outdir, "cursor.bin");
+	for(f = 0; f < 50; f++) for(y = 0; y < 10; y++){
+
+		__DWORD__ 	row[2] = { 0, 0 };
+
+		for(x = 0; x < 10; x++){
+
+			int 	v = 0, m = 0;
+
+			for(k = 0; k < 4; k++){
+
+				int 	p = bg[400*f+20*(2*y+k/2)+2*x+k%2]&0xf;
+
+				if(p){ v += p; m++; }
+			}
+			if(m >= 2) row[x/8] |= (v/m) << (4*(x%8));
+		}
+		put32(fd, row[0]);
+		put32(fd, row[1]);
+	}
+	fclose(fd);
+	free(bg);
 }
 
 static void bake_sound(int track, const char * outdir){

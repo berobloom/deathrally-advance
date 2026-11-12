@@ -70,8 +70,8 @@ extern const u32 shop_lz[];
 #define PICTURE(n)		(pictures_obj+64*64*(n))
 #define FACE(n)			(faces_obj+64*64*(n))	// 20: nobody's
 #define PICTURE_X		176	// top right, beside the words
-#define PICTURE_Y		8
-#define PICTURE_ROWS		10	// the rows it's beside
+#define PICTURE_Y		28	// under the banner
+#define PICTURE_ROWS		12	// the rows it's beside
 
 // the picture the next speech shows, if one, and the rows from the top that
 // are narrower beside it
@@ -102,17 +102,20 @@ static void print(int col, int row, const char * fmt, ...){
 	gba_print(col, row, line);
 }
 
-static void center(int row, const char * s){
+static void center(int row, const char * s){ gba_center(row, s); }
 
-	gba_print((COLS-(int)strlen(s))/2, row, s);
+// a row of a menu in the big font, as the desktop's: the one chosen
+// white, with the cursor, the others grey
+static void item_at(int y, int chosen, const char * s){
+
+	gba_text_clear(y, 16);
+	gba_text_color(0, chosen ? 15 : 11);
+	gba_print_big(40, y, s);
+	gba_text_color(0, 15);
+	if(chosen) gba_cursor(24, y+3);
 }
 
-// a row of a menu, an arrow at the one chosen
-static void item(int row, int chosen, const char * s){
-
-	gba_print(2, row, (row == chosen) ? ">" : " ");
-	gba_print(4, row, s);
-}
+static void item(int row, int chosen, const char * s){ item_at(8*row-4, row == chosen, s); }
 
 // the menus' sounds (MEN-SAM.CMF's), on the channels and at the rates
 // the desktop's menus play them
@@ -196,14 +199,16 @@ static void hall_of_fame(int you){
 
 	sound_menu_music(0x51);		// its own music, as menu___22a80h()'s
 	gba_text_screen();
-	center(1, "HALL OF FAME");
-	gba_print(4, 3, "NAME        RACES");
+	center(3, "HALL OF FAME");
+	gba_text_color(0, 11);
+	gba_print(4, 5, "NAME        RACES");
 	for(n = 0; n < 10; n++){
 
-		print(1, 5+n, "%2d. %-11.11s %4d %s", n+1, ___1a0e28h[n].name, (int)___1a0e28h[n].races,
+		gba_text_color(0, (n == you) ? 15 : 12);
+		print(1, 6+n, "%2d. %-11.11s %4d  %s", n+1, ___1a0e28h[n].name, (int)___1a0e28h[n].races,
 			difficulty_short[___1a0e28h[n].difficulty%3]);
-		if(n == you) gba_print(0, 5+n, ">");
 	}
+	gba_text_color(0, 15);
 	center(18, "PRESS A");
 	wait_key(1);
 	sound_menu_music(back);
@@ -218,16 +223,21 @@ int gba_title(void){
 	for(;;){
 
 		sound_menu_music(-1);
+		int 	drawn = -1;
+
 		gba_text_screen();
-		center(4, "DEATH RALLY ADVANCE");
 		center(17, "PRESS A");
 		for(;;){
 
 			u16 	k;
 
-			item(9, 9+2*row, "CAREER");
-			item(11, 9+2*row, "QUICK RACE");
-			item(13, 9+2*row, "HALL OF FAME");
+			if(drawn != row){
+
+				item(9, 9+2*row, "CAREER");
+				item(11, 9+2*row, "QUICK RACE");
+				item(13, 9+2*row, "HALL OF FAME");
+				drawn = row;
+			}
 			k = menu_frame();
 			if(k&KEY_UP) row = (row+2)%3;
 			if(k&KEY_DOWN) row = (row+1)%3;
@@ -255,28 +265,34 @@ static int new_game(void){
 	return 1;
 #endif
 	gba_text_screen();
-	center(1, "NEW GAME");
+	center(3, "DEATH RALLY DRIVER");
 	for(;;){
 
-		u16 	k;
+		static const int 	rows[4] = { 6, 9, 12, 15 };
+		u16 			k;
 
 		for(n = strlen(name); n < NAME_LEN; n++) name[n] = ' ';
 		name[NAME_LEN] = 0;
-		gba_print(4, 4, "NAME");
-		gba_print(11, 4, name);
-		for(n = 0; n < NAME_LEN; n++) gba_print(11+n, 5, (edit&&(n == cur)) ? "-" : " ");
-		gba_print(4, 7, "FACE");
-		print(11, 7, "%-11s", name_list[face]);
-		if(face != shown) gba_picture(0, FACE(face), 176, 0);
+		gba_print(4, 6, "NAME");
+		// a letter a cell, under the one being changed a line
+		for(n = 0; n < NAME_LEN; n++){
+
+			buf[0] = name[n];
+			buf[1] = 0;
+			gba_print(11+n, 6, buf);
+			gba_print(11+n, 7, (edit&&(n == cur)) ? "-" : " ");
+		}
+		gba_print(4, 9, "FACE");
+		print(11, 9, "%-11s", name_list[face]);
+		if(face != shown) gba_picture(0, FACE(face), 176, 28);
 		shown = face;
-		gba_print(4, 10, "DIFFICULTY");
-		print(4, 11, "%-22s", difficulty_names[difficulty]);
-		gba_print(4, 14, "START");
-		gba_print(2, 4, (row == 0) ? ">" : " ");
-		gba_print(2, 7, (row == 1) ? ">" : " ");
-		gba_print(2, 10, (row == 2) ? ">" : " ");
-		gba_print(2, 14, (row == 3) ? ">" : " ");
+		gba_print(4, 12, "DIFFICULTY");
+		print(4, 13, "%-22s", difficulty_names[difficulty]);
+		gba_print(4, 15, "START");
+		gba_cursor(14, 8*rows[row]-1);
+		gba_text_color(0, 11);
 		gba_print(2, 18, edit ? "UP/DOWN LETTER, A DONE " : "A CHOOSE, B BACK       ");
+		gba_text_color(0, 15);
 
 		k = menu_frame();
 		if(edit){
@@ -442,17 +458,20 @@ static void standings(const int * gained){
 	for(page = 0; page < 2; page++){
 
 		gba_text_screen();
-		center(1, "STANDINGS");
-		print(1, 3, "RANK NAME        POINTS");
+		center(3, "STANDINGS");
+		gba_text_color(0, 11);
+		print(1, 5, "RANK NAME        POINTS");
 		for(n = 10*page; n < 10*page+10; n++){
 
 			racer_t * 	r = racer(n);
-			int 		row = 5+n%10;
+			int 		row = 6+n%10;
 
-			print(1, row, "%2d. %-11s %3d", r->rank, r->name, r->points);
+			gba_text_color(0, (n == ME) ? 15 : 12);
+			print(1, row, "%2d. %-11s  %3d", r->rank, r->name, r->points);
+			gba_text_color(2, 15);
 			if(gained&&gained[r->face]) print(24, row, "+%d", gained[r->face]);
-			if(n == ME) gba_print(0, row, ">");
 		}
+		gba_text_color(0, 15);
 		center(18, page ? "PRESS A" : "PRESS A FOR MORE");
 		wait_key(0);
 	}
@@ -486,24 +505,25 @@ static int race(int num_cars){
 
 	career_race_track(grid);
 	gba_text_screen();
-	center(1, "PREPARE TO RACE");
-	print(2, 4, "TRACK  %s", track_name(D(___1a1028h), buf));
-	print(2, 5, "LAPS   %d", NUM_OF_LAPS);
-	if((int)D(___1a1028h) < 3) print(2, 6, "PRIZE  $%d", prizes[D(___1a1028h)]);
-	else gba_print(2, 6, "PRIZE  GLORY");
+	center(3, "PREPARE TO RACE");
+	print(2, 5, "TRACK   %s", track_name(D(___1a1028h), buf));
+	print(2, 6, "LAPS    %d", NUM_OF_LAPS);
+	if((int)D(___1a1028h) < 3) print(2, 7, "PRIZE   $%d", prizes[D(___1a1028h)]);
+	else gba_print(2, 7, "PRIZE   GLORY");
 	// the track's lap record for your car, as ___36adch() shows it
 	{
 		const record_t 	* r = &___19f750h[racer(ME)->car][B(___1a1f64h+D(___1a1028h))];
 
-		if(r->min+r->sec+r->sec100) print(2, 7, "RECORD %d:%02d.%02d %.11s", (int)r->min, (int)r->sec, (int)r->sec100, r->name);
+		if(r->min+r->sec+r->sec100) print(2, 8, "RECORD  %d:%02d.%02d %.11s", (int)r->min, (int)r->sec, (int)r->sec100, r->name);
 	}
 	for(n = 0; n < num_cars; n++){
 
 		racer_t * 	r = racer(grid[n]);
 
-		if((D(___1a1028h) == 3)&&(n == 0)) gba_print(4, 9+2*n, "THE ADVERSARY");
-		else print(4, 9+2*n, "%2d. %s", r->rank, r->name);
-		if(grid[n] == ME) gba_print(2, 9+2*n, ">");
+		gba_text_color(0, (grid[n] == ME) ? 15 : 12);
+		if((D(___1a1028h) == 3)&&(n == 0)) gba_print(4, 10+2*n, "THE ADVERSARY");
+		else print(4, 10+2*n, "%2d. %s", r->rank, r->name);
+		gba_text_color(0, 15);
 	}
 	center(18, "PRESS A TO RACE");
 	wait_key(0);
@@ -515,14 +535,15 @@ static int race(int num_cars){
 
 	// how it went
 	gba_text_screen();
-	center(1, "RACE RESULTS");
+	center(3, "RACE RESULTS");
 	for(place = 1; place <= num_cars; place++){
 
 		for(n = 0; (n < num_cars)&&(D(___1de7d0h+0x54*n+0x40) != (__DWORD__)place); n++);
 		if(n == num_cars) continue;
-		print(2, 3+2*place, "%d. %-11s %d KILLS%s", place, (char *)___1de7d0h+0x54*n, (int)D(___1de7d0h+0x54*n+0xc),
+		gba_text_color(0, (n == D(___1a103ch)) ? 15 : 12);
+		print(2, 3+2*place, "%d. %-11s  %d KILLS%s", place, (char *)___1de7d0h+0x54*n, (int)D(___1de7d0h+0x54*n+0xc),
 			(D(___1de7d0h+0x54*n+0x10) >= 100) ? " WRECK" : "");
-		if(n == D(___1a103ch)) gba_print(0, 3+2*place, ">");
+		gba_text_color(0, 15);
 	}
 	print(2, 14, "PRIZE MONEY  $%d", (int)D(___196aech));
 	print(2, 15, "KILL BONUS   $%d", (int)D(___196af0h));
@@ -557,16 +578,19 @@ static void signup_draw(int chosen){
 
 		int 	col = 10*r;
 
-		print(col, 2, (r == chosen) ? "[%s]" : " %s ", race_names[r]);
-		print(col+1, 4, "%-8s", track_name(r, buf));
-		print(col+1, 5, "%d LAPS", 4+r);
-		print(col+1, 6, "$%d", prizes[r]);
+		gba_text_color((r == chosen) ? 3 : 0, (r == chosen) ? 15 : 10);
+		print(col+1, 5, "%-8s", race_names[r]);
+		gba_text_color(0, (r == chosen) ? 15 : 10);
+		print(col+1, 7, "%-8s", track_name(r, buf));
+		print(col+1, 8, "%d LAPS", 4+r);
+		print(col+1, 9, "$%-7d", prizes[r]);
 		for(n = 0; n < 4; n++){
 
 			const char * 	name = (n < B(___1a1f64h+r+3)) ? racer(B(___1a0ef8h+4*r+n))->name : "";
 
-			print(col+1, 9+2*n, "%-9.9s", name);
+			print(col+1, 11+n, "%-9.9s", name);
 		}
+		gba_text_color(0, 15);
 	}
 }
 
@@ -624,13 +648,22 @@ static void offer(void){
 	gba_text_screen();
 	voice(SFX_SPECIAL_OFFER);
 	gba_picture(0, PICTURE((ev == CAREER_EVENT_HITMAN) ? PIC_HIT : PIC_DRUGS), PICTURE_X, PICTURE_Y);
-	center(0, "SPECIAL OFFER");
+	center(3, "SPECIAL OFFER");
 	text_narrow = PICTURE_ROWS;
-	text_lines(2, 14, t, 8);
+	text_lines(5, 11, t, 8);
 	text_narrow = 0;
 	center(17, "A DEAL");
 	center(18, "B NO DEAL");
 	if(!wait_key(1)) career_offer_accept(ev, target);
+}
+
+static void signup_screen(void){
+
+	gba_text_screen();
+	center(3, "SIGN UP FOR A RACE");
+	gba_text_color(0, 11);
+	center(18, "LEFT/RIGHT CHOOSE, A SIGN UP, B SIT IT OUT");
+	gba_text_color(0, 15);
 }
 
 // the round's sign-up (___3266ch()): the others sign up as you choose. 1
@@ -640,10 +673,7 @@ static int signup(void){
 	int 	chosen = 0, frames = 0, r;
 
 	career_signup_open();
-	gba_text_screen();
-	center(0, "SIGN UP FOR A RACE");
-	gba_print(1, 18, "LEFT/RIGHT CHOOSE");
-	gba_print(1, 19, "A SIGN UP, B SIT IT OUT");
+	signup_screen();
 	for(;;){
 
 		u16 	k;
@@ -675,10 +705,7 @@ static int signup(void){
 
 				sound_menu(1, SFX_LAUGHTER, 0x24500);
 				speech_lines(&reins[chosen == 2], 1);
-				gba_text_screen();
-				center(0, "SIGN UP FOR A RACE");
-				gba_print(1, 18, "LEFT/RIGHT CHOOSE");
-				gba_print(1, 19, "A SIGN UP, B SIT IT OUT");
+				signup_screen();
 				continue;
 			}
 			if(r == CAREER_FULL) break;
@@ -711,8 +738,8 @@ static int signup(void){
 static int adversary(void){
 
 	gba_text_screen();
-	center(3, "THE ADVERSARY CHALLENGES YOU");
-	center(6, "TR0, 9 LAPS, FOR GLORY");
+	center(5, "THE ADVERSARY CHALLENGES YOU");
+	center(8, "TR0, 9 LAPS, FOR GLORY");
 	center(16, "A ACCEPT");
 	center(17, "B CHICKEN OUT");
 	if(wait_key(1)){
@@ -732,23 +759,27 @@ static int adversary(void){
 
 // the shop as shop_main() has it, in rows: the car on show, the engine,
 // tires and armor, the repairs, and out. career.c does the sums
-#define SHOP_ROW0		5	// the items' first row
-#define SHOP_TEXT		12	// the game's words about the item, rows 12-17
-#define SHOP_TEXT_ROWS		6
+#define SHOP_ROW0		8	// the items' first row
+#define SHOP_TEXT		14	// the game's words about the item, rows 14-18
+#define SHOP_TEXT_ROWS		5
 #define SHOP_BACK		5
 #define SHOP_CAR_X		184	// the car on show, turning top right
-#define SHOP_CAR_Y		0
+#define SHOP_CAR_Y		24
 
 static const char * const shop_items[6] = { "CAR", "ENGINE", "TIRES", "ARMOR", "REPAIR", "DONE" };
 
 // the game's n lines in rows row0 to row0+rows-1, without its colour marks
-// ([ and {): the first line by itself, the rest run on, word-wrapped
+// ([ and {): the first line by itself in white, the rest run on in grey,
+// word-wrapped to the screen's width, or a picture's beside it
+#define TEXT_W			(240-8-6)
+#define TEXT_NARROW_W		(PICTURE_X-8-6)
+
 static void text_lines(int row0, int rows, const char * const * t, int n_lines){
 
 	char 	para[12*48+16], * w;
 	int 	row = row0, n, len, i, first;
 
-	for(n = 0; n < rows; n++) gba_print(1, row0+n, "                            ");
+	gba_text_clear(8*row0, 8*rows);
 	para[0] = 0;
 	// the heading is the first line with words, the screens' empty ones
 	// before it left out
@@ -770,12 +801,12 @@ static void text_lines(int row0, int rows, const char * const * t, int n_lines){
 	}
 	for(w = para; *w&&(row < row0+rows); row++){
 
-		char 	line[29];
+		char 	line[64];
+		int 	max = (row < text_narrow) ? TEXT_NARROW_W : TEXT_W;
 
 		while(*w == ' ') w++;
-		// as much as fits, broken at a space or a line's end, beside
-		// a picture less
-		for(len = 0; w[len]&&(w[len] != '\n')&&(len < ((row < text_narrow) ? 21 : 28)); len++);
+		// as much as fits, broken at a space or a line's end
+		for(len = 0; w[len]&&(w[len] != '\n')&&(len < 63)&&(gba_text_width(w, len+1) <= max); len++);
 		if(w[len]&&(w[len] != '\n')&&(w[len] != ' ')){
 
 			for(i = len; (i > 0)&&(w[i] != ' '); i--);
@@ -783,10 +814,12 @@ static void text_lines(int row0, int rows, const char * const * t, int n_lines){
 		}
 		memcpy(line, w, len);
 		line[len] = 0;
+		gba_text_color(0, (w == para) ? 15 : 12);
 		gba_print(1, row, line);
 		w += len;
 		if(*w == '\n') w++;
 	}
+	gba_text_color(0, 15);
 }
 
 // the same for lines of 40
@@ -806,11 +839,10 @@ static void text_at(int row0, int rows, const char40 * t, int n_lines){
 }
 
 // the game's 6 lines of 40 under the shop's or the market's items
-static int 	shop_rows = SHOP_TEXT_ROWS;	// the market's, beside its picture, one more
 
 static void shop_text(const char40 * t){
 
-	text_at(SHOP_TEXT, shop_rows, t, 6);
+	text_at(SHOP_TEXT, SHOP_TEXT_ROWS, t, 6);
 }
 
 // a screen of the game's words, until A
@@ -821,9 +853,9 @@ static void speech(const char40 * t, int n_lines){
 
 		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
 		text_narrow = PICTURE_ROWS;
-		text_at(1, 16, t, n_lines);
+		text_at(4, 13, t, n_lines);
 	}
-	else text_at(3, 13, t, n_lines);
+	else text_at(4, 13, t, n_lines);
 	center(18, "PRESS A");
 	wait_key(0);
 	text_narrow = 0;
@@ -838,9 +870,9 @@ static void speech_lines(const char * const * t, int n_lines){
 
 		gba_picture(0, picture, PICTURE_X, PICTURE_Y);
 		text_narrow = PICTURE_ROWS;
-		text_lines(1, 16, t, n_lines);
+		text_lines(4, 13, t, n_lines);
 	}
-	else text_lines(3, 13, t, n_lines);
+	else text_lines(4, 13, t, n_lines);
 	center(18, "PRESS A");
 	wait_key(0);
 	text_narrow = 0;
@@ -894,9 +926,9 @@ static void shop_draw(int row){
 	char 		detail[16], price[12];
 	int 		item, p, n;
 
-	print(1, 1, "MONEY   $%-8d", me->money);
-	print(1, 2, "DAMAGE  %d%%  ", me->damage);
-	print(1, 3, "TRADE-IN $%-7d", career_shop_trade_in());
+	print(1, 4, "MONEY     $%-8d", me->money);
+	print(1, 5, "DAMAGE    %d%%  ", me->damage);
+	print(1, 6, "TRADE-IN  $%-7d", career_shop_trade_in());
 	for(item = 0; item < 6; item++){
 
 		p = (item < SHOP_BACK) ? career_shop_price(item) : CAREER_SHOP_NONE;
@@ -906,9 +938,13 @@ static void shop_draw(int row){
 		else if(item == CAREER_SHOP_REPAIR) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "NONE" : "10%% OFF");
 		else if(item < SHOP_BACK) snprintf(detail, sizeof(detail), (p == CAREER_SHOP_NONE) ? "ALL %d" : "%d OF %d", n, career_shop_most(item));
 		if(p != CAREER_SHOP_NONE) snprintf(price, sizeof(price), (p < 0) ? "+$%d" : "$%d", (p < 0) ? -p : p);
-		print(0, SHOP_ROW0+item, "%c %-6s %-13s%8s", (item == row) ? '>' : ' ', shop_items[item], detail, price);
+		gba_text_color(0, (item == row) ? 15 : 11);
+		print(2, SHOP_ROW0+item, "%-6s  %-13s%8s", shop_items[item], detail, price);
 	}
+	gba_cursor(4, 8*(SHOP_ROW0+row)-1);
+	gba_text_color(0, 11);
 	gba_print(1, 19, (row == CAREER_SHOP_CAR) ? "LEFT/RIGHT CAR  A BUY  B OUT" : "A BUY  B OUT                ");
+	gba_text_color(0, 15);
 }
 
 // the car on show turning: the one you'd buy on its row, else yours
@@ -921,7 +957,7 @@ static void shop_draw(int row){
 #define PART_DONE		232
 #define PART(f)			(shop_lz+(f))
 #define PART_X			180	// over the car's place
-#define PART_Y			4
+#define PART_Y			28
 
 static void my_color(void);
 
@@ -1018,7 +1054,7 @@ static void shop(void){
 	D(___1a1ee4h) = ((int)me->car >= 5) ? 5 : me->car+1;
 	gba_text_screen();
 	my_color();
-	center(0, "THE SHOP");
+	center(3, "THE SHOP");
 	shop_car(row);
 	shop_about(row);
 	for(;;){
@@ -1100,11 +1136,11 @@ static const char40 market_denied[6] = { "[Loan denied, Vagabond driver.", "", "
 static const char40 market_paid[6] = { "[Loan paid back.", "", "It's all here. I knew right from", "the start that I could trust you.", "Let's do this again anytime.", "" };
 static const char40 market_done[6] = { "[DONE", "", "Out of the Underground Market,", "back to the garage.", "", "" };
 
-// the market's picture beside its words, rows 12 to 17 on the right: the
+// the market's picture top right, as the shop's car: the
 // loan shark, an item as on sale, held or sold out (___2d728h() and the
 // others), or the way out turning
-#define MARKET_PIC_X		188
-#define MARKET_PIC_Y		(8*SHOP_TEXT)
+#define MARKET_PIC_X		176
+#define MARKET_PIC_Y		24
 
 static void market_picture(int item){
 
@@ -1164,9 +1200,9 @@ static void market_draw(int row){
 	char 		price[12];
 	int 		item, owed = career_loan_owed();
 
-	print(1, 1, "MONEY   $%-8d", me->money);
-	if(owed) print(1, 2, "YOU OWE $%-6d %d RACE%s LEFT ", owed, 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
-	else gba_print(1, 2, "                             ");
+	print(1, 5, "MONEY    $%-8d", me->money);
+	if(owed) print(1, 6, "YOU OWE  $%-6d %d RACE%s LEFT ", owed, 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+	else gba_print(1, 6, "                             ");
 	for(item = 0; item < 6; item++){
 
 		price[0] = 0;
@@ -1180,9 +1216,13 @@ static void market_draw(int row){
 			if(career_market_state(item) == 1) snprintf(price, sizeof(price), "$%d", career_market_price(item));
 			else snprintf(price, sizeof(price), "SOLD");
 		}
-		print(0, SHOP_ROW0+item, "%c %-19s%8s", (item == row) ? '>' : ' ', market_items[item], price);
+		gba_text_color(0, (item == row) ? 15 : 11);
+		print(2, SHOP_ROW0+item, "%-19s%8s", market_items[item], price);
 	}
+	gba_cursor(4, 8*(SHOP_ROW0+row)-1);
+	gba_text_color(0, 11);
 	gba_print(1, 19, "A BUY  B OUT                ");
+	gba_text_color(0, 15);
 }
 
 // A on a row: the loan taken or paid back, or the item bought
@@ -1239,10 +1279,9 @@ static void market(void){
 	career_market_open();
 	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
-	center(0, "THE UNDERGROUND MARKET");
+	center(3, "THE UNDERGROUND MARKET");
 	// the words narrower beside the picture, a row longer
-	text_narrow = ROWS;
-	shop_rows = SHOP_TEXT_ROWS+1;
+	text_narrow = 0;
 	market_about(row);
 	for(;;){
 
@@ -1264,7 +1303,6 @@ static void market(void){
 		market_picture(row);
 	}
 	text_narrow = 0;
-	shop_rows = SHOP_TEXT_ROWS;
 	gba_picture(0, 0, 0, 0);
 	gba_show_part(0, 0, 0, 0, 0);
 	sound_menu_music(back);
@@ -1396,7 +1434,7 @@ static int continue_or_new(void){
 
 	EWRAM_BSS static saved_game_t 	sg;
 	const racer_t * 	me;
-	int 			row = 0;
+	int 			row = 0, n;
 
 #if defined(CAREER_BENCH)
 	return 0;
@@ -1404,17 +1442,21 @@ static int continue_or_new(void){
 	if(!career_restore(&sg)) return 0;
 	me = &sg.racers[sg.me];
 	gba_text_screen();
-	center(1, "CAREER");
-	print(6, 6, "%s", me->name);
-	print(6, 7, "RANK %d, %d POINTS", (int)me->rank, (int)me->points);
-	print(6, 8, "$%d, %s", (int)me->money, car_names[me->car]);
+	center(3, "CAREER");
+	print(6, 7, "%s", me->name);
+	print(6, 8, "RANK %d, %d POINTS", (int)me->rank, (int)me->points);
+	print(6, 9, "$%d, %s", (int)me->money, car_names[me->car]);
 	gba_print(1, 18, "A CHOOSE, B BACK");
-	for(;;){
+	for(n = -1;;){
 
 		u16 	k;
 
-		item(4, row ? 13 : 4, "CONTINUE");
-		item(13, row ? 13 : 4, "NEW CAREER");
+		if(n != row){
+
+			item(5, row ? 13 : 5, "CONTINUE");
+			item(13, row ? 13 : 5, "NEW CAREER");
+			n = row;
+		}
 		k = menu_frame();
 		if(k&(KEY_UP|KEY_DOWN)) row = !row;
 		if(k&KEY_B) return -1;
@@ -1427,6 +1469,8 @@ static int continue_or_new(void){
 }
 
 // --- the hub ---------------------------------------------------------------------------
+
+#define HUB_Y			86	// the first of its five rows, under the face
 
 void career_play(void){
 
@@ -1481,14 +1525,16 @@ void career_play(void){
 #endif
 		career_store();
 		gba_text_screen();
-		gba_picture(0, FACE(me->face), 176, 0);
-		print(1, 1, "%s", me->name);
-		print(1, 3, "RANK    %d", me->rank);
-		print(1, 4, "POINTS  %d", me->points);
-		print(1, 5, "MONEY   $%d", me->money);
-		print(1, 6, "CAR     %s", car_names[me->car]);
-		print(1, 7, "DAMAGE  %d%%", me->damage);
-		if(career_loan_owed()) print(1, 8, "LOAN    $%d, %d RACE%s LEFT", career_loan_owed(), 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+		gba_picture(0, FACE(me->face), 176, 24);
+		gba_text_color(3, 15);
+		print(1, 3, "%s", me->name);
+		gba_text_color(0, 15);
+		print(1, 4, "RANK      %d OF 20", me->rank);
+		print(1, 5, "POINTS    %d", me->points);
+		print(1, 6, "MONEY     $%d", me->money);
+		print(1, 7, "CAR       %s", car_names[me->car]);
+		print(1, 8, "DAMAGE    %d%%", me->damage);
+		if(career_loan_owed()) print(1, 9, "LOAN      $%d, %d RACE%s LEFT", career_loan_owed(), 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
 		// after events(), shop_main()'s end of the road: a wreck you
 		// can't pay to repair
 		if(career_shop_broke()){
@@ -1503,14 +1549,17 @@ void career_play(void){
 			career_forget();
 			return;
 		}
-		for(;;){
+		for(n = -1;;){
 
-			item(10, 10+2*row, career_leading() ? "FACE THE ADVERSARY" : "RACE");
-			item(12, 10+2*row, "SHOP");
-			item(14, 10+2*row, "UNDERGROUND MARKET");
-			item(16, 10+2*row, "STANDINGS");
-			item(18, 10+2*row, "QUIT");
-			for(n = 0; n < 5; n++) gba_print(2, 10+2*n, (n == row) ? ">" : " ");
+			if(n != row){
+
+				item_at(HUB_Y+14*0, row == 0, career_leading() ? "FACE THE ADVERSARY" : "RACE");
+				item_at(HUB_Y+14*1, row == 1, "SHOP");
+				item_at(HUB_Y+14*2, row == 2, "UNDERGROUND MARKET");
+				item_at(HUB_Y+14*3, row == 3, "STANDINGS");
+				item_at(HUB_Y+14*4, row == 4, "QUIT");
+				n = row;
+			}
 			k = menu_frame();
 			if(k&KEY_UP) row = (row+4)%5;
 			if(k&KEY_DOWN) row = (row+1)%5;

@@ -44,6 +44,9 @@
 	asset	pictures_obj, pictures.obj
 	asset	faces_obj, faces.obj
 	asset	shop_lz, shop.lz
+	asset	menubg_dtl, menubg.dtl
+	asset	menufont_bin, menufont.bin
+	asset	cursor_bin, cursor.bin
 	asset	sfx_bin, sfx.bin
 	asset	men_bin, men.bin
 	asset	soundbank_bin, soundbank.bin
