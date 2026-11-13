@@ -50,6 +50,7 @@ int career_shop_most(int item);
 int career_shop_price(int item);
 void career_shop_buy(int item);
 int career_shop_can_race(void);
+int career_market_can_race(void);
 int career_shop_broke(void);
 
 // the underground market's items, as underground_main() numbers them in

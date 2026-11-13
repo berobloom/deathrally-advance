@@ -1662,8 +1662,9 @@ void career_play(void){
 		}
 		if(row == 0){
 
-			// CONTINUE's check
-			if(!career_shop_can_race()){
+			// CONTINUE's checks, the shop's and, with weapons, the
+			// market's it goes on to: a wreck doesn't race
+			if(!career_shop_can_race()||!career_market_can_race()){
 
 				laugh();
 				message("REPAIR YOUR CAR FIRST", "R-E-P-A-I-R");

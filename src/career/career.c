@@ -1136,6 +1136,13 @@ int career_shop_can_race(void){
 	return (career_me()->damage != 100)||(D(___185a14h_UseWeapons) != 0);
 }
 
+// the market's CONTINUE's (underground___2e350h()): a wreck can't race. With
+// weapons the shop's CONTINUE goes on to the market, so a wreck never does
+int career_market_can_race(void){
+
+	return career_me()->damage != 100;
+}
+
 // shop_main()'s end of the road: a wreck, no money to repair it, and
 // not $1,000 with what the car would fetch
 int career_shop_broke(void){

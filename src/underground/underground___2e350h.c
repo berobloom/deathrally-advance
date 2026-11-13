@@ -151,7 +151,7 @@ void underground___2e350h(void){
 		}
 		break;
 	case 5: // CONTINUE
-		if(s_6c[D(___1a1ef8h)].damage == 100){
+		if(!career_market_can_race()){
 
 			___13248h_cdecl(144, 114, 384, 119, 1);
 			VESA101_16X16_FORMAT_PRINT("[Repair your car first.",             170, 124);
