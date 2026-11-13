@@ -6,6 +6,7 @@ void say(const char * fmt, ...);
 u32 gba_cycles(void);
 void gba_text_screen(void);
 void gba_film(int adv);
+void gba_banner(int y);		// the PREPARE TO RACE banner, its top at y
 void gba_print(int col, int row, const char * s);
 void gba_print_cells(int col, int row, int cells, const char * s);
 void gba_center(int row, const char * s);

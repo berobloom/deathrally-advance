@@ -574,28 +574,30 @@ static int race(int num_cars){
 
 	career_race_track(grid);
 	gba_text_screen();
-	center(3, "PREPARE TO RACE");
-	gba_box(0, 4, 30, 14);
-	print(2, 5, "TRACK   %s", track_name(D(___1a1028h), buf));
-	print(2, 6, "LAPS    %d", NUM_OF_LAPS);
-	if((int)D(___1a1028h) < 3) print(2, 7, "PRIZE   $%d", prizes[D(___1a1028h)]);
-	else gba_print(2, 7, "PRIZE   GLORY");
+	// the desktop's banner for a title, at the foot as there (___33010h()),
+	// and still up while the race loads
+	gba_box(0, 3, 30, 14);
+	print(2, 4, "TRACK   %s", track_name(D(___1a1028h), buf));
+	print(2, 5, "LAPS    %d", NUM_OF_LAPS);
+	if((int)D(___1a1028h) < 3) print(2, 6, "PRIZE   $%d", prizes[D(___1a1028h)]);
+	else gba_print(2, 6, "PRIZE   GLORY");
 	// the track's lap record for your car, as ___36adch() shows it
 	{
 		const record_t 	* r = &___19f750h[racer(ME)->car][B(___1a1f64h+D(___1a1028h))];
 
-		if(r->min+r->sec+r->sec100) print(2, 8, "RECORD  %d:%02d.%02d %.11s", (int)r->min, (int)r->sec, (int)r->sec100, r->name);
+		if(r->min+r->sec+r->sec100) print(2, 7, "RECORD  %d:%02d.%02d %.11s", (int)r->min, (int)r->sec, (int)r->sec100, r->name);
 	}
 	for(n = 0; n < num_cars; n++){
 
 		racer_t * 	r = racer(grid[n]);
 
 		gba_text_color(0, (grid[n] == ME) ? 15 : 12);
-		if((D(___1a1028h) == 3)&&(n == 0)) gba_print(4, 10+2*n, "THE ADVERSARY");
-		else print(4, 10+2*n, "%2d. %s", r->rank, r->name);
+		if((D(___1a1028h) == 3)&&(n == 0)) gba_print(4, 9+2*n, "THE ADVERSARY");
+		else print(4, 9+2*n, "%2d. %s", r->rank, r->name);
 		gba_text_color(0, 15);
 	}
-	center(18, "PRESS A TO RACE");
+	center(17, "PRESS A TO RACE");
+	gba_banner(160-16);
 	wait_key(0);
 
 	career_race_fill(num_cars, grid);

@@ -55,6 +55,7 @@
 	asset	end_bin, end.bin
 	asset	endani_film, endani.film
 	asset	adv_bin, adv.bin
+	asset	prep_bin, prep.bin
 	asset	endani0_film, endani0.film
 	asset	frames_bin, frames.bin
 	asset	soundbank_bin, soundbank.bin

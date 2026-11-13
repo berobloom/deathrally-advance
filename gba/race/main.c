@@ -730,6 +730,49 @@ static void follow_camera(void){
 }
 
 // the track the race and the screen use from now on
+// the PREPARE TO RACE banner (gbabake's prep.bin), its 4 OBJs last in OAM,
+// their tiles where car 1's go and their colors in sprite bank 15: the
+// race's setup leaves them be, so it shows while a career race loads
+#define BANNER_OAM		124
+#define BANNER_TILE0		128
+static int banner_up;
+
+static void banner_at(int y){
+
+	int 	k;
+
+	for(k = 0; k < 4; k++){
+
+		OAM[BANNER_OAM+k].attr0 = OBJ_Y(y) | OBJ_16_COLOR | OBJ_WIDE;
+		OAM[BANNER_OAM+k].attr1 = OBJ_X(64*k) | OBJ_SIZE(3);
+		OAM[BANNER_OAM+k].attr2 = OBJ_CHAR(BANNER_TILE0+32*k) | OBJ_PRIORITY(0) | OBJ_PALETTE(15);
+	}
+}
+
+// on the text screen, its top at y; until gba_text_screen()
+void gba_banner(int y){
+
+	extern const u8 prep_bin[];
+
+	copy32(SPRITE_PALETTE+240, prep_bin, 32);
+	copy32((u8 *)SPRITE_GFX+32*BANNER_TILE0, prep_bin+32, 4*32*32);
+	banner_at(y);
+	banner_up = 1;
+}
+
+// the race in its place: the track's colors in bank 15, and car 1's tiles
+// are to be drawn again
+static void banner_down(void){
+
+	int 	k;
+
+	if(!banner_up) return;
+	banner_up = 0;
+	for(k = 0; k < 4; k++) OAM[BANNER_OAM+k].attr0 = OBJ_DISABLE;
+	copy32(SPRITE_PALETTE+240, (reversed ? trk->rev_pal : trk->pal)+240, 32);
+	for(k = 0; k < 4*32*32/4; k++) ((u32 *)SPRITE_GFX)[8*BANNER_TILE0+k] = 0;
+}
+
 static void use_track(const race_track_t * t){
 
 	trk = t;
@@ -754,7 +797,8 @@ static void use_track(const race_track_t * t){
 	track_pw = t->inf[2];
 	track_ph = t->inf[3];
 	copy32(BG_PALETTE, reversed ? t->rev_pal : t->pal, 512);
-	copy32(SPRITE_PALETTE, reversed ? t->rev_pal : t->pal, 512);
+	// the banner's bank kept while a race loads under it, until start_race()
+	copy32(SPRITE_PALETTE, reversed ? t->rev_pal : t->pal, banner_up ? 480 : 512);
 	init_hud();			// its colours are the track's
 	// what was on screen is another track's, and so are the tiles drawn into
 	vis_x0 = -1;
@@ -1022,6 +1066,12 @@ static const char * start_race(int career, int my_index, int num_cars){
 		// the menus' layers off while it's set up: their tiles are in
 		// the menus' colors, which use_track() changes
 		REG_DISPCNT = MODE_0;
+		// but the banner, if gba_banner() put it up, in the middle
+		if(banner_up){
+
+			banner_at((SCREEN_H-16)/2);
+			REG_DISPCNT = MODE_0 | OBJ_ON | OBJ_1D_MAP;
+		}
 		use_track(&race_tracks[n]);
 		say("career race on %s%s, %d laps, you in place %d of %d", ___19bd64h, reversed ? " reversed" : "", NUM_OF_LAPS, my_index, num_cars);
 	}
@@ -1054,8 +1104,9 @@ static const char * start_race(int career, int my_index, int num_cars){
 	// the menus' pictures and side panel out of OBJ VRAM and OAM: a car
 	// fills only the top left 40x40 of its 64x64 sprite, the rest of it
 	// would show what was there
-	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
-	for(n = 0; n < 0x8000/4; n++) ((u32 *)SPRITE_GFX)[n] = 0;
+	// (the banner's kept until the race is drawn)
+	for(n = 0; n < (banner_up ? BANNER_OAM : 128); n++) OAM[n].attr0 = OBJ_DISABLE;
+	for(n = 0; n < 0x8000/4; n++) if(!banner_up||(n < 8*BANNER_TILE0)||(n >= 8*BANNER_TILE0+4*32*32/4)) ((u32 *)SPRITE_GFX)[n] = 0;
 	for(n = 0; n < MAX_SPRITES; n++) sprite_shown[n] = 0;
 	lamp_shown = 0;
 	make_light();
@@ -1103,6 +1154,7 @@ static const char * start_race(int career, int my_index, int num_cars){
 	___1a1140h.drop_mine = KEY_SCAN_MINE;
 	___1a1140h.horn = KEY_SCAN_HORN;
 
+	banner_down();
 	for(n = 0; n < NUM_CARS; n++) shown_frame[n] = -1;
 	vis_x0 = -1;
 	render_race();
@@ -1420,6 +1472,7 @@ void gba_text_screen(void){
 	VBlankIntrWait();
 	REG_DISPCNT = LCDC_OFF;
 	for(n = 0; n < 128; n++) OAM[n].attr0 = OBJ_DISABLE;
+	banner_up = 0;
 	shown_model = -1;
 	shown_part = 0;
 	cursor_x = -1;

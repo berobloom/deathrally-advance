@@ -53,6 +53,7 @@
 //   tracks.obj   the sign-up's pictures of the tracks, halved, the same way
 //   panel.bin    the side panel with your car and its upgrades, see bake_panel()
 //   box.bin      the menus' box, see bake_box()
+//   prep.bin     the PREPARE TO RACE banner, see bake_prep()
 //   endani.film  the end's film, ENDANI.HAF, see bake_film(), and frames.bin
 //   endani0.film the Adversary's, ENDANI0.HAF, the same way
 //                the border the desktop shows it in; end01.wav on its effects
@@ -813,6 +814,7 @@ static void bake_shop_parts(const char * outdir){
 static void bake_menu_screen(const char * outdir);
 static void bake_panel(const char * outdir);
 static void bake_box(const char * outdir);
+static void bake_prep(const char * outdir);
 static void bake_film(const char * haf, const char * cmf, const char * name, const char * prefix, const char * outdir);
 
 static void bake_menu_pictures(const char * outdir){
@@ -873,6 +875,7 @@ static void bake_menu_pictures(const char * outdir){
 
 	bake_panel(outdir);
 	bake_box(outdir);
+	bake_prep(outdir);
 	bake_film("ENDANI.HAF", "ENDANI-E.CMF", "endani.film", "end", outdir);
 	bake_film("ENDANI0.HAF", "ENDANI0E.CMF", "endani0.film", "adv", outdir);
 
@@ -1733,6 +1736,83 @@ static void film_scale(__BYTE__ * dst, int dw, int dh, const __BYTE__ * src, int
 		}
 		dst[dw*y+x] = cache[key];
 	}
+}
+
+// The desktop's PREPARE TO RACE banner (PREP4.BPK, 640x54 in menu.pal's
+// colors), which ___33010h() draws at the foot of the screen it loads a
+// race under: at 3/8, 240x20, its top and bottom 2 rows cut (the flag's,
+// the letters are inside), in 15 colors of its own. prep.bin: its colors
+// 1-15 as the GBA's (0 unused), then 4 OBJs of 64x32 left to right, 4bpp
+// tiles, their top 16 rows the banner's (the last 16 pixels of the 4th
+// clear)
+static void bake_prep(const char * outdir){
+
+	enum { SW = 640, SH = 54, W = 240, H = 16, CUT = 2, K = 15 };
+	__POINTER__ 	src = read_entry("MENU.BPA", "prep4.bpk");
+	__BYTE__ 	* img = calloc(1, SW*SH+0x10000), px[W*H], tiles[4][32*32];
+	int 		rgb[W*H][3], cen[K][3], i, j, x, y, it;
+	FILE * 		fd;
+
+	bpk_decode2(img, src);
+	free(src);
+	// each pixel the average of the 8/3 x 8/3 it covers
+	for(y = 0; y < H; y++) for(x = 0; x < W; x++){
+
+		int 	sx, sy, a = 0, c[3] = { 0, 0, 0 }, ty = y+CUT;
+
+		for(sy = 8*ty/3; sy*3 < 8*(ty+1); sy++) for(sx = 8*x/3; sx*3 < 8*(x+1); sx++){
+
+			int 	wx = (3*(sx+1) < 8*(x+1) ? 3*(sx+1) : 8*(x+1))-(3*sx > 8*x ? 3*sx : 8*x);
+			int 	wy = (3*(sy+1) < 8*(ty+1) ? 3*(sy+1) : 8*(ty+1))-(3*sy > 8*ty ? 3*sy : 8*ty);
+			__BYTE__ 	p = img[SW*sy+sx];
+
+			for(i = 0; i < 3; i++) c[i] += wx*wy*menu_pal[3*p+i];
+			a += wx*wy;
+		}
+		for(i = 0; i < 3; i++) rgb[W*y+x][i] = (c[i]+a/2)/a;
+	}
+	free(img);
+	// 15 colors: k-means from the pixels spread through the picture
+	for(j = 0; j < K; j++) for(i = 0; i < 3; i++) cen[j][i] = rgb[(W*H/K)*j+W/2][i];
+	for(it = 0; it < 30; it++){
+
+		int 	sum[K][4];
+
+		memset(sum, 0, sizeof(sum));
+		for(x = 0; x < W*H; x++){
+
+			int 	best = 0, best_d = 1 << 30;
+
+			for(j = 0; j < K; j++){
+
+				int 	dr = rgb[x][0]-cen[j][0], dg = rgb[x][1]-cen[j][1], db = rgb[x][2]-cen[j][2], d = dr*dr+dg*dg+db*db;
+
+				if(d < best_d){ best_d = d; best = j; }
+			}
+			px[x] = 1+best;
+			for(i = 0; i < 3; i++) sum[best][i] += rgb[x][i];
+			sum[best][3]++;
+		}
+		for(j = 0; j < K; j++) if(sum[j][3]) for(i = 0; i < 3; i++) cen[j][i] = (sum[j][i]+sum[j][3]/2)/sum[j][3];
+	}
+	memset(tiles, 0, sizeof(tiles));
+	for(y = 0; y < H; y++) for(x = 0; x < W; x++){
+
+		int 	o = x/64, tx = (x%64)/8, ty = y/8, t = 8*ty+tx;
+		__BYTE__ 	* b = &tiles[o][32*t+4*(y%8)+(x%8)/2];
+
+		*b |= (x&1) ? px[W*y+x] << 4 : px[W*y+x];
+	}
+	fd = out(outdir, "prep.bin");
+	fputc(0, fd); fputc(0, fd);
+	for(j = 0; j < K; j++){
+
+		__WORD__ 	w = gba_color(cen[j][0], cen[j][1], cen[j][2]);
+
+		fputc(w, fd); fputc(w >> 8, fd);
+	}
+	fwrite(tiles, 1, sizeof(tiles), fd);
+	fclose(fd);
 }
 
 // A film for gba/race's gba_film(), from CINEM/HAF, at 3/4 of its size:
