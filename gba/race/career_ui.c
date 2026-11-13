@@ -1212,11 +1212,13 @@ static const char40 market_denied[6] = { "[Loan denied, Vagabond driver.", "", "
 static const char40 market_paid[6] = { "[Loan paid back.", "", "It's all here. I knew right from", "the start that I could trust you.", "Let's do this again anytime.", "" };
 static const char40 market_done[6] = { "[DONE", "", "Out of the Underground Market,", "back to the garage.", "", "" };
 
-// the market's picture top right, as the shop's car: the
+// the market's picture on the right, as the shop's car: the
 // loan shark, an item as on sale, held or sold out (___2d728h() and the
-// others), or the way out turning
+// others), or the way out turning. Under the title and beside the box,
+// whose rows end before it
 #define MARKET_PIC_X		176
-#define MARKET_PIC_Y		24
+#define MARKET_PIC_Y		32
+#define MARKET_BOX_W		22	// cells
 
 static void market_picture(int item){
 
@@ -1276,9 +1278,17 @@ static void market_draw(int row){
 	char 		price[12];
 	int 		item, owed = career_loan_owed();
 
-	print(1, 5, "MONEY    $%-8d", me->money);
-	if(owed) print(1, 6, "YOU OWE  $%-6d %d RACE%s LEFT ", owed, 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
-	else gba_print(1, 6, "                             ");
+	print(1, 4, "MONEY    $%-8d", me->money);
+	if(owed){
+
+		print(1, 5, "YOU OWE  $%-8d", owed);
+		print(1, 6, "%d RACE%s LEFT  ", 4-(int)me->loanshark_counter, (me->loanshark_counter == 3) ? "" : "S");
+	}
+	else {
+
+		gba_print(1, 5, "                  ");
+		gba_print(1, 6, "                  ");
+	}
 	for(item = 0; item < 6; item++){
 
 		price[0] = 0;
@@ -1293,7 +1303,10 @@ static void market_draw(int row){
 			else snprintf(price, sizeof(price), "SOLD");
 		}
 		gba_text_color(0, (item == row) ? 15 : 9);
-		print(2, SHOP_ROW0+item, "%-19s%8s", market_items[item], price);
+		// the name in 13 cells, its letters narrower than them, and the
+		// price in the 6 to the box's last but one
+		gba_print_cells(2, SHOP_ROW0+item, 13, market_items[item]);
+		print(MARKET_BOX_W-1-6, SHOP_ROW0+item, "%6s", price);
 	}
 	gba_cursor(4, 8*(SHOP_ROW0+row)-1);
 	gba_text_color(0, 11);
@@ -1356,7 +1369,7 @@ static void market(void){
 	if(career_market_welcome()) speech_lines(welcome, 10);
 	gba_text_screen();
 	center(3, "THE UNDERGROUND MARKET");
-	gba_box(0, 7, 30, 8);
+	gba_box(0, 7, MARKET_BOX_W, 8);
 	// the words narrower beside the picture, a row longer
 	text_narrow = 0;
 	market_about(row);

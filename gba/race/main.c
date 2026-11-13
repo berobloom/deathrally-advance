@@ -1096,17 +1096,19 @@ static const char * start_race(int career, int my_index, int num_cars){
 	return 0;
 }
 
-// the GBA's keys as the keyboard the game reads. The mine key is cleared
-// by race___40164h() once it's seen, so it's set when pressed only
+// the GBA's keys as the keyboard the game reads, as the desktop's arrows:
+// up accelerates, down brakes, B is the turbo, A the gun and R drops a
+// mine. The mine key is cleared by race___40164h() once it's seen, so
+// it's set when pressed only
 static void read_keys(u16 keys, u16 down){
 
-	kmap[KEY_SCAN_ACCELERATE] = !!(keys & KEY_A);
-	kmap[KEY_SCAN_BRAKE] = !!(keys & KEY_B);
+	kmap[KEY_SCAN_ACCELERATE] = !!(keys & KEY_UP);
+	kmap[KEY_SCAN_BRAKE] = !!(keys & KEY_DOWN);
 	kmap[DR_SCAN_LEFT] = !!(keys & KEY_LEFT);
 	kmap[DR_SCAN_RIGHT] = !!(keys & KEY_RIGHT);
-	kmap[KEY_SCAN_TURBO] = !!(keys & KEY_R);
-	kmap[KEY_SCAN_GUN] = !!(keys & KEY_L);
-	if(down & KEY_SELECT) kmap[KEY_SCAN_MINE] = 1;
+	kmap[KEY_SCAN_TURBO] = !!(keys & KEY_B);
+	kmap[KEY_SCAN_GUN] = !!(keys & KEY_A);
+	if(down & KEY_R) kmap[KEY_SCAN_MINE] = 1;
 }
 
 static void hud_race(const view_t * v){

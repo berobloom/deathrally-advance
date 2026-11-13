@@ -161,12 +161,10 @@ In `gba/race`:
 
 | Button       | Does                                     |
 |--------------|------------------------------------------|
-| D-pad        | Steer left and right                     |
-| A            | Accelerate                               |
-| B            | Brake                                    |
-| R            | Turbo                                    |
-| L            | Machine gun                              |
-| Select       | Drop a mine                              |
+| D-pad        | Up accelerates, down brakes, left and right steer |
+| A            | Machine gun                              |
+| B            | Turbo                                    |
+| R            | Drop a mine                              |
 | Start        | Let the AI drive your car, or, once the race is over, go on (so does A) |
 
 The title screen chooses the career or a quick race. In the career's screens, the D-pad moves, A chooses and B goes back. A new game asks for your name (A on it, then up and down change the letter and left and right move along), your face, which is one of the drivers' and leaves that driver out, and the difficulty. At the sign-up, left and right pick a race and A signs up, or B sits the round out. The others sign up as you choose, and a race that has its four is full.
