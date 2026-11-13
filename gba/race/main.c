@@ -1359,11 +1359,13 @@ void gba_text_clear(int y, int h){
 #define FILM_PAGE(n) 		((u8 *)VRAM+(n)*0xa000)
 #define FILM_ROW 		35		// the film's 90 rows under the border's top
 
-extern const u8 endani_film[], frames_bin[];
+extern const u8 endani_film[], endani0_film[], frames_bin[];
 
-void gba_film(void){
+// the end's film, or with adv the Adversary's
+void gba_film(int adv){
 
-	const u32 	* f = (const u32 *)endani_film;
+	const u8 	* film = adv ? endani0_film : endani_film;
+	const u32 	* f = (const u32 *)film;
 	const u8 	* info = (const u8 *)(f+1);
 	u32 		n = f[0], k, due = 0, start;
 	int 		page = 1, ch = 0;
@@ -1382,7 +1384,7 @@ void gba_film(void){
 	start = vblanks;
 	for(k = 0; k < n; k++){
 
-		const u8 	* frame = endani_film+f[1+n+k];
+		const u8 	* frame = film+f[1+n+k];
 		u16 		keys;
 
 		// into the page not shown
@@ -1397,7 +1399,7 @@ void gba_film(void){
 		if(info[4*k]){
 
 			ch = ch%6+1;
-			sound_film_effect(ch, info[4*k]);
+			sound_film_effect(adv, ch, info[4*k]);
 		}
 		scanKeys();
 		keys = keysDown();

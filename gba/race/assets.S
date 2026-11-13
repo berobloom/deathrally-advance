@@ -54,6 +54,8 @@
 	asset	men_bin, men.bin
 	asset	end_bin, end.bin
 	asset	endani_film, endani.film
+	asset	adv_bin, adv.bin
+	asset	endani0_film, endani0.film
 	asset	frames_bin, frames.bin
 	asset	soundbank_bin, soundbank.bin
 #if defined(RACE_PRE)

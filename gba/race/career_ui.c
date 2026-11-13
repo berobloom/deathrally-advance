@@ -270,7 +270,7 @@ int gba_title(void){
 	static int 	row = 0;
 
 #if defined(FILM_TEST)
-	gba_film();
+	gba_film(FILM_TEST);
 #endif
 
 	for(;;){
@@ -551,7 +551,15 @@ static void results(int A1){
 	say("CAREER round %d: you rank %d with %d points, $%d; racers hash %08lx", ++bench_round, racer(ME)->rank, racer(ME)->points, racer(ME)->money, racers_hash());
 #endif
 	standings(gained);
-	if(lead) message("YOU LEAD ON POINTS!", "THE ADVERSARY IS WAITING");
+	if(lead){
+
+		// leading for the first time: the Adversary's film, as
+		// ___3892ch() plays it after the standings, then the menus'
+		// music again
+		gba_film(1);
+		sound_menu_music(-1);
+		message("YOU LEAD ON POINTS!", "THE ADVERSARY IS WAITING");
+	}
 }
 
 // --- a race -------------------------------------------------------------------------
@@ -620,7 +628,7 @@ static int race(int num_cars){
 			message("YOU BEAT THE ADVERSARY!", "THE DEATH RALLY IS YOURS");
 			// the end (___22808h()): its film, and you in the hall
 			// of fame, to the menus' music again
-			gba_film();
+			gba_film(0);
 			sound_menu_music(-1);
 			records_load();
 			hall_of_fame(career_hall_of_fame());

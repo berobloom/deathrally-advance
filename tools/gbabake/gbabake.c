@@ -54,6 +54,7 @@
 //   panel.bin    the side panel with your car and its upgrades, see bake_panel()
 //   box.bin      the menus' box, see bake_box()
 //   endani.film  the end's film, ENDANI.HAF, see bake_film(), and frames.bin
+//   endani0.film the Adversary's, ENDANI0.HAF, the same way
 //                the border the desktop shows it in; end01.wav on its effects
 //   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
 //                cursor, see bake_menu_screen()
@@ -873,6 +874,7 @@ static void bake_menu_pictures(const char * outdir){
 	bake_panel(outdir);
 	bake_box(outdir);
 	bake_film("ENDANI.HAF", "ENDANI-E.CMF", "endani.film", "end", outdir);
+	bake_film("ENDANI0.HAF", "ENDANI0E.CMF", "endani0.film", "adv", outdir);
 
 	// the sign-up's pictures of the tracks, TRSNAP2M's first 19 of
 	// 128x112, as ___30df8h() shows them: TR0, TR1-TR9, TR1-TR9 reversed
