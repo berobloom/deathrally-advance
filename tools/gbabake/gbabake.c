@@ -1210,9 +1210,11 @@ static void bake_sound(int track, const char * outdir){
 // drawn into the image here, as seen from straight above: each point at its
 // X/256, Y/256 from the object's TRX_X, TRX_Y, where the desktop puts the
 // ground's (Z 256). Its faces that look up, the lowest first, in their
-// colors and the trees' shades as race___53464h() works them out, without
-// the textures, which it can leave off too, or the shadows, through tables
-// it leaves empty
+// colors and the trees' shades as race___53464h() works them out, then the
+// textures it puts on them, without the shadows, through tables it leaves
+// empty. A texture is a picture the desktop draws unscaled with its top
+// left where its XPos, YPos project at its depth (_14): from above, at
+// 1/256 of them, scaled by the depth/256, as the faces under it shrink
 #pragma pack(push, 1)
 typedef struct xc50_s {
 	int 		PointsN, TrianglesN;
@@ -1223,14 +1225,21 @@ typedef struct xc50_s {
 	__DWORD__	PointsX[75], PointsY[75];
 	__DWORD__	_C44, _C48, _C4C;
 } xc50_t;
-#pragma pack(pop)
 xc50_t 		___1f3b08h[100];
 int 		NUM_OF_OBJECTS;
 __DWORD__ 	___1df9a0h[100][75];
 void race___4a6b4h(void);
 
 typedef struct {
+	__DWORD__ 	width, height, offset;
+	int 		XPos, YPos, _14;
+	__DWORD__ 	_18, _1C, _20, _24, _28;
+} x2c_t;
+#pragma pack(pop)
+
+typedef struct {
 	double 		x[3], y[3], c[3], z;
+	int 		texture;	// -1, or a texture to draw instead of a face
 } face_t;
 
 // race___53464h()'s kind 0x80 color of a point, the shift as x86 does it
@@ -1243,9 +1252,12 @@ static int tree_color(int x, int y){
 
 static int face_cmp(const void * a, const void * b){
 
-	double 	za = ((const face_t *)a)->z, zb = ((const face_t *)b)->z;
+	const face_t 	* fa = a, * fb = b;
 
-	return (za < zb) ? 1 : (za > zb) ? -1 : 0;	// the farthest down first
+	// the farthest down first, a texture after the faces as high
+	if(fa->z != fb->z) return (fa->z < fb->z) ? 1 : -1;
+
+	return (fa->texture >= 0)-(fb->texture >= 0);
 }
 
 // each pixel whose middle is in the triangle, its color from its corners'
@@ -1274,12 +1286,31 @@ static void fill_face(__BYTE__ * ima, int w, int h, const face_t * f){
 	}
 }
 
+// texture t at its place, see bake_buildings(), color 0 see-through
+static void fill_texture(__BYTE__ * ima, int w, int h, const x2c_t * t, const __BYTE__ * px, unsigned px_size){
+
+	double 	s = t->_14/256.0, x0 = t->XPos/256.0, y0 = t->YPos/256.0;
+	int 	x, y, xa = (int)floor(x0), ya = (int)floor(y0), xb = (int)ceil(x0+s*t->width), yb = (int)ceil(y0+s*t->height);
+
+	if((t->_14 <= 0)||((unsigned long)t->offset+(unsigned long)t->width*t->height > px_size)) return;
+	for(y = (ya < 0) ? 0 : ya; (y < yb)&&(y < h); y++) for(x = (xa < 0) ? 0 : xa; (x < xb)&&(x < w); x++){
+
+		int 	u = (int)floor((x+0.5-x0)/s), v = (int)floor((y+0.5-y0)/s);
+		__BYTE__ 	c;
+
+		if((u < 0)||(v < 0)||(u >= (int)t->width)||(v >= (int)t->height)) continue;
+		if((c = px[t->offset+t->width*v+u]) != 0) ima[w*y+x] = c;
+	}
+}
+
 static void bake_buildings(int track, const char * bpa_name, __BYTE__ * ima, int w, int h){
 
+	static x2c_t 	tex[256];
 	char 		entry[32];
-	__POINTER__ 	src;
+	__POINTER__ 	src, px;
 	face_t 		* faces;
-	int 		k, m, j, n = 0;
+	int 		k, m, j, n = 0, n_tex = 0, drawn_tex = 0;
+	unsigned 	px_size = (track == 1)||(track == 2) ? 0x5f370 : 0x493e0;	// as race___42824h() reads them
 
 	snprintf(entry, sizeof(entry), "TR%d-SCE.BPK", track);
 	src = read_entry(bpa_name, entry);
@@ -1287,10 +1318,15 @@ static void bake_buildings(int track, const char * bpa_name, __BYTE__ * ima, int
 	bpk_decode4(1, 0, (__POINTER__)&NUM_OF_OBJECTS, src);
 	if((NUM_OF_OBJECTS < 0)||(NUM_OF_OBJECTS > 100)){ fprintf(stderr, "%s: %d objects\n", entry, NUM_OF_OBJECTS); exit(1); }
 	bpk_decode4(sizeof(xc50_t)*NUM_OF_OBJECTS, 1, (__POINTER__)___1f3b08h, src);
+	bpk_decode4(1, sizeof(xc50_t)*NUM_OF_OBJECTS+1, (__POINTER__)&n_tex, src);
+	if((n_tex < 0)||(n_tex > 256)){ fprintf(stderr, "%s: %d textures\n", entry, n_tex); exit(1); }
+	if(n_tex > 0) bpk_decode4(sizeof(x2c_t)*n_tex, sizeof(xc50_t)*NUM_OF_OBJECTS+2, (__POINTER__)tex, src);
+	px = calloc(1, px_size);
+	bpk_decode4(px_size, sizeof(x2c_t)*n_tex+sizeof(xc50_t)*NUM_OF_OBJECTS+2, px, src);
 	free(src);
 	race___4a6b4h();	// the shades of kind 0x8a's points
 
-	faces = calloc(100*NUM_OF_OBJECTS+1, sizeof(face_t));
+	faces = calloc(100*NUM_OF_OBJECTS+n_tex+1, sizeof(face_t));
 	for(k = 0; k < NUM_OF_OBJECTS; k++){
 
 		const xc50_t 	* o = &___1f3b08h[k];
@@ -1302,6 +1338,7 @@ static void bake_buildings(int track, const char * bpa_name, __BYTE__ * ima, int
 			face_t 		* f = &faces[n];
 			double 		face;
 
+			f->texture = -1;
 			if((kind >= 0x81)&&(kind <= 0x83)) continue;	// shadows
 			f->z = 0;
 			for(j = 0; j < 3; j++){
@@ -1319,10 +1356,23 @@ static void bake_buildings(int track, const char * bpa_name, __BYTE__ * ima, int
 			if(face < -1e-9) n++;
 		}
 	}
+	// the textures, as high as their depth
+	for(k = 0; k < n_tex; k++){
+
+		faces[n].texture = k;
+		faces[n].z = tex[k]._14;
+		n++;
+		drawn_tex++;
+	}
 	qsort(faces, n, sizeof(face_t), face_cmp);
-	for(k = 0; k < n; k++) fill_face(ima, w, h, &faces[k]);
-	printf("%s: %d objects, %d faces drawn in\n", entry, NUM_OF_OBJECTS, n);
+	for(k = 0; k < n; k++){
+
+		if(faces[k].texture >= 0) fill_texture(ima, w, h, &tex[faces[k].texture], px, px_size);
+		else fill_face(ima, w, h, &faces[k]);
+	}
+	printf("%s: %d objects, %d faces and %d textures drawn in\n", entry, NUM_OF_OBJECTS, n-drawn_tex, drawn_tex);
 	free(faces);
+	free(px);
 }
 
 int main(int argc, char * argv[]){
