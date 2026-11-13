@@ -120,7 +120,7 @@ The screens look like the desktop's menus, made smaller to fit. Each has the des
 
 ### Speed
 
-In mGBA, with the AI driving all four cars, a whole race runs at 60.0 frames per second at the real 70 ticks a second, on all ten tracks. At most two seconds a race show 59, which is one frame shown twice. If the logic falls more than two ticks behind, the game slows down rather than catching up. `make TICKS=60` runs one tick a frame, at 6/7 of the game's speed. `RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=n"` builds a benchmark: one tick a frame however long it takes, with the AI driving your car. At the end it logs the cost of a tick and a hash of the race, which a change that is meant to keep the race the same must not move.
+In mGBA, with the AI driving all four cars, a whole race runs at 60.0 frames per second at the real 70 ticks a second, on all ten tracks. At most two seconds a race show 59, which is one frame shown twice. If the logic falls more than two ticks behind, the game slows down rather than catching up. `make TICKS=60` runs one tick a frame, at 6/7 of the game's speed. `RACE_CFLAGS="-DRACE_BENCH -DRACE_SEED=n"` builds a benchmark: one tick a frame however long it takes, with the AI driving your car. At the end it logs the cost of a tick and a hash of the race, which a change that is meant to keep the race the same must not move. `tools/gbarun/gbarun -p TICK:PHASE:SLOW:OUT` profiles it, an instruction at a time, keeping the ticks it logged as slow apart from the others and the race's logic, the vblank interrupt's drawing and its sound apart from the rest; `tools/gbarun/profile.py` names the functions.
 
 ### Building
 

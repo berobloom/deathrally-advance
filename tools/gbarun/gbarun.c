@@ -2,11 +2,20 @@
 // reading memory and saving screenshots at given frames, and prints what
 // the ROM logs (gba/race's say(), through mGBA's debug registers).
 //
-//   gbarun [-s SAVE] [-a SOUND.wav] ROM FRAMES [SCRIPT]
+//   gbarun [-s SAVE] [-a SOUND.wav] [-p TICK:PHASE:SLOW:OUT] ROM FRAMES [SCRIPT]
 //
 // -s keeps the cartridge's save memory in the file SAVE, made if it
 // isn't there, as a real cartridge's battery would. -a records what it
 // plays, 32768 Hz stereo.
+//
+// -p profiles a benchmark build: it runs an instruction at a time and
+// adds each one's cycles to its address, apart for the ticks listed in
+// the file SLOW (the numbers gba/race's "BENCH slow tick N" logs) and for
+// the others, and by what the ROM says it's doing. TICK is the address of
+// the ROM's tick counter (bench_ticks in the ROM's ELF), which is N-1
+// while tick N runs, PHASE of its bench_phase (0-3). OUT gets the ticks'
+// counts, then a line for each address, "slow|other PHASE ADDR CYCLES";
+// tools/gbarun/profile.py names the functions.
 //
 // SCRIPT, one command a line, # for comments:
 //
@@ -24,6 +33,7 @@
 #include <mgba/core/core.h>
 #include <mgba/core/config.h>
 #include <mgba/core/log.h>
+#include <mgba/core/timing.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,6 +159,34 @@ static uint32_t parse_keys(const char * k){
 	return keys;
 }
 
+// -p's: cycles by address, halfword by halfword, in the ROM's first 4 MB,
+// EWRAM and IWRAM, the rest together
+#define PROF_ROM 		(4 << 20)
+#define PROF_N 			((PROF_ROM+(256 << 10)+(32 << 10))/2+2)	// and the BIOS, and the rest
+static uint64_t 	* prof[2][4];
+static unsigned char 	slow_tick[1 << 16];
+
+static unsigned prof_slot(uint32_t pc){
+
+	if((pc >= 0x08000000)&&(pc < 0x08000000+PROF_ROM)) return (pc-0x08000000)/2;
+	if((pc >= 0x02000000)&&(pc < 0x02040000)) return (PROF_ROM+pc-0x02000000)/2;
+	if((pc >= 0x03000000)&&(pc < 0x03008000)) return (PROF_ROM+(256 << 10)+pc-0x03000000)/2;
+	if(pc < 0x4000) return PROF_N-2;	// the BIOS together
+
+	return PROF_N-1;
+}
+
+static uint32_t prof_addr(unsigned k){
+
+	if(k == PROF_N-1) return 0;
+	if(k == PROF_N-2) return 2;
+	k *= 2;
+	if(k < PROF_ROM) return 0x08000000+k;
+	if(k < PROF_ROM+(256 << 10)) return 0x02000000+k-PROF_ROM;
+
+	return 0x03000000+k-PROF_ROM-(256 << 10);
+}
+
 static int read_script(const char * path){
 
 	char 	line[300];
@@ -180,13 +218,42 @@ int main(int argc, char ** argv){
 	color_t 	* screen;
 	unsigned 	w, h;
 	int 		frames, n_ev = 0, f, i, release = -1;
-	const char 	* save = NULL;
+	const char 	* save = NULL, * prof_out = NULL;
+	uint32_t 	tick_addr = 0, phase_addr = 0, ticks[2] = { 0, 0 };
 	FILE 		* wav = NULL;
 	uint32_t 	wav_n = 0;
 
-	while((argc > 2)&&(!strcmp(argv[1], "-s")||!strcmp(argv[1], "-a"))){
+	while((argc > 2)&&(!strcmp(argv[1], "-s")||!strcmp(argv[1], "-a")||!strcmp(argv[1], "-p"))){
 
-		if(argv[1][1] == 's') save = argv[2];
+		if(argv[1][1] == 'p'){
+
+			static char 	arg[512];
+			char 		* phase, * slow, * out;
+			FILE 		* sf;
+			unsigned 	n, k;
+
+			snprintf(arg, sizeof(arg), "%s", argv[2]);
+			if(!(phase = strchr(arg, ':'))||!(slow = strchr(phase+1, ':'))||!(out = strchr(slow+1, ':'))){
+
+				fprintf(stderr, "gbarun: -p TICK:PHASE:SLOW:OUT\n");
+				return 1;
+			}
+			*phase++ = 0;
+			*slow++ = 0;
+			*out++ = 0;
+			tick_addr = strtoul(arg, NULL, 16);
+			phase_addr = strtoul(phase, NULL, 16);
+			prof_out = out;
+			if(!(sf = fopen(slow, "r"))){
+
+				fprintf(stderr, "gbarun: can't open %s\n", slow);
+				return 1;
+			}
+			while(fscanf(sf, "%u", &n) == 1) if(n < sizeof(slow_tick)) slow_tick[n] = 1;
+			fclose(sf);
+			for(k = 0; k < 8; k++) prof[k/4][k%4] = calloc(PROF_N, sizeof(uint64_t));
+		}
+		else if(argv[1][1] == 's') save = argv[2];
 		else if(!(wav = fopen(argv[2], "wb"))){
 
 			fprintf(stderr, "gbarun: can't write %s\n", argv[2]);
@@ -261,7 +328,32 @@ int main(int argc, char ** argv){
 				release = f+(colon ? atoi(colon+1) : 2);
 			}
 		}
-		core->runFrame(core);
+		if(prof_out){
+
+			// an instruction at a time, its cycles to where it is
+			uint32_t 	frame = core->frameCounter(core), tick = core->rawRead32(core, tick_addr, -1);
+			uint64_t 	t = mTimingGlobalTime(core->timing);
+
+			while(core->frameCounter(core) == frame){
+
+				int32_t 	pc = 0;
+				uint32_t 	now_tick;
+				uint64_t 	t1;
+
+				core->readRegister(core, "pc", &pc);
+				core->step(core);
+				t1 = mTimingGlobalTime(core->timing);
+				prof[(tick+1 < sizeof(slow_tick))&&slow_tick[tick+1]][core->rawRead32(core, phase_addr, -1)&3][prof_slot((uint32_t)pc)] += t1-t;
+				t = t1;
+				now_tick = core->rawRead32(core, tick_addr, -1);
+				if(now_tick != tick){
+
+					ticks[(tick+1 < sizeof(slow_tick))&&slow_tick[tick+1]]++;
+					tick = now_tick;
+				}
+			}
+		}
+		else core->runFrame(core);
 		if(wav){
 
 			short 	buf[2*4096];
@@ -280,6 +372,17 @@ int main(int argc, char ** argv){
 		fclose(wav);
 	}
 
+	if(prof_out){
+
+		FILE 		* pf = fopen(prof_out, "w");
+		unsigned 	k;
+		int 		w2, ph;
+
+		if(!pf){ fprintf(stderr, "gbarun: can't write %s\n", prof_out); return 1; }
+		fprintf(pf, "ticks %u %u\n", ticks[1], ticks[0]);
+		for(w2 = 0; w2 < 2; w2++) for(ph = 0; ph < 4; ph++) for(k = 0; k < PROF_N; k++) if(prof[w2][ph][k]) fprintf(pf, "%s %d %08x %llu\n", w2 ? "slow" : "other", ph, prof_addr(k), (unsigned long long)prof[w2][ph][k]);
+		fclose(pf);
+	}
 	core->deinit(core);
 	free(screen);
 

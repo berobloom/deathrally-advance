@@ -251,12 +251,29 @@ static u32 cycles(void){
 static void draw_view(void);
 static void take_view(void);
 
+#if defined(RACE_BENCH)
+// what the benchmark is doing, for gbarun -p: 1 the race's logic, 2 the
+// interrupt's drawing, 3 its sound, 0 the rest
+volatile u32 bench_phase;
+#define BENCH_PHASE(n) 		(bench_phase = (n))
+#else
+#define BENCH_PHASE(n)
+#endif
+
 static void vblank_handler(void){
 
+#if defined(RACE_BENCH)
+	u32 	was = bench_phase;
+#endif
+
+	BENCH_PHASE(3);
 	mmVBlank();		// first: it swaps the sound's buffers
 	vblanks++;
+	BENCH_PHASE(2);
 	draw_view();
+	BENCH_PHASE(3);
 	mmFrame();		// the sound for the next frame
+	BENCH_PHASE(was);
 }
 
 // --- track background ----------------------------------------------------
@@ -1815,7 +1832,9 @@ static void run_race(void){
 			// the interrupt's drawing left out
 			i = isr_cycles;
 			t = cycles();
+			BENCH_PHASE(1);
 			race_logic();
+			BENCH_PHASE(0);
 			t = cycles()-t-(isr_cycles-i);
 			logic += t; ticks += k;
 			if(t > logic_max) logic_max = t;
