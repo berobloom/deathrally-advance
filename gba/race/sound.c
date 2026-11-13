@@ -45,15 +45,15 @@ void sound_init(void){
 
 	static mm_gba_system 	mm;
 
-	mm.mixing_mode = MM_MIX_16KHZ;
+	mm.mixing_mode = MM_MIX_13KHZ;
 	mm.mod_channel_count = MOD_CHANNELS;
 	mm.mix_channel_count = MIX_CHANNELS;
 	// all in EWRAM: IWRAM, where the stack is, has none to spare
 	mm.module_channels = (mm_addr)malloc(MOD_CHANNELS*MM_SIZEOF_MODCH);
 	mm.active_channels = (mm_addr)malloc(MIX_CHANNELS*MM_SIZEOF_ACTCH);
 	mm.mixing_channels = (mm_addr)malloc(MIX_CHANNELS*MM_SIZEOF_MIXCH);
-	mm.mixing_memory = (mm_addr)malloc(MM_MIXLEN_16KHZ);
-	mm.wave_memory = (mm_addr)malloc(MM_MIXLEN_16KHZ);
+	mm.mixing_memory = (mm_addr)malloc(MM_MIXLEN_13KHZ);
+	mm.wave_memory = (mm_addr)malloc(MM_MIXLEN_13KHZ);
 	mm.soundbank = (mm_addr)soundbank_bin;
 	mmInit(&mm);
 	mmSetModuleVolume(768);
