@@ -924,7 +924,13 @@ static int choose_race(void){
 
 				OAM[0].attr0 = OBJ_DISABLE;
 				init_hud();		// the race's
-				return !!(n&KEY_B);	// B: back to the title
+				if(n&KEY_B) return 1;	// B: back to the title
+				// the PREPARE TO RACE banner while the race is set up,
+				// as a career race's
+				VBlankIntrWait();
+				gba_banner((SCREEN_H-16)/2);
+				REG_DISPCNT = MODE_0 | OBJ_ON | OBJ_1D_MAP;
+				return 0;
 			}
 			if(n&KEY_UP) row = (row+CHOICES-1)%CHOICES;
 			if(n&KEY_DOWN) row = (row+1)%CHOICES;
