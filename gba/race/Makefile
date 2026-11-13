@@ -86,11 +86,11 @@ $(BUILD)/career_ui.o: career_ui.c gba.h FORCE
 	$(CC) $(CFLAGS) -Wall -c -o $@ $<
 
 # the music of each track and the effects, for Maxmod: the race's effects
-# first, so that their ids are 0 on, the menus' after them, then the
-# tracks' modules in TRACKS' order and the menus' last
+# first, so that their ids are 0 on, the menus' after them, the end's
+# film's, then the tracks' modules in TRACKS' order and the menus' last
 MMUTIL := $(DEVKITPRO)/tools/bin/mmutil
 $(BUILD)/soundbank-$(NAME).bin: $(BAKES:%=%/.done)
-	$(MMUTIL) -o$@ -h$(BUILD)/soundbank-$(NAME).h $(sort $(wildcard $(BAKE)/efe*.wav)) $(sort $(wildcard $(BAKE)/men*.wav)) $(foreach t,$(TRACKS),$(BUILD)/bake-tr$(t)/tr$(t).s3m) $(BAKE)/men.s3m > /dev/null
+	$(MMUTIL) -o$@ -h$(BUILD)/soundbank-$(NAME).h $(sort $(wildcard $(BAKE)/efe*.wav)) $(sort $(wildcard $(BAKE)/men*.wav)) $(sort $(wildcard $(BAKE)/end*.wav)) $(foreach t,$(TRACKS),$(BUILD)/bake-tr$(t)/tr$(t).s3m) $(BAKE)/men.s3m > /dev/null
 
 $(BUILD)/sound.o: sound.c $(BUILD)/soundbank-$(NAME).bin
 	$(CC) $(CFLAGS) -I$(BUILD) -include $(BUILD)/soundbank-$(NAME).h -Wall -c -o $@ $<

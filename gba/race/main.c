@@ -1349,6 +1349,66 @@ void gba_text_clear(int y, int h){
 	for(; h > 0; h--, y++) for(tx = 0; tx < 30; tx++) text_put(8*tx, y, 0, 0xffffffff);
 }
 
+// --- the end's film -----------------------------------------------------------
+
+// ___10b80h_cdecl() playing ENDANI.HAF, from gbabake's endani.film and
+// frames.bin: the 8bpp bitmap mode's two pages, both with the border in
+// colors 0-15, each frame unpacked into the one not shown, then shown with
+// its colors 16-255 at the vblank after its time comes. The frames' times
+// are in 70ths of a second, as the desktop's. A, B or Start ends it
+#define FILM_PAGE(n) 		((u8 *)VRAM+(n)*0xa000)
+#define FILM_ROW 		35		// the film's 90 rows under the border's top
+
+extern const u8 endani_film[], frames_bin[];
+
+void gba_film(void){
+
+	const u32 	* f = (const u32 *)endani_film;
+	const u8 	* info = (const u8 *)(f+1);
+	u32 		n = f[0], k, due = 0, start;
+	int 		page = 1, ch = 0;
+
+	REG_DISPCNT = LCDC_OFF;
+	for(k = 0; k < 128; k++) OAM[k].attr0 = OBJ_DISABLE;
+	copy32(BG_PALETTE, frames_bin, 32);
+	copy32(FILM_PAGE(0), frames_bin+32, 240*160);
+	copy32(FILM_PAGE(1), frames_bin+32, 240*160);
+	REG_BG2X = 0; REG_BG2Y = 0;
+	REG_BG2PA = 0x100; REG_BG2PB = 0; REG_BG2PC = 0; REG_BG2PD = 0x100;
+	// black until the first frame
+	for(k = 16; k < 256; k++) BG_PALETTE[k] = 0;
+	REG_DISPCNT = MODE_4 | BG2_ON;
+	sound_film(1);
+	start = vblanks;
+	for(k = 0; k < n; k++){
+
+		const u8 	* frame = endani_film+f[1+n+k];
+		u16 		keys;
+
+		// into the page not shown
+		LZ77UnCompVram(frame+480, FILM_PAGE(page)+240*FILM_ROW);
+		// its time: the lengths before it, in vblanks
+		while((int)(vblanks-start) < (int)(due*VBLANKS_PER_SEC/TICKS_PER_SEC)) VBlankIntrWait();
+		VBlankIntrWait();
+		copy32(BG_PALETTE+16, frame, 480);
+		REG_DISPCNT = MODE_4 | BG2_ON | (page ? BACKBUFFER : 0);
+		page ^= 1;
+		due += info[4*k+1];
+		if(info[4*k]){
+
+			ch = ch%6+1;
+			sound_film_effect(ch, info[4*k]);
+		}
+		scanKeys();
+		keys = keysDown();
+		if(keys&(KEY_A|KEY_B|KEY_START)) break;
+	}
+	// the last frame for its length, then dark
+	while((int)(vblanks-start) < (int)(due*VBLANKS_PER_SEC/TICKS_PER_SEC)) VBlankIntrWait();
+	REG_DISPCNT = LCDC_OFF;
+	sound_film(0);
+}
+
 // the menus' background, and no text on it
 void gba_text_screen(void){
 

@@ -53,6 +53,8 @@
 //   tracks.obj   the sign-up's pictures of the tracks, halved, the same way
 //   panel.bin    the side panel with your car and its upgrades, see bake_panel()
 //   box.bin      the menus' box, see bake_box()
+//   endani.film  the end's film, ENDANI.HAF, see bake_film(), and frames.bin
+//                the border the desktop shows it in; end01.wav on its effects
 //   menubg.dtl, menufont.bin, cursor.bin  the menus' background, fonts and
 //                cursor, see bake_menu_screen()
 //   cars.img     the 13 car images (7 models, then the -S.BPK of the first 6),
@@ -810,6 +812,7 @@ static void bake_shop_parts(const char * outdir){
 static void bake_menu_screen(const char * outdir);
 static void bake_panel(const char * outdir);
 static void bake_box(const char * outdir);
+static void bake_film(const char * haf, const char * cmf, const char * name, const char * prefix, const char * outdir);
 
 static void bake_menu_pictures(const char * outdir){
 
@@ -869,6 +872,7 @@ static void bake_menu_pictures(const char * outdir){
 
 	bake_panel(outdir);
 	bake_box(outdir);
+	bake_film("ENDANI.HAF", "ENDANI-E.CMF", "endani.film", "end", outdir);
 
 	// the sign-up's pictures of the tracks, TRSNAP2M's first 19 of
 	// 128x112, as ___30df8h() shows them: TR0, TR1-TR9, TR1-TR9 reversed
@@ -1513,4 +1517,318 @@ int main(int argc, char * argv[]){
 	printf("TR%d: %dx%d (%dx%d tiles), start (%u,%u) rot %u\n", track, w, h, tw, th,
 		inf->startups[0].x, inf->startups[0].y, inf->startups[0].rot);
 	return 0;
+}
+
+
+// --- the films --------------------------------------------------------------------
+
+// A HAF (CINEM/*.HAF, as src/gfx/cinem.c plays them): a u16 frame count n,
+// n bytes of the effect each frame starts (0 none), n of how long it
+// shows in 70ths of a second, then each frame: a u16 size, then 768 bytes
+// of its palette (6 bits a color, the frame's own 16-255) and its 320x120
+// pixels, LZW coded as a GIF's are, in blocks of a count and that many
+// bytes. haf_frame() is cinem.c's ___108e8h() and ___10784h()
+
+typedef struct {
+	const __BYTE__ * 	p;
+	unsigned 		at, block, bits, have;
+	__BYTE__ 		buf[256], * next, byte;
+} lzw_in_t;
+
+static unsigned lzw_code(lzw_in_t * in, unsigned width){
+
+	unsigned 	r, n;
+
+	if(in->have == 0){
+
+		if(in->block == 0){
+
+			in->block = in->p[in->at++];
+			for(n = 0; n < in->block; n++) in->buf[n] = in->p[in->at++];
+			in->next = in->buf;
+		}
+		if(in->block) in->block--;
+		in->byte = *in->next++;
+		in->have = 8;
+	}
+	r = in->byte >> (8-in->have);
+	while(in->have < width){
+
+		if(in->block == 0){
+
+			in->block = in->p[in->at++];
+			for(n = 0; n < in->block; n++) in->buf[n] = in->p[in->at++];
+			in->next = in->buf;
+		}
+		if(in->block) in->block--;
+		in->byte = *in->next++;
+		in->have += 8;
+		r |= in->byte << (in->have-8);
+	}
+	in->have -= width;
+
+	return r&~(~0u << width);
+}
+
+// a frame's palette, 768 bytes, and its 320x120 pixels
+static void haf_frame(const __BYTE__ * enc, __BYTE__ * pal, __BYTE__ * px){
+
+	static __BYTE__ 	stack[0x1001], suffix[0x1001];
+	static unsigned 	prefix[0x1001];
+	lzw_in_t 		in;
+	unsigned 		bits, width, top, next_code, reset, end, code, val = 0, prev = 0, c, n = 0, w = 0, r = 0;
+
+	memcpy(pal, enc, 768);
+	memset(&in, 0, sizeof(in));
+	in.p = enc;
+	in.at = 768;
+	bits = in.p[in.at++];
+	width = bits+1;
+	top = 2 << bits;
+	next_code = (1 << bits)+2;
+	reset = 1 << bits;
+	end = reset+1;
+	while(((code = lzw_code(&in, width)) != end)&&(w < 320*120)){
+
+		if(code == reset){
+
+			if(!r&&++r){
+
+				width = bits+1;
+				top = 2 << bits;
+				next_code = (1 << bits)+2;
+			}
+			continue;
+		}
+		if(r&&!--r){
+
+			px[w++] = prev = val = code%next_code;
+			continue;
+		}
+		c = code;
+		if(c >= next_code){
+
+			c = prev;
+			stack[n++] = val;
+		}
+		while(c >= reset+2){
+
+			stack[n++] = suffix[c];
+			c = prefix[c];
+		}
+		stack[n++] = c;
+		if(top > next_code){
+
+			suffix[next_code] = val = c;
+			prefix[next_code] = prev;
+			prev = code;
+			next_code++;
+		}
+		if((top <= next_code)&&(width < 12)){
+
+			width++;
+			top *= 2;
+		}
+		while(n > 0){
+
+			if(w < 320*120) px[w] = stack[n-1];
+			w++;
+			n--;
+		}
+	}
+}
+
+// in, n bytes, LZ77 coded for the BIOS's LZ77UnCompVram() into out, which
+// has room for n*9/8+8: as lz77_vram(), but with each place's earlier
+// ones found through a hash of its first 3 bytes
+static unsigned lz77_vram_fast(__BYTE__ * out, const __BYTE__ * in, unsigned n){
+
+	static int 	head[1 << 15], * prev_at;
+	unsigned 	o = 4, i = 0, flags = 0, bit = 0, k;
+
+	prev_at = realloc(prev_at, sizeof(int)*(n+1));
+	for(k = 0; k < (1 << 15); k++) head[k] = -1;
+	out[0] = 0x10; out[1] = n; out[2] = n >> 8; out[3] = n >> 16;
+	while(i < n){
+
+		unsigned 	best = 0, at = 0, chain = 0, adv, j;
+		int 		c;
+
+		if(bit == 0){
+
+			flags = o++;
+			out[flags] = 0;
+			bit = 0x80;
+		}
+		if(i+2 < n) for(c = head[((in[i] << 10)^(in[i+1] << 5)^in[i+2])&0x7fff]; (c >= 0)&&(i-c <= 4096)&&(chain < 512); c = prev_at[c], chain++){
+
+			unsigned 	d = i-c;
+
+			if(d < 2) continue;	// not from the byte before: VRAM is written 16 bits at a time
+			for(k = 0; (k < 18)&&(i+k < n)&&(in[i+k] == in[i+k-d]); k++);
+			if(k > best){ best = k; at = d; if(k == 18) break; }
+		}
+		if(best >= 3){
+
+			out[flags] |= bit;
+			out[o++] = ((best-3) << 4)|((at-1) >> 8);
+			out[o++] = at-1;
+			adv = best;
+		}
+		else {
+
+			out[o++] = in[i];
+			adv = 1;
+		}
+		for(j = 0; j < adv; j++, i++) if(i+2 < n){
+
+			unsigned 	h = ((in[i] << 10)^(in[i+1] << 5)^in[i+2])&0x7fff;
+
+			prev_at[i] = head[h];
+			head[h] = i;
+		}
+		bit >>= 1;
+	}
+	while(o&3) out[o++] = 0;
+
+	return o;
+}
+
+static __WORD__ gba_color(int r, int g, int b){ return (r >> 1)|((g >> 1) << 5)|((b >> 1) << 10); }
+
+// 320x120 at 3/4, 240x90: each pixel the average of the 4/3 x 4/3 it
+// covers, in the nearest of colors lo-hi of pal (6 bits a color)
+static void film_scale(__BYTE__ * dst, int dw, int dh, const __BYTE__ * src, int sw, const __BYTE__ * pal, int lo, int hi){
+
+	static int 	cache[1 << 18];		// each color's nearest, for this call's pal
+	int 		x, y;
+
+	memset(cache, 0xff, sizeof(cache));
+	for(y = 0; y < dh; y++) for(x = 0; x < dw; x++){
+
+		int 	sx, sy, r = 0, g = 0, b = 0, a = 0, key, best = lo, best_d = 1 << 30, c;
+
+		// in thirds of a source pixel: [4x/3, 4(x+1)/3)
+		for(sy = 4*y/3; sy*3 < 4*(y+1); sy++) for(sx = 4*x/3; sx*3 < 4*(x+1); sx++){
+
+			int 	wx = (3*(sx+1) < 4*(x+1) ? 3*(sx+1) : 4*(x+1))-(3*sx > 4*x ? 3*sx : 4*x);
+			int 	wy = (3*(sy+1) < 4*(y+1) ? 3*(sy+1) : 4*(y+1))-(3*sy > 4*y ? 3*sy : 4*y);
+			__BYTE__ 	p = src[sw*sy+sx];
+
+			r += wx*wy*pal[3*p]; g += wx*wy*pal[3*p+1]; b += wx*wy*pal[3*p+2]; a += wx*wy;
+		}
+		r = (r+a/2)/a; g = (g+a/2)/a; b = (b+a/2)/a;
+		key = ((r&63) << 12)|((g&63) << 6)|(b&63);
+		if(cache[key] < 0){
+
+			for(c = lo; c <= hi; c++){
+
+				int 	dr = pal[3*c]-r, dg = pal[3*c+1]-g, db = pal[3*c+2]-b, d = dr*dr+dg*dg+db*db;
+
+				if(d < best_d){ best_d = d; best = c; }
+			}
+			cache[key] = best;
+		}
+		dst[dw*y+x] = cache[key];
+	}
+}
+
+// A film for gba/race's gba_film(), from CINEM/HAF, at 3/4 of its size:
+//
+//   NAME         u32 n frames; then for each a u8 effect, a u8 length (in
+//                70ths of a second) and 2 unused; then for each a u32,
+//                where its data is in the file; each frame's data its 240
+//                colors 16-255 as the GBA's, then its 240x90 pixels LZ77
+//                coded for LZ77UnCompVram()
+//   frames.bin   the border the desktop shows a film in (FRAMES.BPK, its
+//                colors 0-15) at 3/4, 240x150, 5 rows down a 240x160
+//                screen, the film's rows at 35-124: 16 colors as the
+//                GBA's, then 240x160 pixels
+//   PREFIXnn.wav the effects, CMF's instruments, and PREFIX.bin their volumes
+static void bake_film(const char * haf, const char * cmf, const char * name, const char * prefix, const char * outdir){
+
+	char 		path[64], vols[32];
+	FILE 		* fd;
+	__BYTE__ 	* d, * enc, pal[768], src[320*120], px[240*160], * lz = malloc(240*90*9/8+8);
+	long 		size;
+	unsigned 	n, i, at, p, total = 0;
+	__POINTER__ 	bpk;
+	__BYTE__ 	* img;
+
+	snprintf(path, sizeof(path), "CINEM/%s", haf);
+	if(!(fd = fopen(path, "rb"))){ perror(path); exit(1); }
+	fseek(fd, 0, SEEK_END);
+	size = ftell(fd);
+	rewind(fd);
+	d = malloc(size);
+	if(fread(d, 1, size, fd) != (size_t)size){ perror(path); exit(1); }
+	fclose(fd);
+	n = d[0]|(d[1] << 8);
+
+	fd = out(outdir, name);
+	put32(fd, n);
+	for(i = 0; i < n; i++){ fputc(d[2+i], fd); fputc(d[2+n+i], fd); fputc(0, fd); fputc(0, fd); }
+	at = 4+4*n+4*n;
+	for(i = 0, p = 2+2*n; i < n; i++){
+
+		unsigned 	len = d[p]|(d[p+1] << 8);
+
+		put32(fd, 0);	// filled in below
+		p += 2+len;
+	}
+	for(i = 0, p = 2+2*n; i < n; i++){
+
+		unsigned 	len = d[p]|(d[p+1] << 8), k, c;
+
+		enc = d+p+2;
+		if(p+2+len > (unsigned)size){ fprintf(stderr, "%s: frame %u past the end\n", haf, i); exit(1); }
+		memset(src, 0, sizeof(src));
+		haf_frame(enc, pal, src);
+		film_scale(px, 240, 90, src, 320, pal, 16, 255);
+		c = lz77_vram_fast(lz, px, 240*90);
+		fseek(fd, 4+4*n+4*i, SEEK_SET);
+		put32(fd, at);
+		fseek(fd, at, SEEK_SET);
+		for(k = 16; k < 256; k++){
+
+			__WORD__ 	w = gba_color(pal[3*k], pal[3*k+1], pal[3*k+2]);
+
+			fputc(w, fd); fputc(w >> 8, fd);
+		}
+		fwrite(lz, 1, c, fd);
+		at += 480+c;
+		total += 480+c;
+		p += 2+len;
+	}
+	fclose(fd);
+	printf("%s: %u frames, %u KB\n", haf, n, total/1024);
+	free(d);
+	free(lz);
+
+	// the border
+	bpk = read_entry("MENU.BPA", "FRAMES.BPK");
+	img = calloc(1, 0xfa00);
+	bpk_decode4(0x300, 0, pal, bpk);
+	bpk_decode4(0xfa00, 0x300, img, bpk);
+	free(bpk);
+	memset(px, 0, sizeof(px));
+	{
+		__BYTE__ 	b[240*150];
+
+		film_scale(b, 240, 150, img, 320, pal, 0, 15);
+		memcpy(px+240*5, b, sizeof(b));
+	}
+	free(img);
+	fd = out(outdir, "frames.bin");
+	for(i = 0; i < 16; i++){
+
+		__WORD__ 	w = gba_color(pal[3*i], pal[3*i+1], pal[3*i+2]);
+
+		fputc(w, fd); fputc(w >> 8, fd);
+	}
+	fwrite(px, 1, sizeof(px), fd);
+	fclose(fd);
+
+	snprintf(vols, sizeof(vols), "%s.bin", prefix);
+	bake_xm(cmf, prefix, vols, outdir);
 }

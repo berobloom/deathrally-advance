@@ -137,7 +137,7 @@ make -C gba/race             # builds gba/race/drrace.gba: the career, or a quic
 make -C gba/race TRACK=8     # drrace-tr8.gba, track 8 only, which starts straight away
 ```
 
-Each prototype ROM holds one track and is about 2 MB. The race ROM is about 16.9 MB of the cartridge's 32, with the 4.3 MB soundbank of the ten songs and 44 sound effects. Each track's image is its 8x8 tiles, each different one once (gbabake's `track.dtl`), 5.3 MB for the ten.
+Each prototype ROM holds one track and is about 2 MB. The race ROM is about 20.1 MB of the cartridge's 32, with the 4.3 MB soundbank of the ten songs and 44 sound effects. Each track's image is its 8x8 tiles, each different one once (gbabake's `track.dtl`), 5.3 MB for the ten.
 
 #### The track's buildings
 
@@ -171,6 +171,8 @@ The title screen chooses the career or a quick race. In the career's screens, th
 
 The career saves itself in the cartridge's SRAM each time you're back at its hub, in the desktop's saved game's form, and the lap records and hall of fame with it, which start as a new DR.CFG's. The events' speeches show the game's pictures, halved, and the hub and a new game your driver's face. The shop shows the upgrade on offer, the repair and the way out turning as its own animations do, halved, where the car you'd buy turns on its row, and the market each item's picture, on sale, held or sold out. The menus play the game's menu music, jumping in it where the desktop's do. The title screen shows the hall of fame, and the race's screen before it the track's lap record for your car. Choosing the career again offers to continue it or start a new one; a career that's over, won or lost, is no longer offered.
 
+Beating the Adversary plays the end's film, as `___22808h()` does: `ENDANI.HAF`'s 368 frames of 320x120, with the first track's music and the film's effects (`ENDANI-E.CMF`), in the desktop's border (`FRAMES.BPK`). `tools/gbabake` decodes each frame (the HAF's LZW, as `src/gfx/cinem.c`), scales it to 240x90 in its own 240 colors and LZ77 codes it, 2.8 MB in all (`endani.film`). The GBA shows it in the 8bpp bitmap mode, each frame unpacked by the BIOS into the page not shown and shown with its colors at the vblank its time comes, in the desktop's 70ths of a second. A, B or Start ends it. `RACE_CFLAGS=-DFILM_TEST` plays it at start-up.
+
 Before a quick race, up and down pick a row and left and right change it: the track, which pans by slowly, forward or reversed (REV), your car, which turns in the middle of the screen, the laps (1-9), the rivals' skill, your car's upgrades, and whether there are weapons. A or Start races, and B goes back to the title. Without weapons nobody has guns or mines, and the HUD box shows the lap time instead. The rivals' skill is the game's three difficulties, from Speed Makes Me Dizzy (1) to Petrol In My Veins (3). Upgrades (0-4) fit your engine, tires and armor to that level, or to the best the car can take. The opponents are always the Deliverator, the Wraith and the Sentinel, with no upgrades.
 
 Its meter, at the bottom right, shows frames per second and the share of the CPU used. The bottom left shows your position and lap.
@@ -184,7 +186,7 @@ Not done yet:
 * In the career: the desktop's side panel in the shop and the market, where the turning car (in the track's colors) and the prices take its place.
 * The headlights' exact colors. The game lightens each track color through the track's light table, on seven of the ten tracks; the GBA adds one color, semi-transparent, the closest of the track's palette to what the table adds on average.
 * The track's buildings as the desktop draws them: in perspective from the middle of the screen every frame (`race___53464h()`), over the cars. The GBA has them, with their textures, drawn into the track's image instead, seen from straight above (see [The track's buildings](#the-tracks-buildings)). The tracks have 1,600 to 5,100 triangles in 40 to 84 objects each, and 50 to 380 KB of textures, about 1.5 MB in all. Drawing them over the cars needs a layer of up to 600 8bpp tiles, and the BG VRAM is taken by the track's tiles and the HUD. Drawn into the track's tiles each frame instead, under the cars, a try found the time too much: a view has 130 to 170 triangles of 3 or so objects on screen, covering 150 to 320 tiles, but they overlap, and filling them, before any pixel is written, took 1 to 2.8 million cycles a frame, of the 280,000 there are and the 80,000 or so the race leaves free.
-* The end's animation (`ENDANI.HAF`), 3.8 MB of 320x200 frames.
+* The Adversary's film (`ENDANI0.HAF`), which the desktop plays when you first lead on points. The GBA plays the end's the same way, so it would take another 3 MB or so of the ROM.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
 * Testing on real hardware.

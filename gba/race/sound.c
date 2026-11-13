@@ -14,6 +14,7 @@
 extern const u8 soundbank_bin[];
 extern const u8 sfx_bin[];		// each effect's base volume, 0-64
 extern const u8 men_bin[];		// and each of the menus'
+extern const u8 end_bin[];		// and the end's film's
 
 // the effects' ids come first in the soundbank, then a module for each track
 #define SFX_FIRST		0
@@ -133,6 +134,36 @@ void sound_menu(int channel, int n, __DWORD__ freq){
 	v = (0xc000 >> 8)*men_bin[n-1] >> 6;	// the menus' default volume
 	e.id = SFX_MEN01+n-1;
 	e.rate = rate(freq);
+	e.handle = 0;
+	e.volume = (v > 255) ? 255 : v;
+	e.panning = 128;
+	LOCKED(mmEffectCancel(handles[channel]); handles[channel] = mmEffectEx(&e));
+	effect[channel] = 0;
+}
+
+// the end's film's music, as ___10b80h_cdecl() loads it: the first
+// track's (TR0-MUS.CMF), if this ROM has it
+void sound_film(int on){
+
+#if defined(MOD_TR0)
+	LOCKED(mmEffectCancelAll(); if(on) mmStart(MOD_TR0, MM_PLAY_LOOP); else mmStop());
+#else
+	LOCKED(mmEffectCancelAll(); mmStop());
+#endif
+	menu_playing = 0;
+}
+
+// its effect n (ENDANI-E.CMF's instrument n) on channel 1-6, as
+// ___10b80h_cdecl() pushes them: at their own volume, rate and the middle
+void sound_film_effect(int channel, int n){
+
+	mm_sound_effect 	e;
+	__DWORD__ 		v;
+
+	if(!channel||(channel > SFX_CHANNELS)||(n < 1)||(n > SFX_END40-SFX_END01+1)) return;
+	v = (0x10000 >> 8)*end_bin[n-1] >> 6;
+	e.id = SFX_END01+n-1;
+	e.rate = rate(0x10000);
 	e.handle = 0;
 	e.volume = (v > 255) ? 255 : v;
 	e.panning = 128;

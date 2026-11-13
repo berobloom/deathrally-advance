@@ -269,6 +269,10 @@ int gba_title(void){
 
 	static int 	row = 0;
 
+#if defined(FILM_TEST)
+	gba_film();
+#endif
+
 	for(;;){
 
 		sound_menu_music(-1);
@@ -614,7 +618,10 @@ static int race(int num_cars){
 		if(career_leader_round()){
 
 			message("YOU BEAT THE ADVERSARY!", "THE DEATH RALLY IS YOURS");
-			// the end (___22808h()), and you in the hall of fame
+			// the end (___22808h()): its film, and you in the hall
+			// of fame, to the menus' music again
+			gba_film();
+			sound_menu_music(-1);
 			records_load();
 			hall_of_fame(career_hall_of_fame());
 			return 1;
