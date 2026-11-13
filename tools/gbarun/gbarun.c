@@ -26,6 +26,8 @@
 //   FRAME poke32 ADDR=VAL   write a word, ADDR hex, VAL decimal
 //   FRAME peek32 ADDR       print a word
 //
+// GBARUN_BIOS=gba_bios.bin runs it with the real BIOS.
+//
 // Addresses come from the ROM's map, gba/race/build/drrace.map. With no
 // SCRIPT it just runs, as for the benchmark builds. See shop.txt.
 
@@ -34,6 +36,8 @@
 #include <mgba/core/config.h>
 #include <mgba/core/log.h>
 #include <mgba/core/timing.h>
+#include <mgba-util/vfs.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -290,6 +294,21 @@ int main(int argc, char ** argv){
 
 		fprintf(stderr, "gbarun: can't use %s for the save\n", save);
 		return 1;
+	}
+	// GBARUN_BIOS=FILE: the real BIOS, which a cartridge on the hardware
+	// runs with, instead of mGBA's own stand-in for its calls
+	if(getenv("GBARUN_BIOS")){
+
+		struct VFile * 	bios = VFileOpen(getenv("GBARUN_BIOS"), O_RDONLY);
+
+		if(!bios||!core->loadBIOS(core, bios, 0)){
+
+			fprintf(stderr, "gbarun: can't use %s for the BIOS\n", getenv("GBARUN_BIOS"));
+			return 1;
+		}
+		mCoreConfigSetIntValue(&core->config, "useBios", 1);
+		mCoreConfigSetIntValue(&core->config, "skipBios", 1);
+		core->reloadConfigOption(core, "useBios", NULL);
 	}
 	core->reset(core);
 	if(wav){

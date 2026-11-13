@@ -2086,6 +2086,76 @@ void gba_career_race(int my_index, int num_cars){
 	sound_music(-1);
 }
 
+// The cartridge's wait states: the fastest of these that reads the ROM as
+// the slow default (4/2, which the BIOS booted with) does, from IWRAM so
+// that the code isn't read wrong while it tries. 3/1 with prefetch is what
+// the race's speed counts on, and what most carts do
+#define ROM_SAMPLES 		64
+static const u16 rom_speeds[] = { 0x4017, 0x4007, 0x4003, 0x0003 };
+EWRAM_BSS static u32 rom_slow[ROM_SAMPLES][8];
+extern const u8 __assets_end[];		// the ROM's end, assets.ld's
+
+typedef struct { u32 w[8]; } rom_block_t;	// read by one LDM, sequentially
+
+static IWRAM_CODE ARM_CODE __attribute__((noinline)) int rom_reads(int slow, u32 size){
+
+	int 	k, i;
+
+	for(k = 0; k < ROM_SAMPLES; k++){
+
+		const rom_block_t 	* at = (const rom_block_t *)(0x08000000+(((size-32)/ROM_SAMPLES*k) & ~31));
+		rom_block_t 		b = *(volatile const rom_block_t *)at;
+
+		if(slow) for(i = 0; i < 8; i++) rom_slow[k][i] = b.w[i];
+		else for(i = 0; i < 8; i++) if(rom_slow[k][i] != b.w[i]) return 0;
+	}
+	return 1;
+}
+
+static IWRAM_CODE ARM_CODE __attribute__((noinline)) int rom_try(u16 waitcnt, u32 size){
+
+	int 	k, ok = 1;
+
+	REG_WAITCNT = waitcnt;
+	for(k = 0; ok&&(k < 4); k++) ok = rom_reads(0, size);
+	if(!ok) REG_WAITCNT = 0;
+	return ok;
+}
+
+static void rom_speed(void){
+
+	u32 		size = (u32)__assets_end-0x08000000;
+	unsigned 	n;
+
+	REG_WAITCNT = 0;
+	rom_reads(1, size);
+	for(n = 0; n < sizeof(rom_speeds)/sizeof(rom_speeds[0]); n++) if(rom_try(rom_speeds[n], size)) return;
+	REG_WAITCNT = 0;
+}
+
+// a cartridge smaller than the ROM: past its end it reads as its start
+// again, or as the bus's own (each halfword its address/2). Then a red
+// screen, as there are no letters to say so with
+static void rom_whole(void){
+
+	u32 	size = (u32)__assets_end-0x08000000, a, w;
+	int 	k, mirror = 0, open = 0, n = 0;
+
+	if(size <= 0x1000000) return;
+	for(k = 0; k < ROM_SAMPLES; k++){
+
+		a = 0x1000000+((size-0x1000000-64)/ROM_SAMPLES*k & ~3);
+		w = *(volatile const u32 *)(0x08000000+a);
+		mirror += (w == *(volatile const u32 *)(0x08000000+a-0x1000000));
+		open += (w == ((((0x08000000+a)/2) & 0xffff)|(((((0x08000000+a)/2)+1) & 0xffff) << 16)));
+		n++;
+	}
+	if((mirror < n)&&(open < n)) return;
+	BG_PALETTE[0] = RGB5(31, 0, 0);
+	REG_DISPCNT = MODE_0;
+	while(1);
+}
+
 int main(void){
 
 	int 		n;
@@ -2099,7 +2169,8 @@ int main(void){
 		for(; p < sp-64; p++) *p = 0x57AC57AC;
 	}
 
-	REG_WAITCNT = 0x4017;		// ROM at 3/1 wait states with prefetch, works on flash carts
+	rom_speed();
+	rom_whole();
 	REG_DEBUG_ENABLE = 0xC0DE;
 	debug_log = (REG_DEBUG_ENABLE == 0x1DEA);
 	{

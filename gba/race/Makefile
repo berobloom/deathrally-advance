@@ -73,8 +73,17 @@ $(BUILD)/libmm/%.o: $(LIBMM)
 	@cd $(@D) && $(AR) x $(LIBMM) $*.o
 	@$(OBJCOPY) --rename-section .iwram=.text --rename-section .bss=.sbss $@
 
-$(ELF): $(BUILD)/main.o $(BUILD)/career_ui.o $(BUILD)/sound.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(LIBMM_ROM:%=$(BUILD)/libmm/%.o) $(GAME_LIB)
-	$(CC) $(LDFLAGS) -Wl,-Map,$(BUILD)/drrace.map -o $@ $^ -lmm -lgba -lm
+# the assets last in the ROM: gba.specs with gba_cart.ld as drrace.ld,
+# which has assets.ld's section after the rest
+$(BUILD)/drrace.ld: assets.ld
+	@mkdir -p $(@D)
+	sed '/^\s*__rom_end__ = /r assets.ld' $(DEVKITARM)/arm-none-eabi/lib/gba_cart.ld > $@
+
+$(BUILD)/drrace.specs: $(BUILD)/drrace.ld
+	sed 's|-T gba_cart.ld%s|-T $(CURDIR)/$(BUILD)/drrace.ld|' $(DEVKITARM)/arm-none-eabi/lib/gba.specs > $@
+
+$(ELF): $(BUILD)/main.o $(BUILD)/career_ui.o $(BUILD)/sound.o $(BUILD)/assets-$(NAME).o $(LIBGCC_OBJS) $(LIBMM_ROM:%=$(BUILD)/libmm/%.o) $(GAME_LIB) $(BUILD)/drrace.specs
+	$(CC) $(subst -specs=gba.specs,-specs=$(BUILD)/drrace.specs,$(LDFLAGS)) -Wl,-Map,$(BUILD)/drrace.map -o $@ $(filter-out %.specs,$^) -lmm -lgba -lm
 
 # rebuilt every time: PRE and RACE_CFLAGS change what goes in
 $(BUILD)/main.o: main.c gba.h FORCE

@@ -21,7 +21,7 @@
 	.incbin	"\file", 0, \n
 	.endm
 
-	.section .rodata
+	.section .assets, "a"
 
 @ the same for every track
 	asset	setup_mines1a, mines1a.bin
