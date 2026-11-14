@@ -18,10 +18,16 @@ The GBA build puts the game data inside the ROM, so a ROM carries the same restr
 
 | | |
 |:-:|:-:|
-| ![The start grid](docs/screenshots/gba-start-grid.png) | ![Racing on the first track](docs/screenshots/gba-racing.png) |
-| The start grid of the first track | Racing, with the frame rate meter on top |
-| ![Track 3](docs/screenshots/gba-track-2.png) | ![Track 10](docs/screenshots/gba-track-9.png) |
-| Track 3, with the other cars on autopilot | Track 10 |
+| ![The title screen](docs/screenshots/gba-title.png) | ![The career's hub](docs/screenshots/gba-career-hub.png) |
+| The title screen | The career's hub, with your face and car |
+| ![Signing up for a race](docs/screenshots/gba-sign-up.png) | ![The shop](docs/screenshots/gba-shop.png) |
+| Signing up for one of the round's three races | The shop: cars and upgrades |
+| ![The underground market](docs/screenshots/gba-market.png) | ![Prepare to race](docs/screenshots/gba-prepare.png) |
+| The underground market | Before a race: the track and the grid |
+| ![The start lights](docs/screenshots/gba-start-lights.png) | ![Racing](docs/screenshots/gba-racing.png) |
+| The start lights, with the HUD box at the top left | Racing the others into the first corner |
+| ![A night track](docs/screenshots/gba-night-track.png) | ![The Adversary's film](docs/screenshots/gba-film.png) |
+| A track by night | The Adversary's film, when you first lead on points |
 
 Screenshots are taken in mGBA and shown at twice the GBA's resolution.
 
