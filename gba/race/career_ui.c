@@ -555,9 +555,9 @@ static void results(int A1){
 
 		// leading for the first time: the Adversary's film, as
 		// ___3892ch() plays it after the standings, then the menus'
-		// music again
+		// music again from its start, as it loads it without a position
 		gba_film(1);
-		sound_menu_music(-1);
+		sound_menu_music(0);
 		message("YOU LEAD ON POINTS!", "THE ADVERSARY IS WAITING");
 	}
 }
@@ -598,12 +598,15 @@ static int race(int num_cars){
 	}
 	center(17, "PRESS A TO RACE");
 	gba_banner(160-16);
+	sound_menu_music(0x28);		// the race's own, as ___33010h() sets it here
 	wait_key(0);
 
 	career_race_fill(num_cars, grid);
 	gba_career_race(D(___1a103ch), num_cars);
 	career_race_after(num_cars, grid);
-	sound_menu_music(0x28);		// as ___33010h() goes back to the menus
+	// the menus' music from its start, as ___33010h() loads it again after
+	// the race without a position
+	sound_menu_music(0);
 
 	// how it went
 	gba_text_screen();
@@ -629,9 +632,9 @@ static int race(int num_cars){
 
 			message("YOU BEAT THE ADVERSARY!", "THE DEATH RALLY IS YOURS");
 			// the end (___22808h()): its film, and you in the hall
-			// of fame, to the menus' music again
+			// of fame, to the menus' music again from its start
 			gba_film(0);
-			sound_menu_music(-1);
+			sound_menu_music(0);
 			records_load();
 			hall_of_fame(career_hall_of_fame());
 			return 1;
