@@ -36,7 +36,7 @@ Screenshots are taken in mGBA and shown at twice the GBA's resolution.
 
 The driving, the collisions and the other cars' autopilot are simple stand-ins. None of the game's race code runs on the GBA yet.
 
-In mGBA all ten tracks run at 60 frames per second using about 12% of each frame, of which at most 9% is graphics. That leaves most of the frame for the game's own race code, which is the next thing to measure. The prototype hasn't been tested on real hardware yet.
+In mGBA all ten tracks run at 60 frames per second using about 12% of each frame, of which at most 9% is graphics. That leaves most of the frame for the game's own race code, which is the next thing to measure. The race ROM boots on a real GBA SP from a flash cart; the race itself on the hardware is still to be tried.
 
 ### The Race Code on the GBA
 
@@ -192,7 +192,7 @@ Not done yet:
 * The track's buildings as the desktop draws them: in perspective from the middle of the screen every frame (`race___53464h()`), over the cars. The GBA has them, with their textures, drawn into the track's image instead, seen from straight above (see [The track's buildings](#the-tracks-buildings)). The tracks have 1,600 to 5,100 triangles in 40 to 84 objects each, and 50 to 380 KB of textures, about 1.5 MB in all. Drawing them over the cars needs a layer of up to 600 8bpp tiles, and the BG VRAM is taken by the track's tiles and the HUD. Drawn into the track's tiles each frame instead, under the cars, a try found the time too much: a view has 130 to 170 triangles of 3 or so objects on screen, covering 150 to 320 tiles, but they overlap, and filling them, before any pixel is written, took 1 to 2.8 million cycles a frame, of the 280,000 there are and the 80,000 or so the race leaves free.
 * The narrow view's HUD panel (`race___40f48h()`), which the GBA's screen doesn't use.
 * The menus' own screens, which are drawn at 640x480.
-* Testing on real hardware.
+* Testing on real hardware beyond the start: the race's speed, the sound and the save.
 
 ## Desktop
 
