@@ -286,6 +286,8 @@ Function files are named after their address in the original executable (e.g. `_
 
 MIT, see [LICENSE](LICENSE).
 
+The Game Boy Advance port's changes are Copyright (C) 2026 Berobloom and are released under the same MIT license.
+
 ## Credits
 
 - dRally: Neomalius (urxp)
